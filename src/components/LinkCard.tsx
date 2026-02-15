@@ -1,4 +1,4 @@
-import { Star, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Star, ExternalLink, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,10 @@ interface LinkCardProps {
   onToggleFavorite: (id: string) => void;
   onEdit: (link: LinkItem) => void;
   onDelete: (id: string) => void;
+  onDragStart?: (e: React.DragEvent, link: LinkItem) => void; // ✅ Para drag & drop
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent, link: LinkItem) => void;
+  isDragging?: boolean;
 }
 
 export function LinkCard({ link, onToggleFavorite, onEdit, onDelete }: LinkCardProps) {
@@ -30,9 +34,28 @@ export function LinkCard({ link, onToggleFavorite, onEdit, onDelete }: LinkCardP
   const faviconUrl = getFaviconUrl();
 
   return (
-    <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">
+    <Card 
+      draggable 
+      onDragStart={(e) => onDragStart?.(e, link)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        onDragOver?.(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop?.(e, link);
+      }}
+      className={`group relative overflow-hidden transition-all ${
+        isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md'
+      } cursor-grab active:cursor-grabbing`}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
+          {/* ✅ Ícone de grip para indicar que é draggable */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          </div>
+          
           <img
             src={faviconUrl}
             alt=""

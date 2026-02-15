@@ -18,7 +18,7 @@ interface LinkFormProps {
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   editingLink?: LinkItem | null;
-  onSubmit: (data: Omit<LinkItem, "id" | "createdAt">) => void;
+  onSubmit: (data: Omit<LinkItem, "id" | "createdAt" | "position">) => void; // ✅ Remover position
 }
 
 export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit }: LinkFormProps) {

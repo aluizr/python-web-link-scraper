@@ -14,7 +14,7 @@ export function useLinks(userId: string | undefined) {
     const fetchData = async () => {
       setLoading(true);
       const [linksRes, catsRes] = await Promise.all([
-        supabase.from("links").select("*").order("created_at", { ascending: false }),
+        supabase.from("links").select("*").order("position", { ascending: true }), // ✅ Ordenar por position
         supabase.from("categories").select("*"),
       ]);
       if (linksRes.data) {
@@ -29,6 +29,7 @@ export function useLinks(userId: string | undefined) {
             isFavorite: r.is_favorite,
             favicon: r.favicon,
             createdAt: r.created_at,
+            position: r.position || 0, // ✅ Adicionar position
           }))
         );
       }
@@ -40,7 +41,7 @@ export function useLinks(userId: string | undefined) {
     fetchData();
   }, [userId]);
 
-  const addLink = useCallback(async (link: Omit<LinkItem, "id" | "createdAt">) => {
+  const addLink = useCallback(async (link: Omit<LinkItem, "id" | "createdAt" | "position">) => {
     if (!userId) return;
     const parsed = linkSchema.safeParse(link);
     if (!parsed.success) {
@@ -48,6 +49,8 @@ export function useLinks(userId: string | undefined) {
       return;
     }
     const v = parsed.data;
+    // ✅ Calcular position (novo link vai para o topo)
+    const maxPosition = Math.max(...links.map(l => l.position || 0), -1);
     const { data, error } = await supabase
       .from("links")
       .insert({
@@ -59,6 +62,7 @@ export function useLinks(userId: string | undefined) {
         is_favorite: v.isFavorite,
         favicon: v.favicon || "",
         user_id: userId,
+        position: maxPosition + 1, // ✅ Adicionar position
       })
       .select()
       .single();
@@ -73,10 +77,11 @@ export function useLinks(userId: string | undefined) {
         isFavorite: data.is_favorite,
         favicon: data.favicon,
         createdAt: data.created_at,
+        position: data.position || 0, // ✅ Adicionar position
       };
       setLinks((prev) => [newLink, ...prev]);
     }
-  }, [userId]);
+  }, [userId, links]);
 
   const updateLink = useCallback(async (id: string, data: Partial<LinkItem>) => {
     // Validate fields that are being updated
@@ -168,6 +173,30 @@ export function useLinks(userId: string | undefined) {
     }
   }, []);
 
+  // ✅ Função para reordenar links via drag & drop
+  const reorderLinks = useCallback(async (reorderedLinks: LinkItem[]) => {
+    try {
+      // Atualizar estado local imediatamente (otimista)
+      setLinks(reorderedLinks);
+      
+      // Enviar updates para o banco
+      const updates = reorderedLinks.map((link, index) => ({
+        id: link.id,
+        position: index,
+      }));
+      
+      // Executar updates em paralelo
+      await Promise.all(
+        updates.map(({ id, position }) =>
+          supabase.from("links").update({ position }).eq("id", id)
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao reordenar links:", error);
+      toast.error("Erro ao reordenar links");
+    }
+  }, []);
+
   const allTags = Array.from(new Set(links.flatMap((l) => l.tags)));
 
   return {
@@ -182,5 +211,6 @@ export function useLinks(userId: string | undefined) {
     addCategory,
     deleteCategory,
     renameCategory,
+    reorderLinks, // ✅ Adicionar função de reorder
   };
 }

@@ -8,6 +8,7 @@ export interface LinkItem {
   isFavorite: boolean;
   favicon: string;
   createdAt: string;
+  position: number; // ✅ Para drag & drop ordering
 }
 
 export interface Category {

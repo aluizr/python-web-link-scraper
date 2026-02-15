@@ -31,6 +31,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     addCategory,
     deleteCategory,
     renameCategory,
+    reorderLinks, // ✅ Adicionar função de reorder
   } = useLinks(user.id);
 
   const [filter, setFilter] = useState<FilterType>({ type: "all" });
@@ -38,6 +39,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const [formOpen, setFormOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [draggedLink, setDraggedLink] = useState<LinkItem | null>(null); // ✅ Estado para drag
 
   const filteredLinks = useMemo(() => {
     let result = links;
@@ -65,7 +67,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     return result;
   }, [links, filter, search]);
 
-  const handleSubmit = (data: Omit<LinkItem, "id" | "createdAt">) => {
+  const handleSubmit = (data: Omit<LinkItem, "id" | "createdAt" | "position">) => {
     if (editingLink) {
       updateLink(editingLink.id, data);
     } else {
@@ -77,6 +79,51 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const handleEdit = (link: LinkItem) => {
     setEditingLink(link);
     setFormOpen(true);
+  };
+
+  // ✅ Handlers para Drag & Drop
+  const handleDragStart = (e: React.DragEvent, link: LinkItem) => {
+    setDraggedLink(link);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetLink: LinkItem) => {
+    e.preventDefault();
+    
+    if (!draggedLink || draggedLink.id === targetLink.id) {
+      setDraggedLink(null);
+      return;
+    }
+
+    // Encontrar índices dos links na lista filtrada
+    const draggedIndex = filteredLinks.findIndex(l => l.id === draggedLink.id);
+    const targetIndex = filteredLinks.findIndex(l => l.id === targetLink.id);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedLink(null);
+      return;
+    }
+
+    // Criar nova lista com os links reordenados
+    const newFilteredLinks = [...filteredLinks];
+    const [movedLink] = newFilteredLinks.splice(draggedIndex, 1);
+    newFilteredLinks.splice(targetIndex, 0, movedLink);
+
+    // Reordenar TODOS os links (não apenas os filtrados)
+    const reorderedAllLinks = links.map(link => {
+      const newPosition = newFilteredLinks.findIndex(fl => fl.id === link.id);
+      return newPosition !== -1 ? { ...link, position: newPosition } : link;
+    });
+
+    // Chamar função para salvar no banco
+    reorderLinks(reorderedAllLinks);
+    setDraggedLink(null);
+    toast.success("Links reordenados!");
   };
 
   const handleExport = () => {
@@ -286,6 +333,10 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                   onToggleFavorite={toggleFavorite}
                   onEdit={handleEdit}
                   onDelete={deleteLink}
+                  onDragStart={handleDragStart} // ✅ Adicionar drag handlers
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  isDragging={draggedLink?.id === link.id}
                 />
               ))}
             </div>
