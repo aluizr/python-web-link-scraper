@@ -37,6 +37,6 @@ export default defineConfig(({ mode }) => ({
   build: {
     // ✅ Não expor source maps em produção
     sourcemap: mode !== 'production',
-    minify: 'terser',
+    minify: 'esbuild',
   },
 }));
