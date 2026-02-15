@@ -15,7 +15,7 @@ interface LinkCardProps {
   isDragging?: boolean;
 }
 
-export function LinkCard({ link, onToggleFavorite, onEdit, onDelete }: LinkCardProps) {
+export function LinkCard({ link, onToggleFavorite, onEdit, onDelete, onDragStart, onDragOver, onDrop, isDragging }: LinkCardProps) {
   // ✅ Usar serviço mais privado para favicons (icon.horse)
   const getFaviconUrl = () => {
     if (link.favicon && link.favicon.startsWith('http')) {
