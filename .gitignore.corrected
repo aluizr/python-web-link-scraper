@@ -1,3 +1,5 @@
+# .gitignore atualizado com proteção de arquivos sensíveis
+
 # Logs
 logs
 *.log
@@ -29,3 +31,24 @@ dist-ssr
 .env.*.local
 .env.prod
 .env.production
+
+# Arquivos de build privados
+.supabase/
+dist/
+build/
+
+# IDE e sistemas operacionais
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Arquivos de teste
+coverage/
+.nyc_output/
+
+# Dependências do Supabase local
+supabase/.temp/

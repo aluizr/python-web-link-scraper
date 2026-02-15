@@ -12,7 +12,22 @@ interface LinkCardProps {
 }
 
 export function LinkCard({ link, onToggleFavorite, onEdit, onDelete }: LinkCardProps) {
-  const faviconUrl = link.favicon || `https://www.google.com/s2/favicons?domain=${new URL(link.url).hostname}&sz=32`;
+  // ✅ Usar serviço mais privado para favicons (icon.horse)
+  const getFaviconUrl = () => {
+    if (link.favicon && link.favicon.startsWith('http')) {
+      return link.favicon;
+    }
+    try {
+      const hostname = new URL(link.url).hostname;
+      if (!hostname) return '/placeholder.svg';
+      // Usar icon.horse (mais privado que Google)
+      return `https://icon.horse/icon/${hostname}?size=32`;
+    } catch {
+      return '/placeholder.svg';
+    }
+  };
+  
+  const faviconUrl = getFaviconUrl();
 
   return (
     <Card className="group relative overflow-hidden transition-shadow hover:shadow-md">

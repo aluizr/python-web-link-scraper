@@ -1,3 +1,6 @@
+// vite.config.ts - VERSÃO COM HEADERS DE SEGURANÇA
+// Use este arquivo para substituir o atual
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -20,23 +23,42 @@ export default defineConfig(({ mode }) => ({
     },
     // ✅ Headers de segurança
     headers: {
+      // Previne clickjacking
       'X-Frame-Options': 'DENY',
+      // Previne MIME type sniffing
       'X-Content-Type-Options': 'nosniff',
+      // Ativa proteção de XSS no navegador
       'X-XSS-Protection': '1; mode=block',
+      // Força HTTPS
       'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+      // Referrer policy
       'Referrer-Policy': 'strict-origin-when-cross-origin',
+      // Permissions Policy (antes Feature-Policy)
       'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
     },
+    middlewareMode: false,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
-    // ✅ Não expor source maps em produção
-    sourcemap: mode !== 'production',
+    // ✅ Otimizações de segurança em build
+    sourcemap: mode !== 'production', // Não expor source maps em prod
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separar código de terceiros
+          vendor: ['react', 'react-dom', '@supabase/supabase-js'],
+        },
+      },
+    },
+    // Habilitar minification
     minify: 'terser',
   },
 }));

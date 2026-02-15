@@ -1,3 +1,6 @@
+<!-- index.html - VERSÃO COM CONTENT SECURITY POLICY -->
+<!-- Use este arquivo para substituir o atual -->
+
 <!doctype html>
 <html lang="pt-BR" class="light" style="color-scheme: light">
   <head>
@@ -5,25 +8,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- ✅ CRITICAL: Content Security Policy -->
+    <!-- Restringe de onde recursos podem ser carregados -->
     <meta 
       http-equiv="Content-Security-Policy" 
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://slzspaijayxtyjmrogcm.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" 
+      content="
+        default-src 'self';
+        script-src 'self' 'wasm-unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https:;
+        font-src 'self' data:;
+        connect-src 'self' https://slzspaijayxtyjmrogcm.supabase.co;
+        frame-ancestors 'none';
+        base-uri 'self';
+        form-action 'self';
+        upgrade-insecure-requests
+      " 
     />
     
-    <!-- ✅ Segurança adicional -->
+    <!-- ✅ Previne Clickjacking -->
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
+    
+    <!-- ✅ Segurança adicional -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta name="format-detection" content="telephone=no" />
     
+    <!-- Metadados da aplicação -->
     <title>Internet Gems Finder</title>
     <meta name="description" content="Um gerenciador elegante e seguro de links na web" />
     <meta name="author" content="Sua Empresa" />
-
+    
+    <!-- Open Graph -->
     <meta property="og:title" content="Internet Gems Finder" />
     <meta property="og:description" content="Organize seus links favoritos com estilo e segurança" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://seu-dominio.com/og-image.png" />
-
+    
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@SeuUsername" />
     <meta name="twitter:image" content="https://seu-dominio.com/og-image.png" />
@@ -36,10 +57,11 @@
     <script 
       type="module" 
       src="/src/main.tsx"
+      integrity="sha384-..."
       crossorigin="anonymous"
     ></script>
     
-    <!-- ✅ No-script fallback -->
+    <!-- ✅ No-script fallback para usuários com JS desabilidado -->
     <noscript>
       <p>Esta aplicação requer JavaScript habilitado para funcionar.</p>
     </noscript>

@@ -92,33 +92,104 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   };
 
   const handleImport = () => {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const MAX_LINKS_PER_IMPORT = 1000;
+    
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
+      
       try {
-        const text = await file.text();
-        const imported = JSON.parse(text) as LinkItem[];
-        if (!Array.isArray(imported)) throw new Error("Formato inválido");
-        let count = 0;
-        for (const item of imported) {
-          if (!item.url) continue;
-          await addLink({
-            url: item.url,
-            title: item.title || item.url,
-            description: item.description || "",
-            category: item.category || "",
-            tags: item.tags || [],
-            isFavorite: item.isFavorite || false,
-            favicon: item.favicon || "",
-          });
-          count++;
+        // ✅ Validação 1: Tamanho do arquivo
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`Arquivo muito grande (máx ${MAX_FILE_SIZE / 1024 / 1024}MB)`);
+          return;
         }
-        toast.success(`${count} link(s) importado(s) com sucesso!`);
+        
+        // ✅ Validação 2: Tipo MIME
+        if (file.type && file.type !== 'application/json') {
+          toast.error("Apenas arquivos JSON são permitidos");
+          return;
+        }
+        
+        // ✅ Validação 3: Leitura segura
+        let fileContent: string;
+        try {
+          fileContent = await file.text();
+        } catch {
+          toast.error("Erro ao ler o arquivo");
+          return;
+        }
+        
+        // ✅ Validação 4: Parsing JSON
+        let imported: any;
+        try {
+          imported = JSON.parse(fileContent);
+        } catch {
+          toast.error("Formato JSON inválido");
+          return;
+        }
+        
+        // ✅ Validação 5: Verificar se é array
+        if (!Array.isArray(imported)) {
+          toast.error("Arquivo deve conter um array de links");
+          return;
+        }
+        
+        // ✅ Validação 6: Limitar quantidade
+        if (imported.length > MAX_LINKS_PER_IMPORT) {
+          toast.error(`Máximo de ${MAX_LINKS_PER_IMPORT} links por importação`);
+          return;
+        }
+        
+        // ✅ Validação 7: Array vazio
+        if (imported.length === 0) {
+          toast.error("Nenhum link encontrado no arquivo");
+          return;
+        }
+        
+        // ✅ Processamento com validação individual
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (let index = 0; index < imported.length; index++) {
+          const item = imported[index];
+          
+          if (!item.url) {
+            errorCount++;
+            continue;
+          }
+          
+          try {
+            await addLink({
+              url: item.url,
+              title: item.title || item.url,
+              description: item.description || "",
+              category: item.category || "",
+              tags: Array.isArray(item.tags) ? item.tags : [],
+              isFavorite: Boolean(item.isFavorite),
+              favicon: item.favicon || "",
+            });
+            successCount++;
+          } catch {
+            errorCount++;
+          }
+        }
+        
+        // ✅ Feedback detalhado
+        if (successCount > 0) {
+          toast.success(`✅ ${successCount} link(s) importado(s) com sucesso!`);
+        }
+        
+        if (errorCount > 0) {
+          toast.error(`⚠️ ${errorCount} link(s) com erro`);
+        }
+        
       } catch {
-        toast.error("Erro ao importar: arquivo JSON inválido.");
+        toast.error("Erro inesperado ao importar arquivo");
       }
     };
     input.click();

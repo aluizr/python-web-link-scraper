@@ -1,3 +1,6 @@
+// src/lib/validation.ts - VERSÃO SEGURA COM PROTEÇÃO CONTRA URLs MALICIOSAS
+// Use este arquivo para substituir o atual
+
 import { z } from "zod";
 
 // ✅ Lista branca de protocolos permitidos
@@ -23,6 +26,7 @@ const MALICIOUS_PATTERNS = [
 // Validador customizado para URLs seguras
 const validateSafeUrl = (url: string): boolean => {
   try {
+    // Verificar se iniciava com protocolo permitido
     const hasAllowedProtocol = ALLOWED_PROTOCOLS.some(
       proto => url.toLowerCase().startsWith(proto)
     );
@@ -31,6 +35,7 @@ const validateSafeUrl = (url: string): boolean => {
       return false;
     }
 
+    // Verificar padrões maliciosos
     const hasMaliciousPattern = MALICIOUS_PATTERNS.some(
       pattern => pattern.test(url)
     );
@@ -39,8 +44,9 @@ const validateSafeUrl = (url: string): boolean => {
       return false;
     }
 
+    // Validar como URL se for http/https
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      new URL(url);
+      new URL(url); // Vai lançar erro se inválido
     }
 
     return true;
@@ -56,9 +62,22 @@ export const linkSchema = z.object({
     .max(2048, "URL muito longa")
     .refine(validateSafeUrl, "URL inválida ou protocolo não permitido")
     .transform(url => url.trim()),
-  title: z.string().max(255, "Título muito longo").transform(title => title.trim()),
-  description: z.string().max(1000, "Descrição muito longa").transform(desc => desc.trim()),
-  category: z.string().max(100, "Categoria muito longa").transform(cat => cat.trim()),
+    
+  title: z
+    .string()
+    .max(255, "Título muito longo")
+    .transform(title => title.trim()),
+    
+  description: z
+    .string()
+    .max(1000, "Descrição muito longa")
+    .transform(desc => desc.trim()),
+    
+  category: z
+    .string()
+    .max(100, "Categoria muito longa")
+    .transform(cat => cat.trim()),
+    
   tags: z
     .array(
       z
@@ -71,7 +90,9 @@ export const linkSchema = z.object({
       tags => tags.length === new Set(tags).size,
       "Tags duplicadas não permitidas"
     ),
+    
   isFavorite: z.boolean(),
+  
   favicon: z
     .string()
     .max(2048, "Favicon URL muito longa")

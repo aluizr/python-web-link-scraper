@@ -53,7 +53,8 @@ export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit
     if (!url) return;
     try {
       const hostname = new URL(url).hostname;
-      setFavicon(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`);
+      // ✅ Usar icon.horse (mais privado que Google)
+      setFavicon(`https://icon.horse/icon/${hostname}?size=32`);
       if (!title && !editingLink) {
         // Use hostname as fallback title
         setTitle(hostname.replace("www.", ""));
