@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   Folder, BookOpen, Code, Palette, Music, Video, Image,
-  News, Briefcase, Heart, Star, Shield, Settings, Layout,
+  Newspaper, Briefcase, Heart, Star, Shield, Settings, Layout,
   Lightbulb, Zap, TrendingUp, ShoppingCart, Archive, Tag,
   Globe, Database, Cloud, Cpu, Award, Radio, Gamepad2,
   LucideIcon
@@ -27,7 +27,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Music,
   Video,
   Image,
-  News,
+  Newspaper,
   Briefcase,
   Heart,
   Star,

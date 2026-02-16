@@ -86,7 +86,7 @@ export const linkSchema = z.object({
 // ✅ Lista de ícones Lucide suportados para categorias
 const ALLOWED_ICONS = [
   'Folder', 'BookOpen', 'Code', 'Palette', 'Music', 'Video', 'Image',
-  'News', 'Briefcase', 'Heart', 'Star', 'Shield', 'Settings', 'Layout',
+  'Newspaper', 'Briefcase', 'Heart', 'Star', 'Shield', 'Settings', 'Layout',
   'Lightbulb', 'Zap', 'Trending', 'Shopping', 'Archive', 'Tag',
   'Globe', 'Database', 'Cloud', 'Cpu', 'Award', 'Radio', 'Gamepad2'
 ];
