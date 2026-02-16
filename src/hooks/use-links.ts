@@ -183,7 +183,12 @@ export function useLinks(userId: string | undefined) {
       })
       .select()
       .single();
-    if (data && !error) {
+    if (error) {
+      console.error("Erro ao criar categoria:", error);
+      toast.error(error.message || "Erro ao criar categoria");
+      return;
+    }
+    if (data) {
       setCategories((prev) => [
         ...prev,
         { id: data.id, name: data.name, icon: data.icon, parentId: data.parent_id ?? null },
