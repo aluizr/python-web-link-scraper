@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, LayoutGrid, List, Download, Upload, LogOut } from "lucide-react";
+import { Plus, LayoutGrid, List, Download, Upload, LogOut, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { LinkCard } from "@/components/LinkCard";
 import { LinkForm } from "@/components/LinkForm";
 import { SearchBar } from "@/components/SearchBar";
+import { StatsDashboard } from "@/components/StatsDashboard";
 import { Button } from "@/components/ui/button";
 import { useLinks } from "@/hooks/use-links";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [draggedLink, setDraggedLink] = useState<LinkItem | null>(null);
+  const [statsOpen, setStatsOpen] = useState(false);
 
   const filteredLinks = getFilteredLinks();
 
@@ -254,6 +256,9 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               >
                 {viewMode === "grid" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
               </Button>
+              <Button variant="outline" size="icon" onClick={() => setStatsOpen(true)} title="Ver estatísticas">
+                <BarChart3 className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="icon" onClick={handleExport} title="Exportar links">
                 <Download className="h-4 w-4" />
               </Button>
@@ -331,6 +336,8 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         editingLink={editingLink}
         onSubmit={handleSubmit}
       />
+
+      <StatsDashboard isOpen={statsOpen} onClose={() => setStatsOpen(false)} />
     </SidebarProvider>
   );
 };
