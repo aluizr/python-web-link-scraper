@@ -70,6 +70,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     }
     setDraggedLink(link);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData("text/plain", link.id);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -85,13 +86,16 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    if (!draggedLink || draggedLink.id === targetLink.id) {
+    const dragId = draggedLink?.id || e.dataTransfer.getData("text/plain");
+    const dragItem = dragId ? links.find((l) => l.id === dragId) : null;
+
+    if (!dragItem || dragItem.id === targetLink.id) {
       setDraggedLink(null);
       return;
     }
 
     // Encontrar índices dos links na lista filtrada
-    const draggedIndex = filteredLinks.findIndex(l => l.id === draggedLink.id);
+    const draggedIndex = filteredLinks.findIndex(l => l.id === dragItem.id);
     const targetIndex = filteredLinks.findIndex(l => l.id === targetLink.id);
 
     if (draggedIndex === -1 || targetIndex === -1) {
