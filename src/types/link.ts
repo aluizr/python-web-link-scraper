@@ -16,3 +16,15 @@ export interface Category {
   name: string;
   icon: string; // ✅ Lucide icon name (e.g., "Folder", "BookOpen", etc.)
 }
+
+export type SortOption = "newest" | "oldest" | "alphabetical" | "favorites";
+export type DatePeriod = "all" | "week" | "month" | "3months" | "year";
+
+export interface SearchFilters {
+  query: string;
+  category: string | null;
+  tags: string[];
+  period: DatePeriod;
+  sort: SortOption;
+  favoritesOnly: boolean;
+}

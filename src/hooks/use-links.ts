@@ -1,13 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { linkSchema, categorySchema } from "@/lib/validation";
+import { filterAndSortLinks } from "@/lib/utils";
 import { toast } from "sonner";
-import type { LinkItem, Category } from "@/types/link";
+import type { LinkItem, Category, SearchFilters } from "@/types/link";
 
 export function useLinks(userId: string | undefined) {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    query: "",
+    category: null,
+    tags: [],
+    period: "all",
+    sort: "newest",
+    favoritesOnly: false,
+  });
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -199,11 +208,19 @@ export function useLinks(userId: string | undefined) {
 
   const allTags = Array.from(new Set(links.flatMap((l) => l.tags)));
 
+  // ✅ Função para obter links filtrados
+  const getFilteredLinks = useCallback(() => {
+    return filterAndSortLinks(links, searchFilters);
+  }, [links, searchFilters]);
+
   return {
     links,
     categories,
     allTags,
     loading,
+    searchFilters,
+    setSearchFilters,
+    getFilteredLinks,
     addLink,
     updateLink,
     deleteLink,

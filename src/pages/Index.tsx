@@ -1,18 +1,16 @@
-import { useState, useMemo } from "react";
-import { Plus, Search, LayoutGrid, List, Download, Upload, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Plus, LayoutGrid, List, Download, Upload, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { LinkCard } from "@/components/LinkCard";
 import { LinkForm } from "@/components/LinkForm";
+import { SearchBar } from "@/components/SearchBar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useLinks } from "@/hooks/use-links";
 import { toast } from "sonner";
-import type { LinkItem } from "@/types/link";
+import type { LinkItem, SearchFilters } from "@/types/link";
 import type { User } from "@supabase/supabase-js";
-
-type FilterType = { type: "all" | "favorites" | "category" | "tag"; value?: string };
 
 interface IndexProps {
   user: User;
@@ -24,6 +22,9 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     links,
     categories,
     allTags,
+    searchFilters,
+    setSearchFilters,
+    getFilteredLinks,
     addLink,
     updateLink,
     deleteLink,
@@ -31,41 +32,15 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     addCategory,
     deleteCategory,
     renameCategory,
-    reorderLinks, // ✅ Adicionar função de reorder
+    reorderLinks,
   } = useLinks(user.id);
 
-  const [filter, setFilter] = useState<FilterType>({ type: "all" });
-  const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [draggedLink, setDraggedLink] = useState<LinkItem | null>(null); // ✅ Estado para drag
+  const [draggedLink, setDraggedLink] = useState<LinkItem | null>(null);
 
-  const filteredLinks = useMemo(() => {
-    let result = links;
-
-    // Filter
-    if (filter.type === "favorites") {
-      result = result.filter((l) => l.isFavorite);
-    } else if (filter.type === "category" && filter.value) {
-      result = result.filter((l) => l.category === filter.value);
-    } else if (filter.type === "tag" && filter.value) {
-      result = result.filter((l) => l.tags.includes(filter.value!));
-    }
-
-    // Search
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (l) =>
-          l.title.toLowerCase().includes(q) ||
-          l.url.toLowerCase().includes(q) ||
-          l.description.toLowerCase().includes(q)
-      );
-    }
-
-    return result;
-  }, [links, filter, search]);
+  const filteredLinks = getFilteredLinks();
 
   const handleSubmit = (data: Omit<LinkItem, "id" | "createdAt" | "position">) => {
     if (editingLink) {
@@ -242,12 +217,13 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     input.click();
   };
 
-  const filterLabel =
-    filter.type === "all"
-      ? "Todos os Links"
-      : filter.type === "favorites"
+  const filterLabel = searchFilters.query
+    ? `Resultados para "${searchFilters.query}"`
+    : searchFilters.category
+      ? searchFilters.category
+      : searchFilters.favoritesOnly
         ? "Favoritos"
-        : filter.value || "";
+        : "Todos os Links";
 
   return (
     <SidebarProvider>
@@ -255,8 +231,8 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         <AppSidebar
           categories={categories}
           allTags={allTags}
-          activeFilter={filter}
-          onFilterChange={setFilter}
+          activeFilter={{ type: "all" }}
+          onFilterChange={() => {}}
           onAddCategory={addCategory}
           onDeleteCategory={deleteCategory}
           onRenameCategory={renameCategory}
@@ -264,22 +240,13 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
         <main className="flex-1 p-6">
           {/* Header */}
-          <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <header className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
               <h1 className="text-2xl font-bold tracking-tight">{filterLabel}</h1>
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar links..."
-                  className="pl-9"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
               <Button
                 variant="outline"
                 size="icon"
@@ -303,7 +270,16 @@ const Index = ({ user, onSignOut }: IndexProps) => {
             </div>
           </header>
 
-          {/* Links */}
+          {/* Advanced Search Bar */}
+          <SearchBar
+            filters={searchFilters}
+            onFiltersChange={setSearchFilters}
+            categories={categories}
+            allTags={allTags}
+          />
+
+          {/* Links Grid/List */}
+          <div className="mt-6">
           {filteredLinks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-lg text-muted-foreground">
@@ -341,6 +317,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               ))}
             </div>
           )}
+          </div>
         </main>
       </div>
 
