@@ -237,12 +237,24 @@ export function AppSidebar({
                       <IconComponent className="h-4 w-4" />
                       <span className="flex-1 truncate">{cat.name}</span>
                       <span className="ml-auto flex gap-0.5 opacity-0 group-hover/cat:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); }}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="cursor-pointer p-1 hover:bg-muted rounded transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setEditingId(cat.id); setEditName(cat.name); } }}
+                        >
                           <Pencil className="h-3 w-3" />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.id); }}>
+                        </div>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          className="cursor-pointer p-1 hover:bg-muted rounded transition-colors"
+                          onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.id); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onDeleteCategory(cat.id); } }}
+                        >
                           <Trash2 className="h-3 w-3 text-destructive" />
-                        </button>
+                        </div>
                       </span>
                     </SidebarMenuButton>
                   )}
