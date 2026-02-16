@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { useMetadata } from "@/hooks/use-metadata";
+import { LinkPreview } from "@/components/LinkPreview";
 import type { LinkItem, Category } from "@/types/link";
 
 interface LinkFormProps {
@@ -29,6 +31,8 @@ export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [favicon, setFavicon] = useState("");
+  const { metadata, fetchMetadata } = useMetadata();
+  const [autoFilledTitle, setAutoFilledTitle] = useState(false);
 
   useEffect(() => {
     if (editingLink) {
@@ -38,6 +42,7 @@ export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit
       setCategory(editingLink.category);
       setTags(editingLink.tags);
       setFavicon(editingLink.favicon);
+      setAutoFilledTitle(true);
     } else {
       setUrl("");
       setTitle("");
@@ -45,24 +50,38 @@ export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit
       setCategory("");
       setTags([]);
       setFavicon("");
+      setAutoFilledTitle(false);
     }
   }, [editingLink, open]);
 
-  // Auto-preview: when URL changes, try to get favicon
+  // Auto-preview: when URL changes, try to get favicon and metadata
   useEffect(() => {
     if (!url) return;
     try {
       const hostname = new URL(url).hostname;
       // ✅ Usar icon.horse (mais privado que Google)
       setFavicon(`https://icon.horse/icon/${hostname}?size=32`);
-      if (!title && !editingLink) {
-        // Use hostname as fallback title
-        setTitle(hostname.replace("www.", ""));
-      }
     } catch {
       // invalid URL, ignore
     }
-  }, [url]);
+
+    // Fetch metadata with debounce (wait 500ms after user stops typing)
+    const timer = setTimeout(() => {
+      fetchMetadata(url).then((result) => {
+        // Auto-fill title if not already set and we got a title from metadata
+        if (!editingLink && !title && result.title && !autoFilledTitle) {
+          setTitle(result.title);
+          setAutoFilledTitle(true);
+        }
+        // Auto-fill description if it's empty
+        if (!description && result.description) {
+          setDescription(result.description);
+        }
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [url, editingLink, autoFilledTitle, title, description, fetchMetadata]);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim().toLowerCase();
@@ -100,10 +119,14 @@ export function LinkForm({ open, onOpenChange, categories, editingLink, onSubmit
               id="url"
               placeholder="https://exemplo.com"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setAutoFilledTitle(false);
+              }}
               required
             />
           </div>
+          {url && <LinkPreview metadata={metadata} url={url} />}
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
             <Input
