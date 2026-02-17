@@ -34,6 +34,7 @@ interface AppSidebarProps {
   onAddCategory: (name: string, icon: string, parentId?: string | null) => void;
   onDeleteCategory: (id: string) => void;
   onRenameCategory: (id: string, name: string) => void;
+  onDropLinkToCategory?: (linkId: string, categoryName: string) => void;
 }
 
 export function AppSidebar({
@@ -44,7 +45,28 @@ export function AppSidebar({
   onAddCategory,
   onDeleteCategory,
   onRenameCategory,
+  onDropLinkToCategory,
 }: AppSidebarProps) {
+  const [dropTargetCat, setDropTargetCat] = useState<string | null>(null);
+
+  const handleCatDragOver = (e: React.DragEvent, catName: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDropTargetCat(catName);
+  };
+
+  const handleCatDragLeave = () => {
+    setDropTargetCat(null);
+  };
+
+  const handleCatDrop = (e: React.DragEvent, catName: string) => {
+    e.preventDefault();
+    const linkId = e.dataTransfer.getData("text/plain");
+    if (linkId && onDropLinkToCategory) {
+      onDropLinkToCategory(linkId, catName);
+    }
+    setDropTargetCat(null);
+  };
   const [newCat, setNewCat] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("Folder");
   const [addingCat, setAddingCat] = useState(false);
@@ -187,7 +209,10 @@ export function AppSidebar({
                       ) : (
                         <SidebarMenuButton
                           onClick={() => onFilterChange({ type: "category", value: parent.name })}
-                          className={`group/cat ${isActive("category", parent.name) ? "bg-accent text-accent-foreground font-medium" : ""}`}
+                          onDragOver={(e) => handleCatDragOver(e, parent.name)}
+                          onDragLeave={handleCatDragLeave}
+                          onDrop={(e) => handleCatDrop(e, parent.name)}
+                          className={`group/cat transition-colors ${dropTargetCat === parent.name ? "bg-primary/15 ring-1 ring-primary/40 scale-[1.02]" : ""} ${isActive("category", parent.name) ? "bg-accent text-accent-foreground font-medium" : ""}`}
                         >
                           <IconComponent className="h-4 w-4" />
                           <span className="flex-1 truncate">{parent.name}</span>
@@ -312,7 +337,10 @@ export function AppSidebar({
                           ) : (
                             <SidebarMenuButton
                               onClick={() => onFilterChange({ type: "category", value: fullName })}
-                              className={`group/cat pl-6 ${isActive("category", fullName) ? "bg-accent text-accent-foreground font-medium" : ""}`}
+                              onDragOver={(e) => handleCatDragOver(e, fullName)}
+                              onDragLeave={handleCatDragLeave}
+                              onDrop={(e) => handleCatDrop(e, fullName)}
+                              className={`group/cat pl-6 transition-colors ${dropTargetCat === fullName ? "bg-primary/15 ring-1 ring-primary/40 scale-[1.02]" : ""} ${isActive("category", fullName) ? "bg-accent text-accent-foreground font-medium" : ""}`}
                             >
                               <ChildIcon className="h-4 w-4" />
                               <span className="flex-1 truncate">{child.name}</span>

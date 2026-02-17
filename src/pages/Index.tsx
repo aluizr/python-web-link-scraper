@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
-import { Plus, LayoutGrid, List, Download, Upload, LogOut, BarChart3 } from "lucide-react";
+import { Plus, LayoutGrid, List, Download, Upload, LogOut, BarChart3, Menu } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -24,6 +25,7 @@ interface IndexProps {
 }
 
 const Index = ({ user, onSignOut }: IndexProps) => {
+  const isMobile = useIsMobile();
   const {
     links,
     categories,
@@ -163,6 +165,41 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     }
   };
 
+  // ✅ Sidebar filter handler — atualiza searchFilters
+  const handleSidebarFilter = useCallback(
+    (filter: { type: "all" | "favorites" | "category" | "tag"; value?: string }) => {
+      setSearchFilters((prev) => {
+        switch (filter.type) {
+          case "all":
+            return { ...prev, category: null, tags: [], favoritesOnly: false };
+          case "favorites":
+            return { ...prev, category: null, tags: [], favoritesOnly: true };
+          case "category":
+            return { ...prev, category: filter.value ?? null, tags: [], favoritesOnly: false };
+          case "tag":
+            return {
+              ...prev,
+              category: null,
+              favoritesOnly: false,
+              tags: filter.value ? [filter.value] : [],
+            };
+          default:
+            return prev;
+        }
+      });
+    },
+    [setSearchFilters]
+  );
+
+  // Derivar filtro ativo para highlight na sidebar
+  const activeFilter = searchFilters.favoritesOnly
+    ? { type: "favorites" as const }
+    : searchFilters.category
+      ? { type: "category" as const, value: searchFilters.category }
+      : searchFilters.tags.length === 1
+        ? { type: "tag" as const, value: searchFilters.tags[0] }
+        : { type: "all" as const };
+
   const filterLabel = searchFilters.query
     ? `Resultados para "${searchFilters.query}"`
     : searchFilters.category
@@ -177,21 +214,26 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         <AppSidebar
           categories={categories}
           allTags={allTags}
-          activeFilter={{ type: "all" }}
-          onFilterChange={() => {}}
+          activeFilter={activeFilter}
+          onFilterChange={handleSidebarFilter}
           onAddCategory={addCategory}
           onDeleteCategory={deleteCategory}
           onRenameCategory={renameCategory}
+          onDropLinkToCategory={(linkId, categoryName) => {
+            updateLink(linkId, { category: categoryName });
+            toast.success(`Link movido para "${categoryName}"`);
+            dragEnd();
+          }}
         />
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-3 md:p-6">
           {/* Header */}
-          <header className="mb-6 flex items-center justify-between">
+          <header className="mb-4 md:mb-6 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
               <h1 className="text-2xl font-bold tracking-tight">{filterLabel}</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
               <ThemeToggle />
               <Button
                 variant="outline"
@@ -204,15 +246,19 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               <Button variant="outline" size="icon" onClick={() => setStatsOpen(true)} title="Estatísticas (S)">
                 <BarChart3 className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setExportOpen(true)} title="Exportar (E)">
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={() => setImportOpen(true)} title="Importar (I)">
-                <Upload className="h-4 w-4" />
-              </Button>
-              <Button onClick={() => { setEditingLink(null); setFormOpen(true); }} title="Novo link (N)">
-                <Plus className="mr-1.5 h-4 w-4" />
-                Novo Link
+              {!isMobile && (
+                <>
+                  <Button variant="outline" size="icon" onClick={() => setExportOpen(true)} title="Exportar (E)">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => setImportOpen(true)} title="Importar (I)">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+              <Button onClick={() => { setEditingLink(null); setFormOpen(true); }} title="Novo link (N)" size={isMobile ? "icon" : "default"}>
+                <Plus className={isMobile ? "h-4 w-4" : "mr-1.5 h-4 w-4"} />
+                {!isMobile && "Novo Link"}
               </Button>
               <Button variant="ghost" size="icon" onClick={onSignOut} title="Sair">
                 <LogOut className="h-4 w-4" />
@@ -249,8 +295,8 @@ const Index = ({ user, onSignOut }: IndexProps) => {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                  : "flex flex-col gap-3"
+                  ? "grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                  : "flex flex-col gap-2 md:gap-3"
               }
             >
               {filteredLinks.map((link) => (

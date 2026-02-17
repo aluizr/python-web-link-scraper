@@ -4,12 +4,12 @@ import { CategoriesChart, TagsCloud, GrowthChart } from "./StatsCharts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
-import type { Link } from "@/types/link";
+import type { LinkItem } from "@/types/link";
 
 interface StatsDashboardProps {
   isOpen: boolean;
   onClose: () => void;
-  links: Link[];
+  links: LinkItem[];
 }
 
 export function StatsDashboard({ isOpen, onClose, links }: StatsDashboardProps) {
