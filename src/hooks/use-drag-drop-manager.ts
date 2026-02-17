@@ -21,7 +21,7 @@ export interface DragDropHistory {
  * - Drop zones visuais
  * - Suporte a teclado (Ctrl+Z, Ctrl+Y)
  */
-export function useDragDropManager(initialLinks: LinkItem[], categories: Category[]) {
+export function useDragDropManager(initialLinks: LinkItem[], categories: Category[], onReorder?: (links: LinkItem[]) => void) {
   const [dragState, setDragState] = useState<DragDropState>({
     draggedLink: null,
     dropZoneId: null,
@@ -29,45 +29,73 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     isDraggingOverCategory: false,
   });
 
-  const [history, setHistory] = useState<DragDropHistory[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [history, setHistory] = useState<DragDropHistory[]>(() => [
+    { links: initialLinks, timestamp: Date.now() }
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const autoScrollRef = useRef<NodeJS.Timeout>();
   const dragImageRef = useRef<HTMLDivElement>(null);
+  const lastLinksRef = useRef<LinkItem[]>(initialLinks);
 
-  // Inicializar histórico com estado inicial
+  // Sincronizar histórico quando links mudam externamente (de use-links)
   useEffect(() => {
-    setHistory([{ links: initialLinks, timestamp: Date.now() }]);
-    setHistoryIndex(0);
-  }, []);
+    // Se links mudaram e estamos no final do histórico
+    if (historyIndex === history.length - 1) {
+      const lastState = history[historyIndex];
+      const linksChanged = 
+        lastState?.links.length !== initialLinks.length ||
+        lastState?.links.some((l, i) => l.id !== initialLinks[i]?.id);
+      
+      if (linksChanged) {
+        setHistory((prev) => [
+          ...prev,
+          { links: initialLinks, timestamp: Date.now() }
+        ]);
+        setHistoryIndex((prev) => prev + 1);
+      }
+    }
+    lastLinksRef.current = initialLinks;
+  }, [initialLinks, historyIndex, history]);
 
   // Função para adicionar novo estado ao histórico
   const addToHistory = useCallback((links: LinkItem[]) => {
     setHistory((prev) => {
       // Remove estados futuros se voltou no histórico e faz uma ação
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({ links, timestamp: Date.now() });
-      return newHistory;
+      const currentLength = prev.length;
+      // Não usar historyIndex aqui pois pode estar desatualizado
+      // Em vez disso, sempre adicionar ao final
+      return [...prev, { links, timestamp: Date.now() }];
     });
     setHistoryIndex((prev) => prev + 1);
-  }, [historyIndex]);
+  }, []);
 
   // Undo
   const undo = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex((prev) => prev - 1);
+      const previousIndex = historyIndex - 1;
+      setHistoryIndex(previousIndex);
+      const previousLinks = history[previousIndex].links;
+      if (onReorder) {
+        onReorder(previousLinks);
+      }
     }
-  }, [historyIndex]);
+  }, [historyIndex, history, onReorder]);
 
   // Redo
   const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      setHistoryIndex((prev) => prev + 1);
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      const nextLinks = history[nextIndex].links;
+      if (onReorder) {
+        onReorder(nextLinks);
+      }
     }
-  }, [historyIndex, history.length]);
+  }, [historyIndex, history, onReorder]);
 
   // Obter estado atual do histórico
   const getCurrentLinks = useCallback((): LinkItem[] => {
-    if (historyIndex >= 0 && historyIndex < history.length) {
+    if (historyIndex >= 0 && historyIndex < history.length && history[historyIndex]) {
       return history[historyIndex].links;
     }
     return initialLinks;
@@ -175,11 +203,20 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     (dragId: string, targetId: string, isCategory?: boolean): LinkItem[] | null => {
       const currentLinks = getCurrentLinks();
       const dragIndex = currentLinks.findIndex((l) => l.id === dragId);
+      const targetIndex = currentLinks.findIndex((l) => l.id === targetId);
 
-      if (dragIndex === -1) return null;
+      if (dragIndex === -1 || targetIndex === -1) return null;
+      if (dragIndex === targetIndex) return null;
 
       const newLinks = [...currentLinks];
       const [draggedItem] = newLinks.splice(dragIndex, 1);
+
+      // Após remover, ajusta o índice de inserção
+      // Se arrastamos algo que estava ANTES do alvo, o índice diminui
+      let insertIndex = targetIndex;
+      if (dragIndex < targetIndex) {
+        insertIndex = targetIndex - 1;
+      }
 
       if (isCategory) {
         // Mover para categoria
@@ -187,12 +224,10 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
           ...draggedItem,
           category: targetId, // targetId é o nome da categoria
         };
-        newLinks.splice(dragIndex, 0, updatedLink);
+        newLinks.splice(insertIndex, 0, updatedLink);
       } else {
         // Reordenar dentro dos links
-        const targetIndex = newLinks.findIndex((l) => l.id === targetId);
-        if (targetIndex === -1) return null;
-        newLinks.splice(targetIndex, 0, draggedItem);
+        newLinks.splice(insertIndex, 0, draggedItem);
       }
 
       // Atualizar posições
@@ -201,10 +236,11 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
         position: index,
       }));
 
-      addToHistory(reordered);
+      // Não adicionar ao histórico aqui - deixar para o caller fazer
+      // O histórico será sincronizado quando initialLinks mudar
       return reordered;
     },
-    [getCurrentLinks, addToHistory]
+    [getCurrentLinks]
   );
 
   // Keyboard shortcuts
