@@ -232,37 +232,35 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     (dragId: string, targetId: string, direction?: "above" | "below", isCategory?: boolean): LinkItem[] | null => {
       // Sempre usar initialLinks como fonte de verdade
       const currentLinks = initialLinks;
-      const dragIndex = currentLinks.findIndex((l) => l.id === dragId);
-      const targetIndex = currentLinks.findIndex((l) => l.id === targetId);
+      let dragIndex = currentLinks.findIndex((l) => l.id === dragId);
+      let targetIndex = currentLinks.findIndex((l) => l.id === targetId);
 
       if (dragIndex === -1 || targetIndex === -1) return null;
       if (dragIndex === targetIndex) return null;
 
-      const newLinks = [...currentLinks];
-      const [draggedItem] = newLinks.splice(dragIndex, 1);
-
-      // Calcular índice de inserção com base na direção
-      let insertIndex = targetIndex;
+      // Criar array novo removendo o item arrastado
+      const newLinks = currentLinks.filter((_, idx) => idx !== dragIndex);
       
+      // Recalcular targetIndex depois de remover (se era depois do item arrastado)
       if (dragIndex < targetIndex) {
-        // Item estava ANTES do alvo - índice diminui após remoção
-        insertIndex = targetIndex - 1;
-      }
-      
-      // Ajustar para "below" inserir DEPOIS do alvo
-      if (direction === "below") {
-        insertIndex = insertIndex + 1;
+        targetIndex = targetIndex - 1;
       }
 
+      const draggedItem = currentLinks[dragIndex];
+      
       if (isCategory) {
         // Mover para categoria
         const updatedLink = {
           ...draggedItem,
-          category: targetId, // targetId é o nome da categoria
+          category: targetId,
         };
-        newLinks.splice(insertIndex, 0, updatedLink);
+        newLinks.splice(targetIndex, 0, updatedLink);
       } else {
-        // Reordenar dentro dos links
+        // Inserir baseado na direção
+        let insertIndex = targetIndex;
+        if (direction === "below") {
+          insertIndex = targetIndex + 1;
+        }
         newLinks.splice(insertIndex, 0, draggedItem);
       }
 
