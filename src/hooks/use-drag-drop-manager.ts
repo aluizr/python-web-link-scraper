@@ -6,6 +6,7 @@ export interface DragDropState {
   dropZoneId: string | null; // ID do link/categoria onde será inserido
   dragPreviewPosition: { x: number; y: number };
   isDraggingOverCategory: boolean;
+  dragDirection?: "above" | "below"; // Direção onde o link será inserido
 }
 
 export interface DragDropHistory {
@@ -27,6 +28,7 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     dropZoneId: null,
     dragPreviewPosition: { x: 0, y: 0 },
     isDraggingOverCategory: false,
+    dragDirection: undefined,
   });
 
   const [history, setHistory] = useState<DragDropHistory[]>(() => [
@@ -154,16 +156,26 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     []
   );
 
-  // Drag over
+  // Drag over - detecta direção do arrasto
   const handleDragOver = useCallback(
     (e: React.DragEvent, targetId?: string, isCategory?: boolean) => {
       e.preventDefault();
       e.dataTransfer!.dropEffect = "move";
 
+      // Calcular a direção com base na posição vertical do mouse
+      let dragDirection: "above" | "below" | undefined = undefined;
+      const element = e.currentTarget as HTMLElement;
+      if (element && targetId) {
+        const rect = element.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        dragDirection = e.clientY < midpoint ? "above" : "below";
+      }
+
       setDragState((prev) => ({
         ...prev,
         dropZoneId: targetId || null,
         isDraggingOverCategory: isCategory || false,
+        dragDirection,
       }));
 
       // Auto-scroll
@@ -181,6 +193,7 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
       ...prev,
       dropZoneId: null,
       isDraggingOverCategory: false,
+      dragDirection: undefined,
     }));
   }, []);
 
@@ -191,6 +204,7 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
       dropZoneId: null,
       dragPreviewPosition: { x: 0, y: 0 },
       isDraggingOverCategory: false,
+      dragDirection: undefined,
     });
 
     if (autoScrollRef.current) {
@@ -200,7 +214,7 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
 
   // Reordenar links
   const reorderLinks = useCallback(
-    (dragId: string, targetId: string, isCategory?: boolean): LinkItem[] | null => {
+    (dragId: string, targetId: string, direction?: "above" | "below", isCategory?: boolean): LinkItem[] | null => {
       const currentLinks = getCurrentLinks();
       const dragIndex = currentLinks.findIndex((l) => l.id === dragId);
       const targetIndex = currentLinks.findIndex((l) => l.id === targetId);
@@ -211,11 +225,17 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
       const newLinks = [...currentLinks];
       const [draggedItem] = newLinks.splice(dragIndex, 1);
 
-      // Após remover, ajusta o índice de inserção
-      // Se arrastamos algo que estava ANTES do alvo, o índice diminui
+      // Calcular índice de inserção com base na direção
       let insertIndex = targetIndex;
+      
       if (dragIndex < targetIndex) {
+        // Item estava ANTES do alvo - índice diminui após remoção
         insertIndex = targetIndex - 1;
+      }
+      
+      // Ajustar para "below" inserir DEPOIS do alvo
+      if (direction === "below") {
+        insertIndex = insertIndex + 1;
       }
 
       if (isCategory) {

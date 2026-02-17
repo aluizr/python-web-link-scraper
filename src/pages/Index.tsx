@@ -104,7 +104,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    const reordered = dragReorderLinks(dragId, targetLink.id);
+    const reordered = dragReorderLinks(dragId, targetLink.id, dragState.dragDirection);
     if (reordered) {
       reorderLinks(reordered);
       toast.success("Links reordenados!");
@@ -233,6 +233,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                   onDragLeave={searchFilters.sort === "manual" ? dragLeave : undefined}
                   isDragging={dragState.draggedLink?.id === link.id}
                   isDropZone={dragState.dropZoneId === link.id && dragState.draggedLink !== null}
+                  dragDirection={dragState.dragDirection}
                 />
               ))}
             </div>
