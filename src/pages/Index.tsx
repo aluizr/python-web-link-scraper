@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Plus, LayoutGrid, List, Download, Upload, LogOut, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useLinks } from "@/hooks/use-links";
 import { useDragDropManager } from "@/hooks/use-drag-drop-manager";
 import { toast } from "sonner";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { LinkItem, SearchFilters } from "@/types/link";
 import type { User } from "@supabase/supabase-js";
 
@@ -61,8 +62,19 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const [statsOpen, setStatsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredLinks = getFilteredLinks();
+
+  // ✅ Atalhos de teclado globais
+  useKeyboardShortcuts({
+    onNewLink: useCallback(() => { setEditingLink(null); setFormOpen(true); }, []),
+    onFocusSearch: useCallback(() => searchInputRef.current?.focus(), []),
+    onToggleView: useCallback(() => setViewMode((v) => (v === "grid" ? "list" : "grid")), []),
+    onOpenStats: useCallback(() => setStatsOpen(true), []),
+    onOpenExport: useCallback(() => setExportOpen(true), []),
+    onOpenImport: useCallback(() => setImportOpen(true), []),
+  });
 
   const handleSubmit = (data: Omit<LinkItem, "id" | "createdAt" | "position">) => {
     if (editingLink) {
@@ -185,19 +197,20 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                 variant="outline"
                 size="icon"
                 onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                title={`Alternar visualização (G)`}
               >
                 {viewMode === "grid" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setStatsOpen(true)} title="Ver estatísticas">
+              <Button variant="outline" size="icon" onClick={() => setStatsOpen(true)} title="Estatísticas (S)">
                 <BarChart3 className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setExportOpen(true)} title="Exportar links">
+              <Button variant="outline" size="icon" onClick={() => setExportOpen(true)} title="Exportar (E)">
                 <Download className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setImportOpen(true)} title="Importar links">
+              <Button variant="outline" size="icon" onClick={() => setImportOpen(true)} title="Importar (I)">
                 <Upload className="h-4 w-4" />
               </Button>
-              <Button onClick={() => { setEditingLink(null); setFormOpen(true); }}>
+              <Button onClick={() => { setEditingLink(null); setFormOpen(true); }} title="Novo link (N)">
                 <Plus className="mr-1.5 h-4 w-4" />
                 Novo Link
               </Button>
@@ -209,6 +222,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
           {/* Advanced Search Bar */}
           <SearchBar
+            ref={searchInputRef}
             filters={searchFilters}
             onFiltersChange={setSearchFilters}
             categories={categories}

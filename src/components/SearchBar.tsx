@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Search, X, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,12 @@ interface SearchBarProps {
   allTags: string[];
 }
 
-export function SearchBar({
+export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar({
   filters,
   onFiltersChange,
   categories,
   allTags,
-}: SearchBarProps) {
+}, ref) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedTagForAdd, setSelectedTagForAdd] = useState<string>("");
 
@@ -118,9 +118,10 @@ export function SearchBar({
       <div className="flex items-center gap-2">
         <Search className="h-4 w-4 text-muted-foreground" />
         <Input
+          ref={ref}
           id="search-query"
           name="searchQuery"
-          placeholder="Buscar por título, URL, descrição, tags..."
+          placeholder="Buscar por título, URL, descrição, tags... ( / )"
           value={filters.query}
           onChange={(e) => handleQueryChange(e.target.value)}
           className="flex-1"
@@ -261,4 +262,4 @@ export function SearchBar({
       )}
     </div>
   );
-}
+});
