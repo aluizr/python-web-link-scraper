@@ -105,12 +105,29 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    // Reordenar: item sempre toma a posição do alvo
-    const reordered = dragReorderLinks(dragId, targetLink.id);
-    if (reordered) {
-      reorderLinks(reordered);
-      toast.success("Links reordenados!");
+    // Usar filteredLinks (ordem visual) como fonte de verdade
+    const dragIndex = filteredLinks.findIndex((l) => l.id === dragId);
+    const targetIndex = filteredLinks.findIndex((l) => l.id === targetLink.id);
+
+    if (dragIndex === -1 || targetIndex === -1) {
+      dragEnd();
+      return;
     }
+
+    // Criar nova ordem: remover item arrastado e inserir na posição do alvo
+    const newOrder = filteredLinks.filter((_, i) => i !== dragIndex);
+    const draggedItem = filteredLinks[dragIndex];
+    const insertIndex = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    newOrder.splice(insertIndex, 0, draggedItem);
+
+    // Atualizar positions
+    const reordered = newOrder.map((link, index) => ({
+      ...link,
+      position: index,
+    }));
+
+    reorderLinks(reordered);
+    toast.success("Links reordenados!");
     dragEnd();
   };
 
