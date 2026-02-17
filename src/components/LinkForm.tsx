@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { X, AlertCircle, Link2 } from "lucide-react";
+import { X, AlertCircle, Link2, StickyNote } from "lucide-react";
 import { useMetadata } from "@/hooks/use-metadata";
 import { useLinkDraft } from "@/hooks/use-link-draft";
 import { useDuplicateDetector } from "@/hooks/use-duplicate-detector";
@@ -37,6 +37,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   const [selectedChildId, setSelectedChildId] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
   const [favicon, setFavicon] = useState("");
   const [showDraftRecovery, setShowDraftRecovery] = useState(false);
   const [forceAllowDuplicate, setForceAllowDuplicate] = useState(false);
@@ -77,6 +78,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       setSelectedParentId(selection.parentId);
       setSelectedChildId(selection.childId);
       setTags(editingLink.tags);
+      setNotes(editingLink.notes || "");
       setFavicon(editingLink.favicon);
       setAutoFilledTitle(true);
       setShowDraftRecovery(false);
@@ -98,6 +100,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         setSelectedParentId("");
         setSelectedChildId("");
         setTags([]);
+        setNotes("");
         setFavicon("");
         setAutoFilledTitle(false);
         setForceAllowDuplicate(false);
@@ -153,6 +156,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         url,
         title,
         description,
+        notes,
         selectedParentId,
         selectedChildId,
         tags,
@@ -163,7 +167,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
-  }, [url, title, description, selectedParentId, selectedChildId, tags, favicon, editingLink, saveDraft]);
+  }, [url, title, description, notes, selectedParentId, selectedChildId, tags, favicon, editingLink, saveDraft]);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim().toLowerCase();
@@ -196,6 +200,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       description: description.trim(),
       category: categoryValue,
       tags,
+      notes: notes.trim(),
       isFavorite: editingLink?.isFavorite ?? false,
       favicon,
     });
@@ -210,6 +215,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       setUrl(draft.url);
       setTitle(draft.title);
       setDescription(draft.description);
+      setNotes(draft.notes || "");
       setSelectedParentId(draft.selectedParentId);
       setSelectedChildId(draft.selectedChildId);
       setTags(draft.tags);
@@ -226,6 +232,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     setUrl("");
     setTitle("");
     setDescription("");
+    setNotes("");
     setSelectedParentId("");
     setSelectedChildId("");
     setTags([]);
@@ -370,6 +377,20 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes" className="flex items-center gap-1.5">
+              <StickyNote className="h-3.5 w-3.5" />
+              Notas pessoais
+            </Label>
+            <Textarea
+              id="notes"
+              placeholder="Anotações, lembretes, observações..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              className="text-sm"
             />
           </div>
           <div className="space-y-2">

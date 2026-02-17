@@ -13,6 +13,7 @@ function makeLink(overrides: Partial<LinkItem> = {}): LinkItem {
     tags: [],
     isFavorite: false,
     favicon: "",
+    notes: "",
     createdAt: "2025-01-15T12:00:00Z",
     position: 0,
     ...overrides,

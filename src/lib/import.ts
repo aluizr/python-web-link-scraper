@@ -32,6 +32,7 @@ export function parseCSV(content: string): ImportResult {
   const tagsIdx = headers.findIndex(h => h.includes('tags') || h.includes('tag'));
   const favoriteIdx = headers.findIndex(h => h.includes('favorite') || h.includes('fav'));
   const descriptionIdx = headers.findIndex(h => h.includes('description') || h.includes('desc'));
+  const notesIdx = headers.findIndex(h => h.includes('notes') || h.includes('nota'));
 
   // Parse data rows
   for (let i = 1; i < lines.length; i++) {
@@ -48,6 +49,7 @@ export function parseCSV(content: string): ImportResult {
       const tagsStr = fields[tagsIdx]?.trim() || '';
       const favoriteStr = fields[favoriteIdx]?.trim().toLowerCase() || 'no';
       const description = fields[descriptionIdx]?.trim() || undefined;
+      const notes = fields[notesIdx]?.trim() || '';
 
       const tags = tagsStr
         ? tagsStr.split(';').map(t => t.trim()).filter(Boolean)
@@ -61,6 +63,7 @@ export function parseCSV(content: string): ImportResult {
         category: category || '',
         tags,
         description,
+        notes,
         isFavorite,
         favicon: '',
       };
@@ -149,6 +152,7 @@ export function parseHTML(content: string): ImportResult {
   const tagsIdx = headers.findIndex(h => h.includes('tags') || h.includes('tag'));
   const favoriteIdx = headers.findIndex(h => h.includes('fav'));
   const descriptionIdx = headers.findIndex(h => h.includes('description'));
+  const notesIdx = headers.findIndex(h => h.includes('notes') || h.includes('nota'));
 
   const links: Omit<LinkItem, "id" | "createdAt" | "position">[] = [];
   const errors: Array<{ row: number; error: string }> = [];
@@ -172,6 +176,7 @@ export function parseHTML(content: string): ImportResult {
       const tagsStr = texts[tagsIdx]?.trim() || '';
       const favoriteStr = texts[favoriteIdx]?.trim().toLowerCase() || 'no';
       const description = texts[descriptionIdx]?.trim() || undefined;
+      const notes = texts[notesIdx]?.trim() || '';
 
       const tags = tagsStr
         ? tagsStr.split(';').map(t => t.trim()).filter(Boolean)
@@ -184,6 +189,7 @@ export function parseHTML(content: string): ImportResult {
         category: category || '',
         tags,
         description,
+        notes,
         isFavorite,
         favicon: '',
       };
@@ -228,6 +234,7 @@ export function parseJSON(content: string): ImportResult {
           category: item.category || '',
           tags: Array.isArray(item.tags) ? item.tags : [],
           description: item.description,
+          notes: item.notes || '',
           isFavorite: !!item.isFavorite,
           favicon: item.favicon || '',
         };
@@ -278,6 +285,7 @@ export function parseBookmarks(content: string): ImportResult {
           category: link.category || '',
           tags: [],
           description: link.description,
+          notes: '',
           isFavorite: false,
           favicon: link.favicon,
         };

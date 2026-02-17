@@ -22,6 +22,7 @@ export function filterAndSortLinks(
         link.description,
         link.url,
         link.category,
+        link.notes,
         ...link.tags,
       ]
         .join(" ")

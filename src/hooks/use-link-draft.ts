@@ -4,6 +4,7 @@ export interface LinkDraft {
   url: string;
   title: string;
   description: string;
+  notes: string;
   selectedParentId: string;
   selectedChildId: string;
   tags: string[];

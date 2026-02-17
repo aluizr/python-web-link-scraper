@@ -1,4 +1,4 @@
-import { Star, ExternalLink, Pencil, Trash2, GripVertical } from "lucide-react";
+import { Star, ExternalLink, Pencil, Trash2, GripVertical, StickyNote } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,7 +159,18 @@ export function LinkCard({
                   {tag}
                 </Badge>
               ))}
+              {link.notes && (
+                <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground" title="Tem notas">
+                  <StickyNote className="h-3 w-3" />
+                </span>
+              )}
             </div>
+
+            {link.notes && (
+              <div className="mt-2 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground leading-relaxed whitespace-pre-line line-clamp-3">
+                {link.notes}
+              </div>
+            )}
           </div>
 
           <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">

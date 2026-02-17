@@ -71,6 +71,7 @@ export const linkSchema = z.object({
       tags => tags.length === new Set(tags).size,
       "Tags duplicadas não permitidas"
     ),
+  notes: z.string().max(5000, "Notas muito longas").transform(n => n.trim()).optional().default(""),
   isFavorite: z.boolean(),
   favicon: z
     .string()

@@ -41,6 +41,7 @@ export function useLinks(userId: string | undefined) {
             tags: r.tags || [],
             isFavorite: r.is_favorite,
             favicon: r.favicon,
+            notes: r.notes || "",
             createdAt: r.created_at,
             position: r.position || 0, // ✅ Adicionar position
           }))
@@ -81,6 +82,7 @@ export function useLinks(userId: string | undefined) {
         tags: v.tags,
         is_favorite: v.isFavorite,
         favicon: v.favicon || "",
+        notes: v.notes || "",
         user_id: userId,
         position: maxPosition + 1, // ✅ Adicionar position
       })
@@ -96,6 +98,7 @@ export function useLinks(userId: string | undefined) {
         tags: data.tags || [],
         isFavorite: data.is_favorite,
         favicon: data.favicon,
+        notes: data.notes || "",
         createdAt: data.created_at,
         position: data.position || 0, // ✅ Adicionar position
       };
@@ -129,6 +132,7 @@ export function useLinks(userId: string | undefined) {
     }
     if (data.isFavorite !== undefined) partial.is_favorite = data.isFavorite;
     if (data.favicon !== undefined) partial.favicon = data.favicon;
+    if (data.notes !== undefined) partial.notes = data.notes;
 
     const { error } = await supabase.from("links").update(partial).eq("id", id);
     if (!error) {

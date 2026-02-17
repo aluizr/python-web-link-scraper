@@ -12,6 +12,7 @@ function makeLink(overrides: Partial<LinkItem> = {}): LinkItem {
     tags: ["tag1", "tag2"],
     isFavorite: false,
     favicon: "",
+    notes: "",
     createdAt: "2025-01-15T12:00:00Z",
     position: 0,
     ...overrides,
@@ -33,7 +34,7 @@ describe("exportAsCSV", () => {
     const blob = exportAsCSV([makeLink()]);
     const text = await blobToText(blob);
     const firstLine = text.split("\n")[0];
-    expect(firstLine).toBe("Title,URL,Category,Tags,Favorite,Description,Created At");
+    expect(firstLine).toBe("Title,URL,Category,Tags,Favorite,Description,Notes,Created At");
   });
 
   it("exports link data in correct columns", async () => {
