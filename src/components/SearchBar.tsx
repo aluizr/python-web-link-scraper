@@ -85,7 +85,7 @@ export function SearchBar({
       category: null,
       tags: [],
       period: "all",
-      sort: "newest",
+      sort: "manual",
       favoritesOnly: false,
     });
     setShowAdvanced(false);

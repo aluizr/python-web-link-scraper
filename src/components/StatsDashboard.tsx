@@ -1,18 +1,18 @@
 import { useStats } from "@/hooks/use-stats";
-import { useLinks } from "@/hooks/use-links";
 import { StatsOverview } from "./StatsOverview";
 import { CategoriesChart, TagsCloud, GrowthChart } from "./StatsCharts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
+import type { Link } from "@/types/link";
 
 interface StatsDashboardProps {
   isOpen: boolean;
   onClose: () => void;
+  links: Link[];
 }
 
-export function StatsDashboard({ isOpen, onClose }: StatsDashboardProps) {
-  const { links } = useLinks();
+export function StatsDashboard({ isOpen, onClose, links }: StatsDashboardProps) {
   const { basicStats, categoryStats, tagStats, growthData, timelineStats } = useStats(links);
 
   return (

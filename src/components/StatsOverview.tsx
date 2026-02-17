@@ -57,7 +57,7 @@ export function StatsOverview({ basicStats, timelineStats }: StatsOverviewProps)
           icon={<Star className="h-4 w-4 text-white" />}
           label="Favoritos"
           value={basicStats.totalFavorites}
-          trend={`${((basicStats.totalFavorites / basicStats.totalLinks) * 100).toFixed(1)}% do total`}
+          trend={`${basicStats.totalLinks > 0 ? ((basicStats.totalFavorites / basicStats.totalLinks) * 100).toFixed(1) : '0.0'}% do total`}
           color="bg-yellow-500"
         />
         <StatCard

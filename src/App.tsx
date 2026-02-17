@@ -1,48 +1,64 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
-import Index from "./pages/Index";
+import { StrictMode, lazy, Suspense, useMemo } from "react";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Lazy load da página principal (inclui recharts via StatsDashboard)
+const Index = lazy(() => import("./pages/Index"));
+
+const LoadingSpinner = () => (
+  <div className="flex min-h-screen items-center justify-center">Carregando...</div>
+);
 
 function AppRoutes() {
   const { user, loading, signIn, signUp, signOut } = useAuth();
 
+  // Memoizar router para não recriar a cada render
+  const router = useMemo(
+    () =>
+      createBrowserRouter(
+        [
+          {
+            path: "/",
+            element: (
+              <Suspense fallback={<LoadingSpinner />}>
+                <Index user={user!} onSignOut={signOut} />
+              </Suspense>
+            ),
+          },
+          { path: "*", element: <NotFound /> },
+        ],
+        { future: { v7_startTransition: true } }
+      ),
+    [user, signOut]
+  );
+
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center">Carregando...</div>;
+    return <LoadingSpinner />;
   }
 
   if (!user) {
     return <Auth onSignIn={signIn} onSignUp={signUp} />;
   }
 
-  const router = createBrowserRouter(
-    [
-      { path: "/", element: <Index user={user} onSignOut={signOut} /> },
-      { path: "*", element: <NotFound /> },
-    ],
-    { future: { v7_startTransition: true } }
-  );
-
   return <RouterProvider router={router} />;
 }
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-    <QueryClientProvider client={queryClient}>
+  <StrictMode>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <AppRoutes />
       </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
+    </ThemeProvider>
+  </StrictMode>
 );
 
 export default App;

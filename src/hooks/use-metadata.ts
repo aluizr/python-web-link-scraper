@@ -9,10 +9,54 @@ export interface LinkMetadata {
   error: string | null;
 }
 
-// Simple cache for metadata requests
-const metadataCache = new Map<string, LinkMetadata>();
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
-const cacheTimestamps = new Map<string, number>();
+// LRU cache with bounded size for metadata requests
+class LRUCache<K, V> {
+  private maxSize: number;
+  private cache = new Map<K, { value: V; timestamp: number }>();
+  private expiry: number;
+
+  constructor(maxSize = 100, expiryMs = 24 * 60 * 60 * 1000) {
+    this.maxSize = maxSize;
+    this.expiry = expiryMs;
+  }
+
+  get(key: K): V | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
+    if (Date.now() - entry.timestamp > this.expiry) {
+      this.cache.delete(key);
+      return undefined;
+    }
+    // Move to end (most recently used)
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    return entry.value;
+  }
+
+  set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Evict oldest entry (first in Map iteration order)
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) this.cache.delete(oldest);
+    }
+    this.cache.set(key, { value, timestamp: Date.now() });
+  }
+}
+
+const metadataCache = new LRUCache<string, LinkMetadata>(100);
+
+/** Normalize URL for consistent cache keys */
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    // Remove trailing slash, lowercase host
+    return u.origin.toLowerCase() + u.pathname.replace(/\/+$/, "") + u.search + u.hash;
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
 
 /**
  * Try to extract metadata using Microlink API with fallback
@@ -132,9 +176,9 @@ export function useMetadata() {
     }
 
     // Check cache first
-    const cached = metadataCache.get(url);
-    const cacheTime = cacheTimestamps.get(url);
-    if (cached && cacheTime && Date.now() - cacheTime < CACHE_EXPIRY) {
+    const cacheKey = normalizeUrl(url);
+    const cached = metadataCache.get(cacheKey);
+    if (cached) {
       setMetadata(cached);
       return cached;
     }
@@ -179,8 +223,7 @@ export function useMetadata() {
       }
 
       // Update cache
-      metadataCache.set(url, result);
-      cacheTimestamps.set(url, Date.now());
+      metadataCache.set(cacheKey, result);
 
       setMetadata(result);
       return result;
@@ -196,8 +239,7 @@ export function useMetadata() {
       };
       
       // Still cache the result
-      metadataCache.set(url, result);
-      cacheTimestamps.set(url, Date.now());
+      metadataCache.set(cacheKey, result);
       
       setMetadata(result);
       return result;

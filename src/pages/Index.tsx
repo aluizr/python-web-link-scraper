@@ -287,7 +287,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         }}
       />
 
-      <StatsDashboard isOpen={statsOpen} onClose={() => setStatsOpen(false)} />
+      <StatsDashboard isOpen={statsOpen} onClose={() => setStatsOpen(false)} links={links} />
 
       <ExportFormatDialog isOpen={exportOpen} onClose={() => setExportOpen(false)} links={links} categories={categories} />
 

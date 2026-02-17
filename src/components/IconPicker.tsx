@@ -1,11 +1,5 @@
 import * as React from "react";
-import {
-  Folder, BookOpen, Code, Palette, Music, Video, Image,
-  Newspaper, Briefcase, Heart, Star, Shield, Settings, Layout,
-  Lightbulb, Zap, TrendingUp, ShoppingCart, Archive, Tag,
-  Globe, Database, Cloud, Cpu, Award, Radio, Gamepad2,
-  LucideIcon
-} from "lucide-react";
+import { ICON_MAP, ICON_NAMES } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -18,38 +12,6 @@ interface IconPickerProps {
   value: string;
   onSelect: (icon: string) => void;
 }
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  Folder,
-  BookOpen,
-  Code,
-  Palette,
-  Music,
-  Video,
-  Image,
-  Newspaper,
-  Briefcase,
-  Heart,
-  Star,
-  Shield,
-  Settings,
-  Layout,
-  Lightbulb,
-  Zap,
-  Trending: TrendingUp,
-  Shopping: ShoppingCart,
-  Archive,
-  Tag,
-  Globe,
-  Database,
-  Cloud,
-  Cpu,
-  Award,
-  Radio,
-  Gamepad2,
-};
-
-const ICON_NAMES = Object.keys(ICON_MAP);
 
 export function IconPicker({ value, onSelect }: IconPickerProps) {
   const CurrentIcon = ICON_MAP[value] || ICON_MAP.Folder;

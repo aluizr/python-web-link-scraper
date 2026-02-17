@@ -2,6 +2,30 @@ import type { LinkItem } from "@/types/link";
 import { linksToBookmarksHTML } from "@/lib/bookmarks-parser";
 
 /**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Safely extract hostname from URL
+ */
+function safeHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Escape CSV special characters
  */
 function escapeCSV(value: string | null | undefined): string {
@@ -168,7 +192,7 @@ export function exportAsHTML(links: LinkItem[], collectionName: string = 'Links'
 </head>
 <body>
     <div class="container">
-        <h1>📚 ${collectionName}</h1>
+        <h1>📚 ${escapeHtml(collectionName)}</h1>
         <div class="info">
             <span>📊 Total: <strong>${links.length}</strong> links</span>
             <span>⭐ Favoritos: <strong>${links.filter(l => l.isFavorite).length}</strong></span>
@@ -193,20 +217,20 @@ export function exportAsHTML(links: LinkItem[], collectionName: string = 'Links'
                   .map(
                     (link) => `
                     <tr>
-                        <td><strong>${link.title}</strong></td>
-                        <td><a href="${link.url}" class="url" target="_blank">${new URL(link.url).hostname}</a></td>
+                        <td><strong>${escapeHtml(link.title)}</strong></td>
+                        <td><a href="${escapeHtml(link.url)}" class="url" target="_blank" rel="noopener noreferrer">${escapeHtml(safeHostname(link.url))}</a></td>
                         <td>
                             ${link.category
-                              ? `<span class="category-badge" style="background: ${getCategoryColor(link.category)}">${link.category}</span>`
+                              ? `<span class="category-badge" style="background: ${getCategoryColor(link.category)}">${escapeHtml(link.category)}</span>`
                               : '-'}
                         </td>
                         <td>
                             <div class="tags">
-                                ${link.tags.map((tag) => `<span class="tag">${tag}</span>`).join('')}
+                                ${link.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                             </div>
                         </td>
                         <td>${link.isFavorite ? '<span class="favorite">★</span>' : '○'}</td>
-                        <td class="description">${link.description || '-'}</td>
+                        <td class="description">${escapeHtml(link.description) || '-'}</td>
                         <td>${new Date(link.createdAt).toLocaleDateString('pt-BR')}</td>
                     </tr>
                 `
