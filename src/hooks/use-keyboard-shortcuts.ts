@@ -82,7 +82,12 @@ export function useKeyboardShortcuts(actions: KeyboardShortcutActions) {
           break;
         case "d":
           e.preventDefault();
-          setTheme(theme === "dark" ? "light" : "dark");
+          {
+            const allThemes = ["light", "dark", "ocean", "sunset", "forest", "rose", "lavender", "midnight"];
+            const currentIndex = allThemes.indexOf(theme ?? "light");
+            const nextIndex = (currentIndex + 1) % allThemes.length;
+            setTheme(allThemes[nextIndex]);
+          }
           break;
         case "s":
           e.preventDefault();
