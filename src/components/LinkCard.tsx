@@ -86,7 +86,7 @@ export function LinkCard({
       data-card-id={link.id}
       className={`group relative overflow-hidden transition-all duration-200 border-2 ${
         isDragging
-          ? "opacity-25 scale-[0.97] shadow-none border-dashed border-primary/40 bg-primary/5 pointer-events-none"
+          ? "opacity-25 scale-[0.97] shadow-none border-dashed border-primary/40 bg-primary/5"
           : ""
       } ${isDropZone && !isDragging
           ? "border-primary/50 bg-primary/10 shadow-lg shadow-primary/10 scale-[1.02] ring-1 ring-primary/30"
