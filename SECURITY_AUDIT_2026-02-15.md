@@ -1,5 +1,5 @@
 # Security Audit Report — February 15, 2026
-**Project:** Internet Gems Finder  
+**Project:** WebNest  
 **Date:** 2026-02-15  
 **Status:** ✅ **IMPROVED** (from critical → manageable)
 

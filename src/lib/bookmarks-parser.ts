@@ -158,7 +158,7 @@ export function linksToBookmarksHTML(
 
   // Gerar HTML com estrutura de bookmarks
   let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<!-- Exportado de Internet Gems Finder em ${new Date().toLocaleString()} -->
+<!-- Exportado de WebNest em ${new Date().toLocaleString()} -->
 <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <TITLE>Bookmarks</TITLE>
 <H1>Bookmarks</H1>

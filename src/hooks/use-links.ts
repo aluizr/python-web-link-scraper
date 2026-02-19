@@ -3,6 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { linkSchema, categorySchema } from "@/lib/validation";
 import { filterAndSortLinks } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  cacheLinks,
+  cacheCategories,
+  getCachedLinks,
+  getCachedCategories,
+  addPendingAction,
+} from "@/lib/offline-cache";
 import type { LinkItem, Category, SearchFilters } from "@/types/link";
 
 export function useLinks(userId: string | undefined) {
@@ -26,41 +33,62 @@ export function useLinks(userId: string | undefined) {
     if (!userId) { setLoading(false); return; }
     const fetchData = async () => {
       setLoading(true);
+
+      // ✅ Se estiver offline, carregar do cache local
+      if (!navigator.onLine) {
+        const cachedLinks = getCachedLinks();
+        const cachedCats = getCachedCategories();
+        if (cachedLinks) setLinks(cachedLinks);
+        if (cachedCats) setCategories(cachedCats);
+        setLoading(false);
+        toast.info("Modo offline — exibindo dados salvos localmente");
+        return;
+      }
+
       const [linksRes, catsRes] = await Promise.all([
         supabase.from("links").select("*").order("position", { ascending: true }), // ✅ Ordenar por position
         supabase.from("categories").select("*"),
       ]);
       if (linksRes.data) {
-        setLinks(
-          linksRes.data.map((r: any) => ({
-            id: r.id,
-            url: r.url,
-            title: r.title,
-            description: r.description,
-            category: r.category,
-            tags: r.tags || [],
-            isFavorite: r.is_favorite,
-            favicon: r.favicon,
-            notes: r.notes || "",
-            createdAt: r.created_at,
-            position: r.position || 0, // ✅ Adicionar position
-          }))
-        );
+        const mappedLinks = linksRes.data.map((r: any) => ({
+          id: r.id,
+          url: r.url,
+          title: r.title,
+          description: r.description,
+          category: r.category,
+          tags: r.tags || [],
+          isFavorite: r.is_favorite,
+          favicon: r.favicon,
+          notes: r.notes || "",
+          createdAt: r.created_at,
+          position: r.position || 0, // ✅ Adicionar position
+        }));
+        setLinks(mappedLinks);
+        cacheLinks(mappedLinks); // ✅ Salvar no cache offline
       }
       if (catsRes.data) {
-        setCategories(
-          catsRes.data.map((r: any) => ({
-            id: r.id,
-            name: r.name,
-            icon: r.icon || "Folder",
-            parentId: r.parent_id ?? null,
-          }))
-        );
+        const mappedCats = catsRes.data.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          icon: r.icon || "Folder",
+          parentId: r.parent_id ?? null,
+        }));
+        setCategories(mappedCats);
+        cacheCategories(mappedCats); // ✅ Salvar no cache offline
       }
       setLoading(false);
     };
     fetchData();
   }, [userId]);
+
+  // ✅ Manter cache offline sincronizado quando dados mudam
+  useEffect(() => {
+    if (links.length > 0) cacheLinks(links);
+  }, [links]);
+
+  useEffect(() => {
+    if (categories.length > 0) cacheCategories(categories);
+  }, [categories]);
 
   const addLink = useCallback(async (link: Omit<LinkItem, "id" | "createdAt" | "position">) => {
     if (!userId) return;

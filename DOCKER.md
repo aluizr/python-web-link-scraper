@@ -33,10 +33,10 @@ docker-compose -f docker-compose.dev.yml up
 
 ```bash
 # Construir imagem
-docker build -t internet-gems-finder:latest .
+docker build -t webnest:latest .
 
 # Executar container
-docker run -p 3000:3000 internet-gems-finder:latest
+docker run -p 3000:3000 webnest:latest
 
 # Acessar em http://localhost:3000
 ```
@@ -45,10 +45,10 @@ docker run -p 3000:3000 internet-gems-finder:latest
 
 ```bash
 # Construir imagem Nginx
-docker build -f Dockerfile.nginx -t internet-gems-finder:nginx .
+docker build -f Dockerfile.nginx -t webnest:nginx .
 
 # Executar container
-docker run -p 80:80 internet-gems-finder:nginx
+docker run -p 80:80 webnest:nginx
 
 # Acessar em http://localhost
 ```
@@ -145,12 +145,12 @@ docker ps -a
 
 ### Ver logs
 ```bash
-docker logs -f internet-gems-finder
+docker logs -f webnest
 ```
 
 ### Acessar container
 ```bash
-docker exec -it internet-gems-finder sh
+docker exec -it webnest sh
 ```
 
 ### Verificar health
@@ -164,18 +164,18 @@ curl http://localhost/health
 ### Docker Hub
 ```bash
 # Tag
-docker tag internet-gems-finder:latest seu-usuario/internet-gems-finder:latest
+docker tag webnest:latest seu-usuario/webnest:latest
 
 # Login
 docker login
 
 # Push
-docker push seu-usuario/internet-gems-finder:latest
+docker push seu-usuario/webnest:latest
 ```
 
 ### Registries Privados
 ```bash
-docker tag internet-gems-finder:latest registry.example.com/gems:latest
+docker tag webnest:latest registry.example.com/webnest:latest
 docker login registry.example.com
 docker push registry.example.com/gems:latest
 ```
@@ -256,7 +256,7 @@ docker build --no-cache -f Dockerfile.nginx .
 ### Port já em uso
 ```bash
 # Mudar port
-docker run -p 8080:80 internet-gems-finder:nginx
+docker run -p 8080:80 webnest:nginx
 ```
 
 ### Container não inicia

@@ -1,4 +1,4 @@
-# 🔒 Relatório de Auditoria de Segurança - Internet Gems Finder
+# 🔒 Relatório de Auditoria de Segurança - WebNest
 
 **Data:** 15 de Fevereiro de 2026  
 **Status:** ⚠️ VULNERABILIDADES CRÍTICAS ENCONTRADAS  
@@ -227,7 +227,7 @@ Adicionar a `index.html`:
     base-uri 'self';
     form-action 'self'
   ">
-  <title>Internet Gems Finder</title>
+  <title>WebNest</title>
 </head>
 ```
 

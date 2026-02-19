@@ -5,6 +5,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { StrictMode, lazy, Suspense, useMemo } from "react";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { usePWA } from "@/hooks/use-pwa";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -17,6 +19,7 @@ const LoadingSpinner = () => (
 
 function AppRoutes() {
   const { user, loading, signIn, signUp, signOut } = useAuth();
+  usePWA(); // ✅ Registrar service worker e detectar atualizações
 
   // Memoizar router para não recriar a cada render
   const router = useMemo(
@@ -60,6 +63,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <OfflineIndicator />
         <AppRoutes />
       </TooltipProvider>
     </ThemeProvider>

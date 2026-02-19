@@ -85,7 +85,7 @@ export function exportAsHTML(links: LinkItem[], collectionName: string = 'Links'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${collectionName} - Internet Gems Finder</title>
+    <title>${collectionName} - WebNest</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -242,7 +242,7 @@ export function exportAsHTML(links: LinkItem[], collectionName: string = 'Links'
             </tbody>
         </table>
         <div class="footer">
-            <p>Exportado por Internet Gems Finder • ${new Date().toLocaleString('pt-BR')}</p>
+            <p>Exportado por WebNest • ${new Date().toLocaleString('pt-BR')}</p>
         </div>
     </div>
 </body>

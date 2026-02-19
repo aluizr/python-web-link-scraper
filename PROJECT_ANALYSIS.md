@@ -1,4 +1,4 @@
-# Análise Geral do Projeto — Internet Gems Finder
+# Análise Geral do Projeto — WebNest
 
 **Data:** 16 de Fevereiro, 2026  
 **Framework:** React 18.3 + Vite 7.3 + TypeScript 5.8  
@@ -11,7 +11,7 @@
 ## 📁 Estrutura de Pastas
 
 ```
-internet-gems-finder/
+webnest/
 ├── src/
 │   ├── components/          # Componentes React
 │   │   ├── ui/              # Componentes Shadcn/UI (gerado)
