@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { enforceRateLimit, RateLimitError } from "@/lib/rate-limiter";
-import { logger } from "@/lib/logger";
+import { logger, identifyUser, clearUserIdentity } from "@/lib/logger";
 import type { User, Session } from "@supabase/supabase-js";
 
 export function useAuth() {
@@ -23,9 +23,9 @@ export function useAuth() {
 
       // Identificar/limpar usuário no logger
       if (session?.user) {
-        logger.identifyUser(session.user.id, session.user.email);
+        identifyUser(session.user.id, session.user.email);
       } else {
-        logger.clearUserIdentity();
+        clearUserIdentity();
       }
     });
 
