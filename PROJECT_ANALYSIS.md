@@ -385,3 +385,30 @@ Linting:        ESLint ✅
 **Análise por:** GitHub Copilot (Automated Code Review)  
 **Data:** 16 de Fevereiro, 2026  
 **Versão do Projeto:** 0.0.1 (Pre-launch)
+
+---
+
+## 💡 Backlog de Features — Futuras (anotado em 20/02/2026)
+
+### Da lista original — Pendentes
+
+| Prioridade | Item | Status |
+|------------|------|--------|
+| P0 | Lighthouse test | Requer deploy em ambiente real |
+| P1 | Analytics (Plausible/Mixpanel) | Tracking de uso e métricas de produto |
+| P2 | Accessibility audit (a11y) | ARIA labels, navegação por teclado, contraste WCAG |
+| P2 | Multilingual (i18n) | Suporte a múltiplos idiomas (pt-BR, en, es) |
+
+### Features de produto novas
+
+| Categoria | Feature | Descrição | Complexidade |
+|-----------|---------|-----------|-------------|
+| Colaboração | Compartilhar coleções | Link público de coleção (read-only) para compartilhar com amigos | Média |
+| Produtividade | Extensão do browser | Salvar links com 1 clique direto do Chrome/Firefox/Edge | Alta |
+| Organização | Tags automáticas | Sugerir tags com base no conteúdo/URL do link | Média |
+| Social | Perfil público | Página pública com links curados do usuário | Média |
+| Busca | Full-text search no Supabase | `tsvector` para busca mais rápida e relevante no banco | Baixa |
+| UX | Onboarding tour | Guia interativo para novos usuários (primeiro acesso) | Baixa |
+| Dados | Link health checker | Verificar periodicamente se URLs ainda estão ativas (404 detection) | Alta |
+| Integração | API REST pública | Endpoints para integrar com outros apps/automações | Alta |
+| Segurança | 2FA / Magic Link | Login sem senha ou segundo fator de autenticação | Média |
