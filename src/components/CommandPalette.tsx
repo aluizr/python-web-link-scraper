@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -111,6 +112,7 @@ export function CommandPalette({ isOpen, onOpenChange, actions }: CommandPalette
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-[480px] gap-0 [&>button]:hidden">
+        <DialogTitle className="sr-only">Paleta de Comandos</DialogTitle>
         {/* Search input */}
         <div className="flex items-center gap-2 border-b px-3">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
