@@ -9,7 +9,7 @@ import { LinkTableView } from "@/components/LinkTableView";
 import { LinkBoardView } from "@/components/LinkBoardView";
 import { LinkCardsView } from "@/components/LinkCardsView";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
-import type { GridColumns } from "@/components/ViewSwitcher";
+import type { GridColumns, CardSize } from "@/components/ViewSwitcher";
 import { LinkForm } from "@/components/LinkForm";
 import { SearchBar } from "@/components/SearchBar";
 import { DragDropOverlay } from "@/components/DragDropOverlay";
@@ -73,6 +73,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [gridColumns, setGridColumns] = useState<GridColumns>(3);
+  const [cardSize, setCardSize] = useState<CardSize>("md");
   const [statsOpen, setStatsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -297,7 +298,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
             </div>
             <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
               <ThemeToggle />
-              <ViewSwitcher viewMode={viewMode} onViewModeChange={setViewMode} gridColumns={gridColumns} onGridColumnsChange={setGridColumns} />
+              <ViewSwitcher viewMode={viewMode} onViewModeChange={setViewMode} gridColumns={gridColumns} onGridColumnsChange={setGridColumns} cardSize={cardSize} onCardSizeChange={setCardSize} />
               <Button variant="outline" size="icon" onClick={() => setCommandOpen(true)} title="Comandos (/ ou Ctrl+K)">
                 <Command className="h-4 w-4" />
               </Button>
@@ -356,6 +357,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
           ) : viewMode === "cards" ? (
             <LinkCardsView
               links={filteredLinks}
+              cardSize={cardSize}
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEdit}
               onDelete={handleDelete}

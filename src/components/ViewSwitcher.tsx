@@ -4,12 +4,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { ViewMode } from "@/types/link";
 
 export type GridColumns = 2 | 3 | 4 | 5;
+export type CardSize = "sm" | "md" | "lg";
 
 interface ViewSwitcherProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   gridColumns: GridColumns;
   onGridColumnsChange: (cols: GridColumns) => void;
+  cardSize: CardSize;
+  onCardSizeChange: (size: CardSize) => void;
 }
 
 const views: { mode: ViewMode; label: string; icon: React.ElementType; description: string }[] = [
@@ -30,7 +33,13 @@ const activeIcons: Record<ViewMode, React.ElementType> = {
 
 const columnOptions: GridColumns[] = [2, 3, 4, 5];
 
-export function ViewSwitcher({ viewMode, onViewModeChange, gridColumns, onGridColumnsChange }: ViewSwitcherProps) {
+const cardSizeOptions: { value: CardSize; label: string }[] = [
+  { value: "sm", label: "P" },
+  { value: "md", label: "M" },
+  { value: "lg", label: "G" },
+];
+
+export function ViewSwitcher({ viewMode, onViewModeChange, gridColumns, onGridColumnsChange, cardSize, onCardSizeChange }: ViewSwitcherProps) {
   const ActiveIcon = activeIcons[viewMode];
 
   return (
@@ -111,6 +120,61 @@ export function ViewSwitcher({ viewMode, onViewModeChange, gridColumns, onGridCo
                     e.stopPropagation();
                     const i = columnOptions.indexOf(gridColumns);
                     if (i < columnOptions.length - 1) onGridColumnsChange(columnOptions[i + 1]);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+        {/* Card size selector — only when cards is active */}
+        {viewMode === "cards" && (
+          <>
+            <div className="mx-2 my-1.5 border-t" />
+            <div className="px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Tamanho do cartão</p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={cardSize === "sm"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const i = cardSizeOptions.findIndex((o) => o.value === cardSize);
+                    if (i > 0) onCardSizeChange(cardSizeOptions[i - 1].value);
+                  }}
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </Button>
+                <div className="flex-1 flex justify-center gap-1">
+                  {cardSizeOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCardSizeChange(opt.value);
+                      }}
+                      className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
+                        cardSize === opt.value
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={cardSize === "lg"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const i = cardSizeOptions.findIndex((o) => o.value === cardSize);
+                    if (i < cardSizeOptions.length - 1) onCardSizeChange(cardSizeOptions[i + 1].value);
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
