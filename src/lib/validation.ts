@@ -93,27 +93,8 @@ export const linkSchema = z.object({
     ),
 });
 
-// ✅ Lista de ícones Lucide suportados para categorias (expandida)
-const ALLOWED_ICONS = [
-  'Folder', 'FolderOpen', 'FolderTree', 'BookOpen', 'Book', 'BookMarked',
-  'Code', 'CodeXml', 'Terminal', 'Palette', 'Music', 'Video', 'Image',
-  'Newspaper', 'Briefcase', 'Heart', 'Star', 'Shield', 'Settings', 'Layout',
-  'Lightbulb', 'Zap', 'Trending', 'Shopping', 'Archive', 'Tag',
-  'Globe', 'Database', 'Cloud', 'Cpu', 'Award', 'Radio', 'Gamepad2',
-  'Home', 'Camera', 'Film', 'Mic', 'Headphones', 'Monitor', 'Smartphone',
-  'Rocket', 'Plane', 'Car', 'Bike', 'Coffee', 'Pizza', 'Apple',
-  'GraduationCap', 'School', 'FlaskConical', 'Microscope', 'Stethoscope',
-  'DollarSign', 'Wallet', 'CreditCard', 'PiggyBank', 'TrendingUp',
-  'MessageCircle', 'Mail', 'Send', 'Users', 'UserPlus',
-  'Lock', 'Key', 'Eye', 'Search', 'Filter',
-  'Wrench', 'Hammer', 'Paintbrush', 'Scissors', 'Pen',
-  'MapPin', 'Navigation', 'Compass', 'Flag', 'Bookmark',
-  'Calendar', 'Clock', 'Timer', 'AlarmClock',
-  'FileText', 'Files', 'Clipboard', 'NotebookPen',
-  'Package', 'Box', 'Gift', 'Trophy', 'Medal',
-  'Sun', 'Moon', 'CloudRain', 'Snowflake', 'Flame',
-  'Bug', 'Bot', 'Brain', 'Sparkles', 'Wand2',
-];
+// ✅ Validação dinâmica de ícones usando a lista real do Lucide
+import { ICON_NAMES } from "@/lib/icons";
 
 // ✅ Cores predefinidas para categorias
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
@@ -133,7 +114,7 @@ export const categorySchema = z.object({
     .max(50, "Nome do ícone muito longo")
     .default("Folder")
     .refine(
-      icon => ALLOWED_ICONS.includes(icon),
+      icon => ICON_NAMES.includes(icon),
       "Ícone inválido"
     ),
   parentId: z.string().uuid().optional().nullable(),
