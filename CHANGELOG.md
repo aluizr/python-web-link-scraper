@@ -4,6 +4,45 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
 ---
 
+## [0.10.0] — 2026-02-21
+
+### Visualização de Cartões (Cards View)
+
+- Novo modo de visualização **Cartões** (`cards`) adicionado ao `ViewSwitcher`
+- Componente `LinkCardsView.tsx` — tiles compactos em grid responsivo com:
+  - Favicon + título truncado
+  - Descrição em 1 linha (compacta)
+  - Badges de categoria + tags (com indicador `+N` para excedentes)
+  - Ícone de notas (`StickyNote`) quando o link tem anotações
+  - Ações no hover: abrir link, editar, excluir (com confirmação), favoritar
+- Ícone `SquareStack` no seletor de visualização
+- Tipo `ViewMode` atualizado para incluir `"cards"`
+- Ciclo do atalho `G` atualizado: Grid → Lista → Cartões → Tabela → Board
+
+### Tamanho Dinâmico dos Cartões
+
+- 3 tamanhos disponíveis: **P** (pequeno), **M** (médio), **G** (grande)
+- Tipo `CardSize` exportado (`"sm" | "md" | "lg"`)
+- Seletor de tamanho no popover do `ViewSwitcher` (visível apenas no modo Cartões):
+  - Botões `P / M / G` com highlight no selecionado
+  - Controles `-` / `+` para ajuste rápido
+- Cada tamanho afeta uniformemente todos os cartões:
+  - **P**: grid até 8 colunas, favicon 20px, texto `xs`, 1 tag visível
+  - **M**: grid até 6 colunas, favicon 28px, texto `sm`, 2 tags visíveis (padrão)
+  - **G**: grid até 5 colunas, favicon 36px, texto `base`, 3 tags, descrição em 2 linhas
+- Ícones de ação e badges escalam proporcionalmente ao tamanho selecionado
+
+### Rebranding — Remoção do Lovable
+
+- Dependência `lovable-tagger` removida do `package.json`
+- Import e uso de `componentTagger()` removidos do `vite.config.ts` e `SECURITY_FIXES/vite-config-seguro.ts`
+- `README.md` reescrito por completo com documentação própria do WebNest (tecnologias, scripts, deploy)
+- Referências a "Lovable" removidas de todos os documentos de segurança:
+  - `SECURITY_AUDIT.md`, `SECURITY_AUDIT_2026-02-15.md`, `SECURITY_SUMMARY.md`
+- `package-lock.json` regenerado sem `lovable-tagger`
+
+---
+
 ## [0.9.0] — 2026-02-20
 
 ### API Key Rotation
