@@ -317,10 +317,10 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               {!isMobile && (
                 <>
                   <Button variant="outline" size="icon" onClick={() => setExportOpen(true)} title="Exportar (E)">
-                    <Download className="h-4 w-4" />
+                    <Upload className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="icon" onClick={() => setImportOpen(true)} title="Importar (I)">
-                    <Upload className="h-4 w-4" />
+                    <Download className="h-4 w-4" />
                   </Button>
                 </>
               )}
