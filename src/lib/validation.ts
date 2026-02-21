@@ -108,7 +108,7 @@ const ALLOWED_ICONS = [
   'Lock', 'Key', 'Eye', 'Search', 'Filter',
   'Wrench', 'Hammer', 'Paintbrush', 'Scissors', 'Pen',
   'MapPin', 'Navigation', 'Compass', 'Flag', 'Bookmark',
-  'Calendar', 'Clock', 'Timer', 'Alarm',
+  'Calendar', 'Clock', 'Timer', 'AlarmClock',
   'FileText', 'Files', 'Clipboard', 'NotebookPen',
   'Package', 'Box', 'Gift', 'Trophy', 'Medal',
   'Sun', 'Moon', 'CloudRain', 'Snowflake', 'Flame',
