@@ -1,4 +1,4 @@
-import { LayoutGrid, List, Table2, Columns3, Check, Minus, Plus } from "lucide-react";
+import { LayoutGrid, List, Table2, Columns3, SquareStack, Check, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ViewMode } from "@/types/link";
@@ -15,6 +15,7 @@ interface ViewSwitcherProps {
 const views: { mode: ViewMode; label: string; icon: React.ElementType; description: string }[] = [
   { mode: "grid", label: "Grade", icon: LayoutGrid, description: "Cards em grid" },
   { mode: "list", label: "Lista", icon: List, description: "Cards em coluna" },
+  { mode: "cards", label: "Cartões", icon: SquareStack, description: "Tiles compactos" },
   { mode: "table", label: "Tabela", icon: Table2, description: "Linhas compactas" },
   { mode: "board", label: "Board", icon: Columns3, description: "Kanban por categoria" },
 ];
@@ -22,6 +23,7 @@ const views: { mode: ViewMode; label: string; icon: React.ElementType; descripti
 const activeIcons: Record<ViewMode, React.ElementType> = {
   grid: LayoutGrid,
   list: List,
+  cards: SquareStack,
   table: Table2,
   board: Columns3,
 };

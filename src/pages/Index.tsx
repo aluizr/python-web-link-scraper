@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { LinkCard } from "@/components/LinkCard";
 import { LinkTableView } from "@/components/LinkTableView";
 import { LinkBoardView } from "@/components/LinkBoardView";
+import { LinkCardsView } from "@/components/LinkCardsView";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import type { GridColumns } from "@/components/ViewSwitcher";
 import { LinkForm } from "@/components/LinkForm";
@@ -86,7 +87,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     onNewLink: useCallback(() => { setEditingLink(null); setFormOpen(true); }, []),
     onFocusSearch: useCallback(() => searchInputRef.current?.focus(), []),
     onToggleView: useCallback(() => setViewMode((v) => {
-      const modes: ViewMode[] = ["grid", "list", "table", "board"];
+      const modes: ViewMode[] = ["grid", "list", "cards", "table", "board"];
       const i = modes.indexOf(v);
       return modes[(i + 1) % modes.length];
     }), []),
@@ -352,6 +353,13 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                 </Button>
               )}
             </div>
+          ) : viewMode === "cards" ? (
+            <LinkCardsView
+              links={filteredLinks}
+              onToggleFavorite={handleToggleFavorite}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ) : viewMode === "table" ? (
             <LinkTableView
               links={filteredLinks}
