@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { linkSchema, categorySchema } from "@/lib/validation";
 import { filterAndSortLinks } from "@/lib/utils";
@@ -364,16 +364,101 @@ export function useLinks(userId: string | undefined) {
 
   const allTags = Array.from(new Set(links.flatMap((l) => l.tags)));
 
-  // ✅ Função para obter links filtrados
+  // ✅ Full-text search no servidor (Supabase RPC)
+  const [serverSearchResults, setServerSearchResults] = useState<LinkItem[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchLinksOnServer = useCallback(async (query: string) => {
+    if (!userId || !query.trim()) {
+      setServerSearchResults(null);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const { data, error } = await supabase.rpc("search_links" as any, {
+        search_query: query.trim(),
+        user_id_param: userId,
+      });
+
+      if (error) {
+        // Se a função RPC não existir (migration não rodou), cai no fallback client-side
+        logger.warn("Full-text search RPC falhou, usando busca client-side", {
+          reason: error.message,
+        });
+        setServerSearchResults(null);
+        return;
+      }
+
+      if (data) {
+        const mapped = (data as any[]).map((r: any) => ({
+          id: r.id,
+          url: r.url,
+          title: r.title,
+          description: r.description,
+          category: r.category,
+          tags: r.tags || [],
+          isFavorite: r.is_favorite,
+          favicon: r.favicon,
+          ogImage: r.og_image || "",
+          notes: r.notes || "",
+          createdAt: r.created_at,
+          position: r.position || 0,
+        }));
+        setServerSearchResults(mapped);
+      }
+    } catch (err) {
+      logger.warn("Erro no full-text search", { error: err });
+      setServerSearchResults(null);
+    } finally {
+      setSearching(false);
+    }
+  }, [userId]);
+
+  // Debounce: dispara busca server-side 300ms após parar de digitar
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    const query = searchFilters.query.trim();
+    if (!query) {
+      setServerSearchResults(null);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      searchLinksOnServer(query);
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchFilters.query, searchLinksOnServer]);
+
+  // ✅ Função híbrida: usa resultado do servidor se disponível, senão client-side
   const getFilteredLinks = useCallback(() => {
-    return filterAndSortLinks(links, searchFilters);
-  }, [links, searchFilters]);
+    // Se tem resultados do full-text search, aplica filtros adicionais sobre eles
+    const baseLinks = serverSearchResults && searchFilters.query.trim()
+      ? serverSearchResults
+      : links;
+
+    return filterAndSortLinks(baseLinks, {
+      ...searchFilters,
+      // Se já veio do servidor, não filtrar por query de novo
+      query: serverSearchResults && searchFilters.query.trim() ? "" : searchFilters.query,
+    });
+  }, [links, searchFilters, serverSearchResults]);
 
   return {
     links,
     categories,
     allTags,
     loading,
+    searching,
     searchFilters,
     setSearchFilters,
     getFilteredLinks,

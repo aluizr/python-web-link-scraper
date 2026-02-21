@@ -37,6 +37,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     links,
     categories,
     allTags,
+    searching,
     searchFilters,
     setSearchFilters,
     getFilteredLinks,
@@ -332,6 +333,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
             onFiltersChange={setSearchFilters}
             categories={categories}
             allTags={allTags}
+            searching={searching}
           />
 
           {/* Links Grid/List */}
