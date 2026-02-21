@@ -14,10 +14,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import type { LinkItem } from "@/types/link";
+import type { LinkItem, Category } from "@/types/link";
 
 interface LinkCardProps {
   link: LinkItem;
+  categories?: Category[];
   onToggleFavorite: (id: string) => void;
   onEdit: (link: LinkItem) => void;
   onDelete: (id: string) => void;
@@ -33,6 +34,7 @@ interface LinkCardProps {
 
 export function LinkCard({
   link,
+  categories,
   onToggleFavorite,
   onEdit,
   onDelete,
@@ -148,7 +150,32 @@ export function LinkCard({
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {link.category && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge
+                  variant="secondary"
+                  className="text-xs"
+                  style={(() => {
+                    // ✅ Find color from category hierarchy
+                    if (!categories) return {};
+                    const cat = categories.find((c) => {
+                      const parts: string[] = [c.name];
+                      let cur = c;
+                      while (cur.parentId) {
+                        const p = categories.find((x) => x.id === cur.parentId);
+                        if (!p) break;
+                        parts.unshift(p.name);
+                        cur = p;
+                      }
+                      return parts.join(" / ") === link.category;
+                    });
+                    const color = cat?.color;
+                    if (!color) return {};
+                    return {
+                      backgroundColor: `${color}20`,
+                      color: color,
+                      borderColor: `${color}40`,
+                    };
+                  })()}
+                >
                   {link.category}
                 </Badge>
               )}

@@ -93,13 +93,30 @@ export const linkSchema = z.object({
     ),
 });
 
-// ✅ Lista de ícones Lucide suportados para categorias
+// ✅ Lista de ícones Lucide suportados para categorias (expandida)
 const ALLOWED_ICONS = [
-  'Folder', 'BookOpen', 'Code', 'Palette', 'Music', 'Video', 'Image',
+  'Folder', 'FolderOpen', 'FolderTree', 'BookOpen', 'Book', 'BookMarked',
+  'Code', 'CodeXml', 'Terminal', 'Palette', 'Music', 'Video', 'Image',
   'Newspaper', 'Briefcase', 'Heart', 'Star', 'Shield', 'Settings', 'Layout',
   'Lightbulb', 'Zap', 'Trending', 'Shopping', 'Archive', 'Tag',
-  'Globe', 'Database', 'Cloud', 'Cpu', 'Award', 'Radio', 'Gamepad2'
+  'Globe', 'Database', 'Cloud', 'Cpu', 'Award', 'Radio', 'Gamepad2',
+  'Home', 'Camera', 'Film', 'Mic', 'Headphones', 'Monitor', 'Smartphone',
+  'Rocket', 'Plane', 'Car', 'Bike', 'Coffee', 'Pizza', 'Apple',
+  'GraduationCap', 'School', 'FlaskConical', 'Microscope', 'Stethoscope',
+  'DollarSign', 'Wallet', 'CreditCard', 'PiggyBank', 'TrendingUp',
+  'MessageCircle', 'Mail', 'Send', 'Users', 'UserPlus',
+  'Lock', 'Key', 'Eye', 'Search', 'Filter',
+  'Wrench', 'Hammer', 'Paintbrush', 'Scissors', 'Pen',
+  'MapPin', 'Navigation', 'Compass', 'Flag', 'Bookmark',
+  'Calendar', 'Clock', 'Timer', 'Alarm',
+  'FileText', 'Files', 'Clipboard', 'NotebookPen',
+  'Package', 'Box', 'Gift', 'Trophy', 'Medal',
+  'Sun', 'Moon', 'CloudRain', 'Snowflake', 'Flame',
+  'Bug', 'Bot', 'Brain', 'Sparkles', 'Wand2',
 ];
+
+// ✅ Cores predefinidas para categorias
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 
 export const categorySchema = z.object({
   name: z
@@ -117,9 +134,14 @@ export const categorySchema = z.object({
     .default("Folder")
     .refine(
       icon => ALLOWED_ICONS.includes(icon),
-      `Ícone inválido. Permitidos: ${ALLOWED_ICONS.join(", ")}`
+      "Ícone inválido"
     ),
   parentId: z.string().uuid().optional().nullable(),
+  color: z
+    .string()
+    .regex(HEX_COLOR_REGEX, "Cor deve ser um hex válido (ex: #3B82F6)")
+    .optional()
+    .nullable(),
 });
 
 export type LinkInput = z.infer<typeof linkSchema>;

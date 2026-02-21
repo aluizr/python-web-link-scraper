@@ -5,10 +5,13 @@ export interface LinkDraft {
   title: string;
   description: string;
   notes: string;
-  selectedParentId: string;
-  selectedChildId: string;
+  selectedCategoryId: string;
+  // Mantidos para compatibilidade com rascunhos antigos
+  selectedParentId?: string;
+  selectedChildId?: string;
   tags: string[];
   favicon: string;
+  ogImage?: string;
 }
 
 const DRAFT_STORAGE_KEY = "link-draft";

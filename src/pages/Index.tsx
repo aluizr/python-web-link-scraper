@@ -50,6 +50,9 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     deleteCategory,
     renameCategory,
     reorderLinks,
+    reorderCategories,
+    updateCategoryColor,
+    updateCategoryIcon,
   } = useLinks(user.id);
 
   const {
@@ -280,6 +283,9 @@ const Index = ({ user, onSignOut }: IndexProps) => {
           onAddCategory={addCategory}
           onDeleteCategory={deleteCategory}
           onRenameCategory={renameCategory}
+          onReorderCategories={reorderCategories}
+          onUpdateCategoryColor={updateCategoryColor}
+          onUpdateCategoryIcon={updateCategoryIcon}
           onDropLinkToCategory={(linkId, categoryName) => {
             updateLink(linkId, { category: categoryName });
             const link = links.find((l) => l.id === linkId);
@@ -402,6 +408,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                 <LinkCard
                   key={link.id}
                   link={link}
+                  categories={categories}
                   onToggleFavorite={handleToggleFavorite}
                   onEdit={handleEdit}
                   onDelete={handleDelete}

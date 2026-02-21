@@ -18,6 +18,8 @@ export interface Category {
   name: string;
   icon: string; // ✅ Lucide icon name (e.g., "Folder", "BookOpen", etc.)
   parentId?: string | null;
+  position: number; // ✅ Ordering within the sidebar
+  color?: string | null; // ✅ Hex color for visual differentiation (e.g., "#3B82F6")
 }
 
 export type SortOption = "manual" | "newest" | "oldest" | "alphabetical" | "favorites";

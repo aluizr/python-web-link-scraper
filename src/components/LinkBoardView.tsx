@@ -26,38 +26,52 @@ interface LinkBoardViewProps {
 }
 
 export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onDelete }: LinkBoardViewProps) {
-  // Agrupar links por categoria (top-level)
+  // Agrupar links por categoria (top-level), com subcategorias como seções
   const columns = useMemo(() => {
-    const grouped = new Map<string, LinkItem[]>();
+    const grouped = new Map<string, { subcategories: Map<string, LinkItem[]> }>();
 
     // "Sem categoria" sempre primeiro
-    grouped.set("", []);
+    grouped.set("", { subcategories: new Map([["", []]]) });
 
-    // Criar colunas para categorias top-level que têm links
-    const parentCategories = categories.filter((c) => !c.parentId);
+    // Criar colunas para categorias top-level
+    const parentCategories = categories.filter((c) => !c.parentId)
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     for (const cat of parentCategories) {
-      grouped.set(cat.name, []);
+      grouped.set(cat.name, { subcategories: new Map([["", []]]) });
     }
 
-    // Distribuir links nas colunas
+    // Distribuir links nas colunas, separando por subcategoria
     for (const link of links) {
       const categoryKey = link.category || "";
-      // Para subcategorias "Parent / Child", agrupar pelo parent
-      const topLevel = categoryKey.includes(" / ") ? categoryKey.split(" / ")[0] : categoryKey;
+      const parts = categoryKey.split(" / ");
+      const topLevel = parts[0] || "";
+      const subCategory = parts.length > 1 ? parts.slice(1).join(" / ") : "";
 
       if (grouped.has(topLevel)) {
-        grouped.get(topLevel)!.push(link);
+        const col = grouped.get(topLevel)!;
+        if (!col.subcategories.has(subCategory)) {
+          col.subcategories.set(subCategory, []);
+        }
+        col.subcategories.get(subCategory)!.push(link);
       } else {
-        // Categoria não existe mais, colocar em "Sem categoria"
-        grouped.get("")!.push(link);
+        grouped.get("")!.subcategories.get("")!.push(link);
       }
     }
 
-    // Filtrar colunas vazias (exceto "Sem categoria" se tiver links)
-    const result: { name: string; links: LinkItem[] }[] = [];
-    for (const [name, items] of grouped) {
-      if (items.length > 0 || name === "") {
-        result.push({ name: name || "Sem categoria", links: items });
+    // Build result
+    const result: { name: string; color?: string | null; sections: { name: string; links: LinkItem[] }[] }[] = [];
+    for (const [name, col] of grouped) {
+      const totalLinks = Array.from(col.subcategories.values()).reduce((sum, arr) => sum + arr.length, 0);
+      if (totalLinks > 0 || name === "") {
+        const cat = parentCategories.find((c) => c.name === name);
+        const sections = Array.from(col.subcategories.entries())
+          .filter(([, items]) => items.length > 0 || name === "")
+          .map(([subName, items]) => ({ name: subName, links: items }));
+        result.push({
+          name: name || "Sem categoria",
+          color: cat?.color,
+          sections,
+        });
       }
     }
 
@@ -66,24 +80,42 @@ export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onD
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
-      {columns.map((column) => (
+      {columns.map((column) => {
+        const allLinks = column.sections.flatMap((s) => s.links);
+        return (
         <div
           key={column.name}
           className="flex-shrink-0 w-72 snap-start"
         >
           {/* Column header */}
           <div className="flex items-center justify-between mb-3 px-1">
-            <h3 className="font-semibold text-sm text-foreground truncate">
-              {column.name}
-            </h3>
+            <div className="flex items-center gap-1.5">
+              {column.color && (
+                <div
+                  className="h-3 w-3 rounded-full shrink-0"
+                  style={{ backgroundColor: column.color }}
+                />
+              )}
+              <h3 className="font-semibold text-sm text-foreground truncate">
+                {column.name}
+              </h3>
+            </div>
             <Badge variant="secondary" className="text-xs ml-2 shrink-0">
-              {column.links.length}
+              {allLinks.length}
             </Badge>
           </div>
 
-          {/* Column cards */}
+          {/* Column cards grouped by subcategory */}
           <div className="flex flex-col gap-2">
-            {column.links.map((link) => (
+            {column.sections.map((section) => (
+              <div key={section.name || "__root__"}>
+                {/* Subcategory label */}
+                {section.name && (
+                  <div className="px-1 pb-1 pt-2">
+                    <p className="text-xs font-medium text-muted-foreground">{section.name}</p>
+                  </div>
+                )}
+                {section.links.map((link) => (
               <Card key={link.id} className="group relative overflow-hidden border hover:shadow-md transition-shadow">
                 {/* OG Image mini cover */}
                 {link.ogImage && (
@@ -185,15 +217,18 @@ export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onD
                 </CardContent>
               </Card>
             ))}
+              </div>
+            ))}
 
-            {column.links.length === 0 && (
+            {allLinks.length === 0 && (
               <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-6 text-center">
                 <p className="text-xs text-muted-foreground">Nenhum link</p>
               </div>
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

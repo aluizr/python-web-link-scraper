@@ -63,7 +63,7 @@ export function useLinks(userId: string | undefined) {
 
       const [linksRes, catsRes] = await Promise.all([
         supabase.from("links").select("*").order("position", { ascending: true }), // ✅ Ordenar por position
-        supabase.from("categories").select("*"),
+        supabase.from("categories").select("*").order("position", { ascending: true }), // ✅ Ordenar categorias por position
       ]);
       if (linksRes.data) {
         const mappedLinks = linksRes.data.map((r: any) => ({
@@ -89,6 +89,8 @@ export function useLinks(userId: string | undefined) {
           name: r.name,
           icon: r.icon || "Folder",
           parentId: r.parent_id ?? null,
+          position: r.position ?? 0,
+          color: r.color ?? null,
         }));
         setCategories(mappedCats);
         cacheCategories(mappedCats); // ✅ Salvar no cache offline
@@ -222,10 +224,10 @@ export function useLinks(userId: string | undefined) {
     }); // withRateLimit
   }, [links]);
 
-  const addCategory = useCallback(async (name: string, icon: string = "Folder", parentId?: string | null) => {
+  const addCategory = useCallback(async (name: string, icon: string = "Folder", parentId?: string | null, color?: string | null) => {
     if (!userId) return;
     return withRateLimit("category:create", async () => {
-    const parsed = categorySchema.safeParse({ name, icon, parentId: parentId ?? null });
+    const parsed = categorySchema.safeParse({ name, icon, parentId: parentId ?? null, color: color ?? null });
     if (!parsed.success) {
       toast.error(parsed.error.errors[0]?.message || "Dados inválidos");
       return;
@@ -236,11 +238,20 @@ export function useLinks(userId: string | undefined) {
         toast.error("Categoria pai não encontrada");
         return;
       }
+      // ✅ Permitir até 3 níveis: verificar se o avô já tem parent
       if (parent.parentId) {
-        toast.error("Subcategorias só podem ter 2 níveis");
-        return;
+        const grandparent = categories.find((c) => c.id === parent.parentId);
+        if (grandparent?.parentId) {
+          toast.error("Máximo de 3 níveis de subcategorias atingido");
+          return;
+        }
       }
     }
+    // ✅ Calcular posição (nova categoria vai para o final)
+    const siblings = categories.filter((c) =>
+      parsed.data.parentId ? c.parentId === parsed.data.parentId : !c.parentId
+    );
+    const maxPos = Math.max(...siblings.map(c => c.position), -1);
     const { data, error } = await supabase
       .from("categories")
       .insert({
@@ -248,43 +259,78 @@ export function useLinks(userId: string | undefined) {
         user_id: userId,
         icon: parsed.data.icon,
         parent_id: parsed.data.parentId ?? null,
+        position: maxPos + 1,
+        color: parsed.data.color ?? null,
       })
       .select()
       .single();
     if (error) {
       logger.error("Erro ao criar categoria", error, { name: parsed.data.name });
-      toast.error(error.message || "Erro ao criar categoria");
+      if (error.message?.includes('idx_categories_unique_name')) {
+        toast.error("Já existe uma categoria com este nome neste nível");
+      } else {
+        toast.error(error.message || "Erro ao criar categoria");
+      }
       return;
     }
     if (data) {
       setCategories((prev) => [
         ...prev,
-        { id: data.id, name: data.name, icon: data.icon, parentId: data.parent_id ?? null },
+        { id: data.id, name: data.name, icon: data.icon, parentId: data.parent_id ?? null, position: data.position ?? 0, color: data.color ?? null },
       ]);
     }
     }); // withRateLimit
   }, [userId, categories]);
 
-  const deleteCategory = useCallback(async (id: string) => {
+  const deleteCategory = useCallback(async (id: string, cascade: boolean = false) => {
     return withRateLimit("category:delete", async () => {
     const category = categories.find((c) => c.id === id);
     if (!category) return;
 
-    const hasChildren = categories.some((c) => c.parentId === id);
-    if (hasChildren) {
-      toast.error("Remova as subcategorias antes de excluir esta categoria");
+    // ✅ Coletar todos os descendentes recursivamente
+    const getAllDescendants = (parentId: string): Category[] => {
+      const children = categories.filter((c) => c.parentId === parentId);
+      return children.flatMap((child) => [child, ...getAllDescendants(child.id)]);
+    };
+
+    const descendants = getAllDescendants(id);
+    const hasChildren = descendants.length > 0;
+
+    if (hasChildren && !cascade) {
+      toast.error("Use a opção de exclusão em cascata para remover categorias com subcategorias");
       return;
     }
 
-    const parent = category.parentId ? categories.find((c) => c.id === category.parentId) : null;
-    const fullName = getCategoryFullName(category, parent || undefined);
+    // Coletar todos os IDs a deletar (categoria + descendentes)
+    const idsToDelete = [id, ...descendants.map((d) => d.id)];
 
-    const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (!error) {
-      await supabase.from("links").update({ category: "" }).eq("category", fullName);
-      setLinks((prev) => prev.map((l) => (l.category === fullName ? { ...l, category: "" } : l)));
-      setCategories((prev) => prev.filter((c) => c.id !== id));
+    // Coletar todos os nomes completos para limpar links
+    const namesToClear: string[] = [];
+    const parent = category.parentId ? categories.find((c) => c.id === category.parentId) : null;
+    namesToClear.push(getCategoryFullName(category, parent || undefined));
+    for (const desc of descendants) {
+      const descParent = categories.find((c) => c.id === desc.parentId);
+      namesToClear.push(getCategoryFullName(desc, descParent || undefined));
     }
+
+    // Deletar do banco (filhos primeiro, depois pais - por causa da FK)
+    for (const delId of [...idsToDelete].reverse()) {
+      const { error } = await supabase.from("categories").delete().eq("id", delId);
+      if (error) {
+        logger.error("Erro ao deletar categoria", error, { categoryId: delId });
+        return;
+      }
+    }
+
+    // Limpar links órfãos
+    for (const name of namesToClear) {
+      await supabase.from("links").update({ category: "" }).eq("category", name);
+    }
+
+    setLinks((prev) =>
+      prev.map((l) => (namesToClear.includes(l.category) ? { ...l, category: "" } : l))
+    );
+    setCategories((prev) => prev.filter((c) => !idsToDelete.includes(c.id)));
     }); // withRateLimit
   }, [categories, getCategoryFullName]);
 
@@ -360,6 +406,51 @@ export function useLinks(userId: string | undefined) {
       toast.error("Erro ao reordenar links");
     }
     }); // withRateLimit
+  }, []);
+
+  // ✅ Função para reordenar categorias via drag & drop
+  const reorderCategories = useCallback(async (reorderedCategories: Category[]) => {
+    return withRateLimit("category:reorder", async () => {
+    try {
+      setCategories(reorderedCategories);
+      const updates = reorderedCategories.map((cat, index) => ({
+        id: cat.id,
+        position: index,
+      }));
+      await Promise.all(
+        updates.map(({ id, position }) =>
+          supabase.from("categories").update({ position }).eq("id", id)
+        )
+      );
+    } catch (error) {
+      logger.error("Erro ao reordenar categorias", error instanceof Error ? error : new Error(String(error)));
+      toast.error("Erro ao reordenar categorias");
+    }
+    }); // withRateLimit
+  }, []);
+
+  // ✅ Função para atualizar a cor de uma categoria
+  const updateCategoryColor = useCallback(async (id: string, color: string | null) => {
+    return withRateLimit("category:update", async () => {
+      const { error } = await supabase.from("categories").update({ color }).eq("id", id);
+      if (error) {
+        logger.error("Erro ao atualizar cor da categoria", error, { categoryId: id });
+      } else {
+        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, color } : c)));
+      }
+    });
+  }, []);
+
+  // ✅ Função para atualizar o ícone de uma categoria
+  const updateCategoryIcon = useCallback(async (id: string, icon: string) => {
+    return withRateLimit("category:update", async () => {
+      const { error } = await supabase.from("categories").update({ icon }).eq("id", id);
+      if (error) {
+        logger.error("Erro ao atualizar ícone da categoria", error, { categoryId: id });
+      } else {
+        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, icon } : c)));
+      }
+    });
   }, []);
 
   const allTags = Array.from(new Set(links.flatMap((l) => l.tags)));
@@ -472,5 +563,8 @@ export function useLinks(userId: string | undefined) {
     deleteCategory,
     renameCategory,
     reorderLinks, // ✅ Adicionar função de reorder
+    reorderCategories, // ✅ Reordenar categorias
+    updateCategoryColor, // ✅ Atualizar cor
+    updateCategoryIcon, // ✅ Atualizar ícone
   };
 }

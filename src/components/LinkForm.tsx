@@ -33,8 +33,6 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedParentId, setSelectedParentId] = useState("");
-  const [selectedChildId, setSelectedChildId] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
@@ -50,24 +48,48 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   const initialLoadDone = useRef(false);
 
   const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
 
-  const resolveSelection = (categoryValue: string) => {
-    if (!categoryValue) return { parentId: "", childId: "" };
-
-    const parent = parentCategories.find((p) => p.name === categoryValue);
-    if (parent) return { parentId: parent.id, childId: "" };
-
-    for (const child of childCategories) {
-      const parentCat = parentCategories.find((p) => p.id === child.parentId);
-      if (!parentCat) continue;
-      const fullName = `${parentCat.name} / ${child.name}`;
-      if (fullName === categoryValue) {
-        return { parentId: parentCat.id, childId: child.id };
-      }
+  // ✅ Build full name from category chain
+  const buildFullName = (cat: Category): string => {
+    const parts: string[] = [cat.name];
+    let current = cat;
+    while (current.parentId) {
+      const parent = categories.find((c) => c.id === current.parentId);
+      if (!parent) break;
+      parts.unshift(parent.name);
+      current = parent;
     }
+    return parts.join(" / ");
+  };
 
-    return { parentId: "", childId: "" };
+  // ✅ Build flat list of all categories with indentation for select
+  const buildCategoryOptions = () => {
+    const options: { id: string; label: string; fullName: string; depth: number }[] = [];
+    const addChildren = (parentId: string | null, depth: number) => {
+      const children = categories
+        .filter((c) => (parentId ? c.parentId === parentId : !c.parentId))
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      for (const child of children) {
+        options.push({
+          id: child.id,
+          label: "\u00A0\u00A0".repeat(depth) + child.name,
+          fullName: buildFullName(child),
+          depth,
+        });
+        addChildren(child.id, depth + 1);
+      }
+    };
+    addChildren(null, 0);
+    return options;
+  };
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const categoryOptions = buildCategoryOptions();
+
+  const resolveSelection = (categoryValue: string): string => {
+    if (!categoryValue) return "";
+    const found = categoryOptions.find((opt) => opt.fullName === categoryValue);
+    return found?.id ?? "";
   };
 
   useEffect(() => {
@@ -75,9 +97,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       setUrl(editingLink.url);
       setTitle(editingLink.title);
       setDescription(editingLink.description);
-      const selection = resolveSelection(editingLink.category);
-      setSelectedParentId(selection.parentId);
-      setSelectedChildId(selection.childId);
+      setSelectedCategoryId(resolveSelection(editingLink.category));
       setTags(editingLink.tags);
       setNotes(editingLink.notes || "");
       setFavicon(editingLink.favicon);
@@ -99,8 +119,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         setUrl("");
         setTitle("");
         setDescription("");
-        setSelectedParentId("");
-        setSelectedChildId("");
+        setSelectedCategoryId("");
         setTags([]);
         setNotes("");
         setFavicon("");
@@ -158,14 +177,13 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
 
     // Agendar salvamento do rascunho
-    draftTimeoutRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       saveDraft({
         url,
         title,
         description,
         notes,
-        selectedParentId,
-        selectedChildId,
+        selectedCategoryId,
         tags,
         favicon,
         ogImage,
@@ -175,7 +193,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
-  }, [url, title, description, notes, selectedParentId, selectedChildId, tags, favicon, ogImage, editingLink, saveDraft]);
+  }, [url, title, description, notes, selectedCategoryId, tags, favicon, ogImage, editingLink, saveDraft]);
 
   const handleAddTag = () => {
     const trimmed = tagInput.trim().toLowerCase();
@@ -195,13 +213,8 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       return;
     }
 
-    const parent = parentCategories.find((p) => p.id === selectedParentId);
-    const child = childCategories.find((c) => c.id === selectedChildId);
-    const categoryValue = child && parent
-      ? `${parent.name} / ${child.name}`
-      : parent
-        ? parent.name
-        : "";
+    const selectedOption = categoryOptions.find((opt) => opt.id === selectedCategoryId);
+    const categoryValue = selectedOption?.fullName ?? "";
     onSubmit({
       url: url.trim(),
       title: title.trim() || url.trim(),
@@ -225,8 +238,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       setTitle(draft.title);
       setDescription(draft.description);
       setNotes(draft.notes || "");
-      setSelectedParentId(draft.selectedParentId);
-      setSelectedChildId(draft.selectedChildId);
+      setSelectedCategoryId(draft.selectedCategoryId || draft.selectedParentId || "");
       setTags(draft.tags);
       setFavicon(draft.favicon);
       setOgImage(draft.ogImage || "");
@@ -243,8 +255,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     setTitle("");
     setDescription("");
     setNotes("");
-    setSelectedParentId("");
-    setSelectedChildId("");
+    setSelectedCategoryId("");
     setTags([]);
     setFavicon("");
     setOgImage("");
@@ -405,46 +416,21 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="parent-category">Categoria</Label>
+            <Label htmlFor="category-select">Categoria</Label>
             <select
-              id="parent-category"
+              id="category-select"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={selectedParentId}
-              onChange={(e) => {
-                setSelectedParentId(e.target.value);
-                setSelectedChildId("");
-              }}
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
             >
               <option value="">Sem categoria</option>
-              {parentCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+              {categoryOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
                 </option>
               ))}
             </select>
           </div>
-
-          {selectedParentId &&
-            childCategories.some((c) => c.parentId === selectedParentId) && (
-              <div className="space-y-2">
-                <Label htmlFor="subcategory">Subcategoria</Label>
-                <select
-                  id="subcategory"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={selectedChildId}
-                  onChange={(e) => setSelectedChildId(e.target.value)}
-                >
-                  <option value="">Sem subcategoria</option>
-                  {childCategories
-                    .filter((c) => c.parentId === selectedParentId)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
           <div className="space-y-2">
             <Label>Tags</Label>
             <div className="flex gap-2">
