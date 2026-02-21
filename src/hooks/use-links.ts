@@ -368,9 +368,10 @@ export function useLinks(userId: string | undefined) {
   const [serverSearchResults, setServerSearchResults] = useState<LinkItem[] | null>(null);
   const [searching, setSearching] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ftsAvailableRef = useRef<boolean>(true); // Desativa se RPC não existir
 
   const searchLinksOnServer = useCallback(async (query: string) => {
-    if (!userId || !query.trim()) {
+    if (!userId || !query.trim() || !ftsAvailableRef.current) {
       setServerSearchResults(null);
       return;
     }
@@ -383,10 +384,11 @@ export function useLinks(userId: string | undefined) {
       });
 
       if (error) {
-        // Se a função RPC não existir (migration não rodou), cai no fallback client-side
-        logger.warn("Full-text search RPC falhou, usando busca client-side", {
+        // Se a função RPC não existir (migration não rodou), desativa para a sessão
+        logger.warn("Full-text search RPC indisponível, usando busca client-side", {
           reason: error.message,
         });
+        ftsAvailableRef.current = false;
         setServerSearchResults(null);
         return;
       }
