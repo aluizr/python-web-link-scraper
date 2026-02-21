@@ -4,6 +4,60 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
 ---
 
+## [0.9.0] — 2026-02-20
+
+### API Key Rotation
+
+- Módulo `api-key-rotation.ts` com suporte a rotação segura de chaves Supabase (anon key)
+- Variável de ambiente `VITE_SUPABASE_FALLBACK_KEY` para chave antiga durante transição
+- Fetch wrapper com retry automático: se a primária receber 401/403, tenta a fallback
+- Cache da chave ativa em `sessionStorage` (evita retry desnecessário na sessão)
+- Logging via `logger.warn()` quando a fallback está em uso
+- Funções utilitárias: `validateApiKey()`, `resolveWorkingKey()`, `getRotationStatus()`
+- `clearKeyCache()` chamado automaticamente no logout
+- Cliente Supabase atualizado para usar chave resolvida + fetch com rotação
+- `.env.example` atualizado com documentação da variável fallback
+
+---
+
+## [0.8.0] — 2026-02-20
+
+### Histórico de Alterações (Activity Log)
+
+- Hook `use-activity-log.ts` com persistência em `localStorage` (máx 200 entradas)
+- 11 tipos de ação rastreados: criar, editar, excluir, favoritar, reordenar, importar, etc.
+- Painel lateral (`ActivityPanel`) com entradas agrupadas por data (Hoje/Ontem/Esta semana/Este mês)
+- Ícones e cores específicos por tipo de ação
+- Formatação de tempo relativo (há X minutos/horas)
+- Botão para limpar histórico
+- Logging automático em todas as mutações do `Index.tsx`
+
+### Command Palette (Slash Commands)
+
+- Componente `CommandPalette` com busca, filtro e navegação por teclado (↑↓ Enter Esc)
+- 12 comandos pré-configurados: novo link, buscar, 4 modos de visualização, stats, histórico, favoritos, exportar, importar, sair
+- Atalhos `/` e `Ctrl+K` para abrir
+- Comandos agrupados por categoria (Ações, Visualização, Dados)
+- Busca por label, descrição e keywords
+- Botões de acesso na barra superior (Clock + Command)
+
+### OG Preview / Cover Image
+
+- Campo `ogImage` adicionado ao tipo `LinkItem` e ao schema Zod
+- Auto-captura da imagem OG dos metadados ao inserir URL
+- Cover image exibida no topo do `LinkCard` (h-36, object-cover, lazy load)
+- Fallback gracioso: imagem escondida em caso de erro de carregamento
+- Migration SQL para coluna `og_image` na tabela `links`
+
+### 4 Modos de Visualização
+
+- `ViewSwitcher` com popover: Grid, List, Table, Board
+- `LinkTableView`: tabela com colunas (favicon, título, descrição, categoria, tags, data, ações)
+- `LinkBoardView`: kanban horizontal agrupado por categoria com cards e OG image
+- Grid size customizer: botões +/- para ajustar 2-5 colunas na visualização grid
+
+---
+
 ## [0.7.0] — 2026-02-20
 
 ### Error Boundary + Logging Centralizado
