@@ -188,10 +188,21 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    // Criar nova ordem: remover item arrastado e inserir na posição do alvo
+    // Criar nova ordem: remover item arrastado e inserir respeitando a direção visual
     const newOrder = filteredLinks.filter((_, i) => i !== dragIndex);
     const draggedItem = filteredLinks[dragIndex];
-    const insertIndex = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+
+    // Usar a direção do ref (síncrono) com fallback para o state
+    const direction = lastKnownDrop.current.direction ?? dragState.dragDirection;
+
+    let insertIndex: number;
+    if (direction === "below") {
+      // Inserir DEPOIS do alvo
+      insertIndex = dragIndex < targetIndex ? targetIndex : targetIndex + 1;
+    } else {
+      // Inserir ANTES do alvo (padrão)
+      insertIndex = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    }
     newOrder.splice(insertIndex, 0, draggedItem);
 
     // Atualizar positions
