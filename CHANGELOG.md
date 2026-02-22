@@ -4,7 +4,21 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
 ---
 
-## [0.12.0] — 2026-02-21
+## [0.13.0] — 2026-02-21
+
+### Notas em Rich Text (Tiptap)
+- Editor WYSIWYG completo substituindo o antigo textarea + Markdown
+- Toolbar com formatação: **Negrito**, *Itálico*, Sublinhado, Tachado, Realce, Código
+- Títulos H1–H3, listas com marcadores, numeradas e **task lists** com checkboxes
+- Blocos de citação, blocos de código, linhas horizontais
+- Inserção e edição de links via popover dedicado
+- Desfazer/Refazer integrados
+- Componente `RichTextDisplay` para exibição read-only com detecção automática de texto legado
+- Estilos CSS dedicados para o editor (task lists, placeholder, blocos de código, citações)
+- Dependências: `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-link`, `@tiptap/extension-underline`, `@tiptap/extension-highlight`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-placeholder`
+
+---
+
 
 ### Galeria com Covers
 - Nova view **Galeria** (masonry layout) usando imagens OG como capas grandes

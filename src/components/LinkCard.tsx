@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
-import { MarkdownPreview } from "@/components/MarkdownPreview";
+import { RichTextDisplay } from "@/components/RichTextEditor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -222,7 +222,7 @@ export function LinkCard({
 
             {link.notes && (
               <div className="mt-2 rounded-md bg-muted/50 px-2.5 py-1.5 text-xs leading-relaxed line-clamp-3">
-                <MarkdownPreview content={link.notes} className="text-xs" />
+                <RichTextDisplay content={link.notes} className="text-xs" />
               </div>
             )}
           </div>
