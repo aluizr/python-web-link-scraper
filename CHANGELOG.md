@@ -4,6 +4,78 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
 ---
 
+## [0.11.0] — 2026-02-21
+
+### Sistema de Categorias Aprimorado
+
+#### Ordenação por Drag & Drop
+- Campo `position` (INTEGER) adicionado à tabela `categories`
+- Arrastar categorias na sidebar para reordená-las (drag handle com `GripVertical`)
+- Ordem persistida no banco via `reorderCategories()`
+
+#### Cores de Categoria
+- Campo `color` (VARCHAR 7, hex) adicionado à tabela `categories`
+- `ColorPicker` na sidebar: 16 cores predefinidas em popover
+- Dots de cor exibidos ao lado do nome da categoria na sidebar
+- Dots de cor nos cabeçalhos das colunas da visão Board
+- Seletor de cor ao criar novas categorias/subcategorias
+
+#### Restrição de Nome Único
+- Índice único `idx_categories_unique_name` em `(user_id, name, parent_id)` no banco
+- Tratamento de erro no frontend ao tentar criar categoria duplicada
+
+#### Exclusão com Cascata
+- Diálogo de confirmação (`AlertDialog`) para **toda** exclusão de categoria
+- Categorias sem filhos: "Os links serão movidos para Sem categoria"
+- Categorias com filhos: "Subcategorias e links serão movidos para Sem categoria" + botão "Excluir tudo"
+- Exclusão recursiva de todos os descendentes via `deleteCategory(id, cascade: true)`
+
+#### Hierarquia de 3 Níveis
+- Limite expandido de 2 para 3 níveis de profundidade (Pai → Filho → Neto)
+- Renderização recursiva na sidebar (`renderCategory()`)
+- Seletor flat no formulário de link com indentação visual por nível
+
+### Sistema de Ícones Renovado
+
+#### 1541 Ícones Lucide
+- De ~90 ícones manuais para **todos os 1541 ícones** do `lucide-react` via `icons` export
+- `ICON_MAP` e `ICON_NAMES` gerados dinamicamente
+- Validação atualizada para aceitar qualquer ícone do Lucide
+
+#### IconPicker Aprimorado
+- **20 categorias** navegáveis por pills: Pastas, Livros, Código & Tech, Mídia, Trabalho, Finanças, Social, Segurança, Ferramentas, Navegação, Tempo, Natureza, Comida, Esportes, Viagem, Saúde, Casa, Favoritos, Compras, Arte & Design
+- **48 ícones populares** na tela inicial
+- **Busca por nome** com até 120 resultados
+- Grid 8 colunas com scroll
+
+#### Ícones Personalizados (Upload)
+- Aba **"Importar"** no IconPicker para upload de ícones do computador
+- Formatos aceitos: SVG, PNG, JPG, WebP, GIF (máx. 32KB)
+- Drag & drop ou clique para selecionar arquivo
+- Ícone convertido para base64 (data URL) e salvo no banco
+- Preview do ícone customizado com botão para remover
+- Migração para expandir campo `icon` de `VARCHAR(50)` para `TEXT`
+- Helper `isCustomIcon()` para detecção e renderização condicional (`<img>`)
+
+#### Edição de Ícone em Categorias Existentes
+- Botão de edição (lápis) agora mostra `IconPicker` + campo de nome
+- Ícone atual pré-selecionado ao entrar no modo de edição
+- Ícone e nome salvos juntos ao confirmar
+
+### Correções
+
+- **Ícones Exportar/Importar trocados**: `Upload` para Exportar, `Download` para Importar
+- **Drag & Drop da esquerda para a direita**: corrigido cálculo de `insertIndex` — item arrastado agora toma a posição original do alvo em ambas as direções
+- **Botões aninhados (DOM)**: `ColorPicker` e chevron de expandir usavam `<button>` dentro de `SidebarMenuButton` (também `<button>`) → substituídos por `<div role="button">`
+- **Ícone `Alarm` inexistente**: substituído por `AlarmClock` (disponível no lucide-react)
+
+### Migrações
+
+- `20260221_improve_categories.sql` — campos `position`, `color`, índice único de nome
+- `20260221_expand_icon_column.sql` — campo `icon` de `VARCHAR(50)` para `TEXT`
+
+---
+
 ## [0.10.0] — 2026-02-21
 
 ### Visualização de Cartões (Cards View)
