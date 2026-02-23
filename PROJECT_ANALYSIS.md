@@ -218,7 +218,7 @@ import { Folder, BookOpen, Code, ... } // +26 icons, ALL bundled
 - Trocar Lucide por `<use href="#icon-name" />`
 - Economia: ~120 KB gzip
 
-**Solução B: Selective imports**
+#### Solução B: Selective imports
 
 ```typescript
 // icon-map.ts (centralizado)
@@ -232,7 +232,7 @@ export const ICONS = {
 };
 ```
 
-**Solução C: Remover Lucide + usar sistema de ícones custom (mais agressivo)**
+#### Solução C: Remover Lucide + usar sistema de ícones custom (mais agressivo)
 
 - Criar pasta `src/assets/icons/` com SVGs minificados
 - Componente `<Icon name="folder" />`

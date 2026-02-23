@@ -77,7 +77,6 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     reorderLinks: dragReorderLinks,
     undo,
     redo,
-    getCurrentLinks,
   } = useDragDropManager(links, categories);
 
   const { entries: activityEntries, logActivity, clearLog } = useActivityLog();

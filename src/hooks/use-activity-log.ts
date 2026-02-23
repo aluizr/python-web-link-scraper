@@ -30,6 +30,8 @@ const ACTION_LABELS: Record<ActivityAction, string> = {
   "link:created": "Link adicionado",
   "link:updated": "Link atualizado",
   "link:deleted": "Link excluído",
+  "link:trashed": "Link movido para lixeira",
+  "link:restored": "Link restaurado",
   "link:favorited": "Link favoritado",
   "link:unfavorited": "Link desfavoritado",
   "link:reordered": "Links reordenados",

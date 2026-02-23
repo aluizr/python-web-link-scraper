@@ -9,6 +9,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 ## 📋 Mudanças Realizadas
 
 ### **1. Banco de Dados**
+
 - ✅ Adicionado campo `position` em links
 - ✅ Criado índice para performance
 - ✅ Links existentes recebem posições sequenciais
@@ -16,11 +17,13 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 **Arquivo:** `supabase/migrations/20260215_add_position_field.sql`
 
 ### **2. Tipos TypeScript**
+
 - ✅ Adicionado `position: number` ao tipo `LinkItem`
 
 **Arquivo:** `src/types/link.ts`
 
 ### **3. Hook `use-links.ts`**
+
 - ✅ Mapeamento agora inclui `position`
 - ✅ Nova função `reorderLinks()` para atualizar posições no banco
 - ✅ Ordenação por `position` (em vez de `created_at`)
@@ -29,6 +32,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 **Arquivo:** `src/hooks/use-links.ts`
 
 ### **4. Componente `LinkCard`**
+
 - ✅ Adicionado atributo `draggable`
 - ✅ Adicionado ícone de grip (GripVertical) - aparece ao passar mouse
 - ✅ Handlers: `onDragStart`, `onDragOver`, `onDrop`
@@ -38,6 +42,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 **Arquivo:** `src/components/LinkCard.tsx`
 
 ### **5. Página `Index.tsx`**
+
 - ✅ Estado `draggedLink` para controlar drag
 - ✅ Handlers implementados:
   - `handleDragStart` - iniciar drag
@@ -55,6 +60,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 ### **1. Executar a Migration SQL**
 
 Abra seu **Supabase Dashboard**:
+
 1. Vá para seu projeto
 2. Clique em **SQL Editor**
 3. Cole este SQL:
@@ -77,8 +83,8 @@ FROM ranked_links
 WHERE public.links.id = ranked_links.id;
 ```
 
-4. Clique em **Run**
-5. ✅ Pronto!
+1. Clique em **Run**
+2. ✅ Pronto!
 
 ### **2. Testar Localmente**
 
@@ -192,15 +198,18 @@ await Promise.all([
 ## 🐛 Se der Erros
 
 ### Erro: "position is not defined"
+
 - [ ] Executou o SQL na sua conta Supabase?
 - [ ] Aguardou ~10 segundos após executar SQL?
 
 ### Drag & Drop não funciona
+
 - [ ] Browser suporta HTML5 Drag/Drop? (todos modernos suportam)
 - [ ] Console tem erros? (F12 → Console)
 - [ ] Migration foi executada?
 
 ### Links visualmente bugados
+
 - [ ] Limpar cache do navegador (Ctrl+Shift+Delete)
 - [ ] Limpar localStorage (DevTools → Application → Clear)
 
