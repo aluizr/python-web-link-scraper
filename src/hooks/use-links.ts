@@ -62,7 +62,7 @@ export function useLinks(userId: string | undefined) {
       }
 
       const [linksRes, catsRes] = await Promise.all([
-        supabase.from("links").select("id, url, title, description, category, tags, is_favorite, favicon, notes, created_at, position, deleted_at, user_id").order("position", { ascending: true }), // ✅ Ordenar por position
+        supabase.from("links").select("id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, created_at, position, deleted_at, user_id").order("position", { ascending: true }), // ✅ Ordenar por position
         supabase.from("categories").select("*").order("position", { ascending: true }), // ✅ Ordenar categorias por position
       ]);
       if (linksRes.data) {
