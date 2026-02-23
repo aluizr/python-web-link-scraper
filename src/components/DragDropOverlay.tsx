@@ -17,7 +17,6 @@ interface DragDropOverlayProps {
     tags?: string[];
   } | null;
 }
-
 /**
  * Overlay com controles de Undo/Redo e feedback visual de drag
  */
