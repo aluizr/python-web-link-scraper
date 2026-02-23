@@ -78,11 +78,13 @@ export function LinkCard({
       }}
       onDragEnd={(e) => onDragEnd?.(e)}
       data-card-id={link.id}
-      className={`group relative overflow-hidden transition-all duration-200 border-2
+      className={`group relative overflow-hidden border-2
+        transition-all duration-200
         ${isDragging
           ? "z-30 scale-105 -translate-y-2 shadow-2xl shadow-primary/30 opacity-100 border-primary/60 bg-primary/10"
           : ""
         }
+        ${!isDragging && dragEnabled ? "snap-animate" : ""}
         ${isDropZone && !isDragging
           ? "border-primary/50 bg-primary/10 shadow-lg shadow-primary/10 scale-[1.02] ring-1 ring-primary/30"
           : !isDragging ? "border-transparent" : ""

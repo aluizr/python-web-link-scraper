@@ -155,21 +155,21 @@ export function LinkCardsView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative rounded-xl border bg-card overflow-hidden transition-all duration-200 ${
-              isDragging
+            className={`group relative rounded-xl border bg-card overflow-hidden transition-all duration-200
+              ${isDragging
                 ? "opacity-25 scale-[0.97] shadow-none border-dashed border-primary/40 bg-primary/5"
                 : ""
-            } ${
-              isDropZone
+              }
+              ${!isDragging && dragEnabled ? "snap-animate" : ""}
+              ${isDropZone
                 ? "border-primary/50 bg-primary/10 shadow-lg shadow-primary/10 scale-[1.02] ring-1 ring-primary/30"
                 : !isDragging
                   ? "hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 border-border/60 hover:border-border"
                   : ""
-            } ${
-              isSelected ? "ring-2 ring-primary border-primary" : ""
-            } ${
-              dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
-            }`}
+              }
+              ${isSelected ? "ring-2 ring-primary border-primary" : ""}
+              ${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""}
+            `}
           >
             {/* Drop zone indicators */}
             {isDropZone && dragDirection === "above" && (
