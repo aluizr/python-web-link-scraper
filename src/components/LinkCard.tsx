@@ -156,7 +156,9 @@ export function LinkCard({
                 className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary transition-colors truncate"
               >
                 {linkStatus === "broken" && (
-                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-destructive" title="Link quebrado" />
+                  <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-destructive">
+                    <title>Link quebrado</title>
+                  </ShieldAlert>
                 )}
                 {link.title || link.url}
                 <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-50" />
