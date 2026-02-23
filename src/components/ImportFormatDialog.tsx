@@ -33,6 +33,7 @@ export function ImportFormatDialog({ isOpen, onClose, onImport }: ImportFormatDi
     successCount: number;
     errorCount: number;
     errors: Array<{ row: number; error: string }>;
+    links: Omit<LinkItem, "id" | "createdAt" | "position">[];
   } | null>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +129,7 @@ export function ImportFormatDialog({ isOpen, onClose, onImport }: ImportFormatDi
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCancel}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {result ? "Confirmar Importação" : "Importar Links"}

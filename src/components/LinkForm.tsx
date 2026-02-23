@@ -329,7 +329,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
       {/* Dialog principal do formulário */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1">

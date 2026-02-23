@@ -7,6 +7,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.14.0] — 2026-02-22
 
 ### Operações em Lote (Batch) — Aprimoradas
+
 - **Seleção em todas as views**: Checkboxes agora disponíveis em Grade, Lista, Cartões, Tabela, Board e Galeria
 - **Checkbox no header da Tabela**: Selecionar/desmarcar todos com indicador de seleção parcial (traço)
 - **Shift+Click para seleção em intervalo**: Selecione um item, segure Shift e clique em outro para selecionar todos entre eles
@@ -16,6 +17,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - **Destaque visual**: Linhas/cards selecionados com ring e background em todas as views
 
 ### Correções (0.14.0)
+
 - **`useEffect` não importado**: `ReferenceError: useEffect is not defined` em `Index.tsx` — adicionado `useEffect` ao import do React (necessário para o listener de Escape adicionado nesta versão)
 
 ---
@@ -23,6 +25,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.13.0] — 2026-02-21
 
 ### Notas em Rich Text (Tiptap)
+
 - Editor WYSIWYG completo substituindo o antigo textarea + Markdown
 - Toolbar com formatação: **Negrito**, *Itálico*, Sublinhado, Tachado, Realce, Código
 - Títulos H1–H3, listas com marcadores, numeradas e **task lists** com checkboxes
@@ -38,6 +41,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.12.0] — 2026-02-21
 
 ### Galeria com Covers
+
 - Nova view **Galeria** (masonry layout) usando imagens OG como capas grandes
 - Layout em colunas CSS (`columns`) com transição de hover e zoom suave
 - Fallback visual com favicon para links sem imagem OG
@@ -45,12 +49,14 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Atalho **G** agora cicla entre 6 views: Grade → Lista → Cartões → Tabela → Board → Galeria
 
 ### Breadcrumb Navigation
+
 - Navegação por migalhas ao filtrar por categoria
 - Exibe hierarquia completa: Todos > Pai > Filho > Neto
 - Clique em qualquer nível para navegar diretamente
 - Botão "Todos" com ícone Home para voltar à raiz
 
 ### Lixeira / Soft Delete
+
 - Links deletados vão para **lixeira** em vez de exclusão permanente
 - Coluna `deleted_at` (TIMESTAMPTZ) na tabela `links`
 - Painel lateral da lixeira com contagem de itens
@@ -63,6 +69,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Migration: `20260221_soft_delete.sql`
 
 ### Operações em Lote (Batch)
+
 - **Seleção múltipla** de links via checkboxes (visível no hover)
 - Barra de ações flutuante (bottom bar) quando há seleção:
   - **Selecionar todos** os links visíveis
@@ -73,6 +80,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Suporte a seleção nas views Grade, Lista e Galeria
 
 ### Broken Link Checker
+
 - Verificador de links com painel lateral dedicado
 - Verificação em lotes de 5 (HEAD request + fallback no-cors)
 - Barra de progresso durante verificação
@@ -83,6 +91,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Botão na barra de ferramentas
 
 ### Rich Text Notes (Markdown)
+
 - Notas pessoais agora suportam **Markdown**
 - Botão **Preview** no formulário para visualizar Markdown renderizado
 - Renderização de Markdown nos cards de link
@@ -91,9 +100,11 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - ⚠️ Substituído pelo editor Tiptap na v0.13.0
 
 ### Correções (0.12.0)
+
 - **`Progress` component missing**: `Failed to fetch dynamically imported module` — `LinkCheckerPanel` importava `@/components/ui/progress` que não existia. Criado componente `Progress` usando `@radix-ui/react-progress` (dep já instalada)
 
 ### Melhorias Técnicas
+
 - `LinkItem.deletedAt` adicionado ao tipo TypeScript
 - `ActivityAction` ampliado: `link:trashed`, `link:restored`
 - `ViewMode` ampliado: `"gallery"`
@@ -110,11 +121,13 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ### Sistema de Categorias Aprimorado
 
 #### Ordenação por Drag & Drop
+
 - Campo `position` (INTEGER) adicionado à tabela `categories`
 - Arrastar categorias na sidebar para reordená-las (drag handle com `GripVertical`)
 - Ordem persistida no banco via `reorderCategories()`
 
 #### Cores de Categoria
+
 - Campo `color` (VARCHAR 7, hex) adicionado à tabela `categories`
 - `ColorPicker` na sidebar: 16 cores predefinidas em popover
 - Dots de cor exibidos ao lado do nome da categoria na sidebar
@@ -122,16 +135,19 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Seletor de cor ao criar novas categorias/subcategorias
 
 #### Restrição de Nome Único
+
 - Índice único `idx_categories_unique_name` em `(user_id, name, parent_id)` no banco
 - Tratamento de erro no frontend ao tentar criar categoria duplicada
 
 #### Exclusão com Cascata
+
 - Diálogo de confirmação (`AlertDialog`) para **toda** exclusão de categoria
 - Categorias sem filhos: "Os links serão movidos para Sem categoria"
 - Categorias com filhos: "Subcategorias e links serão movidos para Sem categoria" + botão "Excluir tudo"
 - Exclusão recursiva de todos os descendentes via `deleteCategory(id, cascade: true)`
 
 #### Hierarquia de 3 Níveis
+
 - Limite expandido de 2 para 3 níveis de profundidade (Pai → Filho → Neto)
 - Renderização recursiva na sidebar (`renderCategory()`)
 - Seletor flat no formulário de link com indentação visual por nível
@@ -139,17 +155,20 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ### Sistema de Ícones Renovado
 
 #### 1541 Ícones Lucide
+
 - De ~90 ícones manuais para **todos os 1541 ícones** do `lucide-react` via `icons` export
 - `ICON_MAP` e `ICON_NAMES` gerados dinamicamente
 - Validação atualizada para aceitar qualquer ícone do Lucide
 
 #### IconPicker Aprimorado
+
 - **20 categorias** navegáveis por pills: Pastas, Livros, Código & Tech, Mídia, Trabalho, Finanças, Social, Segurança, Ferramentas, Navegação, Tempo, Natureza, Comida, Esportes, Viagem, Saúde, Casa, Favoritos, Compras, Arte & Design
 - **48 ícones populares** na tela inicial
 - **Busca por nome** com até 120 resultados
 - Grid 8 colunas com scroll
 
 #### Ícones Personalizados (Upload)
+
 - Aba **"Importar"** no IconPicker para upload de ícones do computador
 - Formatos aceitos: SVG, PNG, JPG, WebP, GIF (máx. 32KB)
 - Drag & drop ou clique para selecionar arquivo
@@ -159,6 +178,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Helper `isCustomIcon()` para detecção e renderização condicional (`<img>`)
 
 #### Edição de Ícone em Categorias Existentes
+
 - Botão de edição (lápis) agora mostra `IconPicker` + campo de nome
 - Ícone atual pré-selecionado ao entrar no modo de edição
 - Ícone e nome salvos juntos ao confirmar
@@ -275,6 +295,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ### Error Boundary + Logging Centralizado
 
 #### Sistema de Logging (`logger.ts`)
+
 - 5 níveis: `debug`, `info`, `warn`, `error`, `fatal`
 - Persistência em `localStorage` (últimos 100 erros, chave `webnest-error-log`)
 - Handlers globais para `window.onerror` e `unhandledrejection`
@@ -283,6 +304,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Integração lazy opcional com Sentry (`VITE_SENTRY_DSN`) e LogRocket (`VITE_LOGROCKET_APP_ID`) — sem dependências obrigatórias
 
 #### Error Boundary (`ErrorBoundary.tsx`)
+
 - Class component com `componentDidCatch` → loga via `logger.fatal()`
 - Fallback padrão com UI amigável: ícone de erro, mensagem, botões "Tentar novamente" e "Recarregar página"
 - Stack trace visível apenas em modo dev (collapsible)
@@ -290,6 +312,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Dois boundaries no `App.tsx`: um externo (toda a árvore) e um interno (envolvendo `AppRoutes`)
 
 #### Integração de Logging nos Hooks
+
 - `use-links.ts`: `logger.error()` em falhas de add/update/delete link, criar categoria e reordenar
 - `use-auth.ts`: `logger.warn()` em falhas de login/cadastro, `identifyUser()` no login e `clearUserIdentity()` no logout
 
@@ -303,6 +326,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ### Otimização de Bundle (P0)
 
 #### Manual Chunks (`vite.config.ts`)
+
 - `vendor-react`: React, React DOM, React Router (~83 KB gzip)
 - `vendor-supabase`: Supabase JS (~46 KB gzip)
 - `vendor-ui`: Radix UI (~27 KB gzip)
@@ -311,6 +335,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Vendor chunks cacheáveis separadamente pelo browser
 
 #### Limpeza
+
 - Removido `slider.tsx` (componente UI não utilizado)
 - Removido `ui/use-toast.ts` (re-export não utilizado)
 - Meta tag `apple-mobile-web-app-capable` substituída por `mobile-web-app-capable` (deprecation fix)
@@ -322,6 +347,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ### Rate Limiting & Anti-Abuso
 
 #### Banco de dados
+
 - Trigger `enforce_links_limit` — máximo de **500 links** por usuário
 - Trigger `enforce_categories_limit` — máximo de **50 categorias** por usuário
 - Trigger `enforce_links_insert_rate` — máximo de **10 inserções em 60 segundos** (anti-spam)
@@ -329,6 +355,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Índice `idx_links_user_created` para performance das queries de rate limiting
 
 #### Client-side
+
 - Módulo `rate-limiter.ts` com sliding window por operação:
   - `link:create` 10/min, `link:update` 30/min, `link:delete` 20/min, `link:favorite` 40/min, `link:reorder` 15/min
   - `category:create` 10/min, `category:delete` 10/min, `category:rename` 20/min
@@ -356,6 +383,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Meta tags PWA no `index.html` (`theme-color`, `apple-mobile-web-app-capable`, `apple-touch-icon`)
 
 ### Migração para npm
+
 - Removido `bun.lockb`, projeto agora usa `npm` como gerenciador de pacotes
 
 ---
@@ -363,6 +391,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.4.0] — 2026-02-17
 
 ### Notas nos Links
+
 - Campo `notes` (TEXT) adicionado à tabela `links` via migration
 - Textarea no formulário de criação/edição com ícone `StickyNote`
 - Indicador visual no card quando o link tem notas
@@ -370,6 +399,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Incluído em exportação e importação (JSON, CSV, HTML, Bookmarks)
 
 ### Dashboard de Estatísticas
+
 - Hook `use-stats.ts` com cálculos memoizados
 - **Visão geral**: total de links, favoritos, categorias, tags, adicionados hoje
 - **Distribuição por categoria**: gráfico de pizza (Recharts) com paleta de 8 cores
@@ -379,6 +409,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 15 testes unitários para estatísticas
 
 ### Exportação (4 formatos)
+
 - **JSON**: array completo de dados
 - **CSV**: headers + rows com escape de vírgulas, aspas e quebras de linha
 - **HTML**: documento estilizado com tabela responsiva, badges coloridas, favicons, estatísticas no cabeçalho
@@ -387,6 +418,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 8 testes unitários para exportação CSV
 
 ### Importação (4 formatos)
+
 - **JSON**: validação de estrutura + Zod por item
 - **CSV**: detecção flexível de colunas (case-insensitive), parsing de campos entre aspas
 - **HTML**: extrai links de tabelas HTML exportadas
@@ -395,6 +427,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Preview de resultado com contagem de sucesso/erro antes de confirmar
 
 ### Atalhos de Teclado
+
 - `N` — Novo link
 - `/` ou `Ctrl+K` — Focar busca
 - `G` — Alternar grade/lista
@@ -406,6 +439,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Desativados durante digitação em inputs
 
 ### Auto-Save de Rascunho
+
 - Hook `use-link-draft.ts` salva estado do formulário no `localStorage`
 - Debounce de 500ms nas mudanças
 - Dialog de recuperação ao abrir o formulário ("Rascunho encontrado — Recuperar ou Descartar?")
@@ -413,6 +447,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Limpo automaticamente após submissão
 
 ### Detecção de URLs Duplicadas
+
 - Hook `use-duplicate-detector.ts` com normalização de URL
 - Remove protocolo, `www.`, trailing slash, query params e hash
 - Comparação case-insensitive
@@ -420,6 +455,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 9 testes unitários
 
 ### Busca Avançada
+
 - Painel de filtros expansível com:
   - Busca textual em título, URL, descrição, notas e tags
   - Filtro por categoria (incluindo `Pai / Filho`)
@@ -431,11 +467,13 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 13 testes unitários para `filterAndSortLinks()`
 
 ### Sistema de 8 Temas
+
 - Light, Dark, Ocean, Sunset, Forest, Rose, Lavender, Midnight
 - Popover visual com preview de cor e ícone para cada tema
 - Checkmark no tema selecionado
 
 ### Docker
+
 - `Dockerfile` multi-stage (Node 20 Alpine → `serve -s dist`)
 - `docker-compose.yml` com health check e restart policy
 - Variações: `Dockerfile.dev`, `Dockerfile.nginx`, `docker-compose.dev.yml`, `docker-compose.all.yml`
@@ -446,6 +484,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.3.0] — 2026-02-16
 
 ### Hierarquia de Categorias (Subcategorias)
+
 - Campo `parent_id` (UUID nullable) adicionado à tabela `categories` via migration
 - FK para `categories.id` com `ON DELETE SET NULL`
 - Constraint: categoria não pode ser pai de si mesma
@@ -458,6 +497,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Filtro de busca inclui categorias `Pai / Filho`
 
 ### Documentação
+
 - `PROJECT_ANALYSIS.md` — análise completa do projeto (estrutura, bundle, performance, otimizações)
 
 ---
@@ -465,6 +505,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.2.0] — 2026-02-15
 
 ### Autenticação
+
 - Campos `user_id` adicionados às tabelas `links` e `categories` (FK → `auth.users`, CASCADE)
 - Políticas RLS permissivas removidas
 - 8 novas políticas RLS com escopo por usuário (SELECT/INSERT/UPDATE/DELETE)
@@ -473,6 +514,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Lazy loading da página principal com `React.lazy()` + `Suspense`
 
 ### Auditoria de Segurança
+
 - **5 vulnerabilidades críticas** identificadas e corrigidas:
   - Credenciais Supabase removidas do repositório
   - `.env` adicionado ao `.gitignore`
@@ -489,6 +531,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 20 testes de validação
 
 ### Drag & Drop
+
 - Hook `use-drag-drop-manager.ts` (346 linhas) com:
   - Gerenciamento de estado de arrasto (`draggedLink`, `dropZoneId`, `dragDirection`)
   - **Undo/Redo** com Ctrl+Z / Ctrl+Y
@@ -502,12 +545,14 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - 9 testes unitários
 
 ### Ícones de Categoria
+
 - Coluna `icon` (VARCHAR 50) com default `'Folder'`
 - 27 ícones Lucide disponíveis (Folder, BookOpen, Code, Palette, Music, Video, etc.)
 - `IconPicker.tsx` — popover com grade 5×6 e estado de seleção
 - Validação: apenas ícones da allowlist aceitos
 
 ### Auto-Fetch de Metadados
+
 - Hook `use-metadata.ts` (251 linhas) com:
   - Cache LRU (100 entradas, expiração 24h)
   - API primária: Microlink (`api.microlink.io`)
@@ -522,18 +567,21 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 ## [0.1.0] — 2026-02-14
 
 ### Fundação do Projeto
+
 - Projeto inicializado com Vite + React 18.3 + TypeScript 5.8 + SWC
 - Tailwind CSS + Shadcn/UI (29 componentes Radix UI)
 - Supabase JS client configurado com `localStorage`
 - Roteamento com React Router DOM v7
 
 ### Banco de Dados
+
 - Tabela `links`: id, url, title, description, category, tags, is_favorite, favicon, created_at
 - Tabela `categories`: id, name
 - RLS habilitada (políticas abertas inicialmente)
 - 3 categorias padrão: Trabalho, Estudos, Lazer
 
 ### Funcionalidades Core
+
 - **CRUD de links**: criar, editar, deletar, favoritar
 - **CRUD de categorias**: criar, deletar, renomear
 - **LinkCard**: card com favicon, título/URL, descrição, badge de categoria, tags, estrela de favorito, ações de editar/deletar com confirmação
@@ -544,6 +592,7 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 - Toggle entre visualização em grade e lista
 
 ### Infraestrutura
+
 - Vitest configurado com jsdom e `@testing-library/jest-dom`
 - ESLint com plugins React Hooks e React Refresh
 - TypeScript com strict mode e path aliases (`@/`)

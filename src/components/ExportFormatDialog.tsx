@@ -95,7 +95,7 @@ export function ExportFormatDialog({ isOpen, onClose, links, categories }: Expor
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Escolha o Formato de Exportação</DialogTitle>
           <DialogDescription>Selecione como deseja exportar seus links</DialogDescription>
