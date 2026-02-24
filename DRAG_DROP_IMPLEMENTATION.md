@@ -108,7 +108,7 @@ npm run dev
 ## 🎨 Recursos de UX
 
 | Feature | Descrição |
-|---------|-----------|
+| --------- | ----------- |
 | 🖱️ Cursor Grab | Muda para cursor de "agarrar" em draggable |
 | 🎯 Ícone Grip | Aparece no hover (≡ icon) |
 | 👻 Opacity | Link sendo arrastado fica 50% transparente |

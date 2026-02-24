@@ -417,7 +417,7 @@ Testes existentes:
 ## 📊 Comparativo: Antes vs. Depois de Otimizações
 
 | Métrica | Antes | Depois | Ganho |
-|---------|-------|--------|-------|
+| --------- | ------- | -------- | ------- |
 | Bundle (gzip) | ~700 KB | ~400 KB | **43%** |
 | Lighthouse Perf | 73 | 88 | +15 |
 | Time to Interactive | 3.5s | 2.0s | **43%** |

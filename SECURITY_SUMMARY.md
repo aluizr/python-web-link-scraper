@@ -59,7 +59,7 @@ SELECT * FROM pg_policies WHERE schemaname = 'public';
 5. Adicionar link com URL: javascript:alert('XSS')
 6. Esperado: ❌ Rejeitar
 
-```
+```text
 .env
 .env.local
 .env.*.local
@@ -174,6 +174,10 @@ Estas coisas o projeto JÁ faz bem:
 Faça estes 3 testes para verificar se as implementações funcionaram:
 
 ### Teste 1: XSS
+
+1. Abrir app
+2. Adicionar link com URL: javascript:alert('XSS')
+3. Esperado: ❌ Rejeitar
 
 ```
 1. Abrir app
