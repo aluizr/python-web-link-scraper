@@ -120,7 +120,7 @@ npm run dev
 
 ## 🛠️ Ordem de Execução
 
-```
+```bash
 1. Executar SQL (adicionar campo position)
 2. Reload da aplicação (npm run dev)
 3. Fazer login
@@ -134,7 +134,7 @@ npm run dev
 
 ### **Fluxo de Drag & Drop**
 
-```
+```bash
 1. Usuário começa arrastar link A
    ↓ setDraggedLink(linkA)
    

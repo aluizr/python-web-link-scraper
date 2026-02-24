@@ -12,7 +12,7 @@
 
 ## 📁 Estrutura de Pastas
 
-```
+```bash
 webnest/
 ├── src/
 │   ├── components/                  # Componentes React (~33 arquivos)
@@ -133,7 +133,7 @@ webnest/
 
 ### Bundle Size Estimation
 
-```
+```bash
 Dependências críticas (prod):
 ├── react@18.3.1              ~240 KB (gzipped: ~75 KB)
 ├── react-dom@18.3.1          ~160 KB (gzipped: ~50 KB)
@@ -165,7 +165,7 @@ Nota: Tiptap adicionou ~90 KB gzip (ProseMirror core + extensões)
 
 ### Métricas (Estimadas)
 
-```
+```bash
 Vite Dev Build:
 - Cold start: ~2s (com cache)
 - Hot reload: ~400ms (SWC é rápido)
@@ -333,7 +333,7 @@ const queryClient = new QueryClient({
 
 ### Cobertura Atual
 
-```
+```bash
 Unit tests:     ~40% (hooks e utilitários cobertos, componentes pendentes)
 Integration:    0% (Supabase real)
 E2E:            0%
@@ -361,7 +361,7 @@ Testes existentes:
 
 2. **Testar componentes críticos:**
 
-   ```
+   ```bash
    - LinkCard (drag, favorite toggle, delete)
    - LinkForm (validation, submit)
    - AppSidebar (filter, add category)

@@ -42,7 +42,8 @@
 ├── docker-compose.all.yml  # Todos os ambientes
 ├── nginx.conf              # Configuração Nginx
 └── .dockerignore           # Arquivos ignorados no build
-```
+
+```bash
 ├── Dockerfile              # Build production com Node.js serve
 ├── Dockerfile.dev          # Build com watch/hot-reload para dev
 ├── Dockerfile.nginx        # Build production otimizado com Nginx

@@ -179,7 +179,7 @@ Faça estes 3 testes para verificar se as implementações funcionaram:
 2. Adicionar link com URL: javascript:alert('XSS')
 3. Esperado: ❌ Rejeitar
 
-```
+```bash
 1. Abrir app
 2. Adicionar link com URL: javascript:alert('XSS')
 3. Esperado: ❌ Rejeitar
@@ -187,7 +187,7 @@ Faça estes 3 testes para verificar se as implementações funcionaram:
 
 ### Teste 2: Import Gigante
 
-```
+```bash
 1. Criar arquivo JSON com 2000 links
 2. Tentar importar
 3. Esperado: ❌ Rejeitar (máx 1000)
@@ -195,7 +195,7 @@ Faça estes 3 testes para verificar se as implementações funcionaram:
 
 ### Teste 3: CSP
 
-```
+```bash
 1. Abrir DevTools (F12)
 2. Console
 3. Tentar: document.body.innerHTML = '<script>alert("test")</script>'
