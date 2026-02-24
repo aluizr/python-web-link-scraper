@@ -334,26 +334,35 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     dragEnd();
   };
 
-  const handleImportLinks = async (
-    importedLinks: Omit<LinkItem, "id" | "createdAt" | "position">[]
-  ) => {
+  // Função de importação segura (limite de tamanho e quantidade)
+  const handleImportLinks = async (importedLinks: Omit<LinkItem, "id" | "createdAt" | "position">[]) => {
+    const MAX_LINKS_PER_IMPORT = 1000;
+    if (importedLinks.length > MAX_LINKS_PER_IMPORT) {
+      toast.error(`Máximo de ${MAX_LINKS_PER_IMPORT} links por importação (seu arquivo tem ${importedLinks.length})`);
+      return;
+    }
     let successCount = 0;
     let errorCount = 0;
-
-    for (const linkData of importedLinks) {
+    const errors: string[] = [];
+    for (let index = 0; index < importedLinks.length; index++) {
+      const linkData = importedLinks[index];
       try {
         await addLink(linkData);
         successCount++;
-      } catch {
+      } catch (error) {
         errorCount++;
+        errors.push(`Link ${index + 1}: Erro ao adicionar link`);
       }
     }
-
-    if (errorCount > 0) {
-      toast.warning(`⚠️ ${errorCount} link(s) falharam`);
-    }
     if (successCount > 0) {
+      toast.success(`✅ ${successCount} link(s) importado(s) com sucesso!`);
       logActivity("import:completed", `${successCount} links importados`, errorCount > 0 ? `${errorCount} falharam` : undefined);
+    }
+    if (errorCount > 0) {
+      toast.error(`⚠️ ${errorCount} erro(s) encontrado(s)`);
+      if (errors.length <= 5) {
+        console.error("Erros de importação:", errors.join("\n"));
+      }
     }
   };
 

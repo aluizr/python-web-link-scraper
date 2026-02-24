@@ -3,6 +3,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
+// Função utilitária para favicon seguro
+function getFaviconUrl(link: { url: string; favicon?: string }) {
+  if (link.favicon && link.favicon.startsWith('http')) {
+    return link.favicon;
+  }
+  try {
+    const hostname = new URL(link.url).hostname;
+    if (!hostname) return '/placeholder.svg';
+    return `https://icon.horse/icon/${hostname}?size=32`;
+  } catch {
+    return '/placeholder.svg';
+  }
+}
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import {
   AlertDialog,
@@ -143,7 +156,7 @@ export function LinkCard({
           
           <FaviconWithFallback
             url={link.url}
-            favicon={link.favicon}
+            favicon={getFaviconUrl(link)}
             size={24}
             className="mt-1"
           />
