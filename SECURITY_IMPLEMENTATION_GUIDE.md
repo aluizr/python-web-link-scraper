@@ -336,4 +336,57 @@ R:
 
 ---
 
+## 🛡️ Onboarding Seguro para Novos Desenvolvedores
+
+1. **Nunca use dados reais em `.env.example`**
+   - Sempre forneça apenas placeholders e instruções.
+2. **Como criar seu `.env`**
+   - Copie `.env.example` para `.env`.
+   - Preencha com suas credenciais reais (NUNCA faça commit do `.env`).
+3. **Checklist de Segurança para Novos Devs**
+   - [ ] `.env` está no `.gitignore`?
+   - [ ] Você rodou `npm install` e `npm audit`?
+   - [ ] Você leu o SECURITY_SUMMARY.md?
+   - [ ] Você sabe como rodar os testes de segurança?
+   - [ ] Você sabe como rodar backup e restore do banco?
+
+---
+
+## 💾 Checklist de Backup Antes do Deploy/Migração
+
+1. Acesse o painel do Supabase.
+2. Vá em Database > Backups.
+3. Crie um backup manual e baixe o arquivo.
+4. Confirme que o backup está salvo em local seguro.
+5. Só então rode migrações ou deploys.
+
+---
+
+## 🧪 Checklist de Testes de Segurança
+
+1. **XSS:**
+   - Tente adicionar links com `javascript:alert('XSS')`.
+   - Esperado: sistema rejeita.
+2. **Importação:**
+   - Tente importar arquivo JSON com mais de 1000 links.
+   - Esperado: sistema rejeita.
+3. **CSP:**
+   - Tente injetar `<script>` via DevTools.
+   - Esperado: CSP bloqueia.
+4. **CSRF:**
+   - Tente requisições cross-site sem token.
+   - Esperado: sistema rejeita.
+5. **Permissões do banco:**
+   - Execute `SELECT * FROM pg_policies WHERE schemaname = 'public';` no Supabase.
+   - Esperado: nenhuma política "Allow all access".
+6. **Validação de URLs:**
+   - Teste URLs maliciosas e protocolos não permitidos.
+   - Esperado: sistema rejeita.
+
+---
+
+**Dúvidas? Consulte este guia ou peça ajuda ao responsável pela segurança do projeto.**
+
+---
+
 **Última atualização:** 15 de Fevereiro de 2026
