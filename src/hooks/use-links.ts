@@ -152,6 +152,7 @@ export function useLinks(userId: string | undefined) {
       return;
     }
     if (data) {
+      console.log('useLinks newLink ogImage:', data.og_image);
       const newLink: LinkItem = {
         id: data.id,
         url: data.url,
