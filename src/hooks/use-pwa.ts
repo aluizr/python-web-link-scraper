@@ -7,5 +7,5 @@ export function usePWA() {
     update: () => {},
     dismiss: () => {},
   };
-}
+// ...existing code...
 }
