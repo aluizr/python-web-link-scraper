@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
-    react(),
+    react({ fastRefresh: false }),
     // Component tagger disabled
     VitePWA({
       registerType: "prompt",
