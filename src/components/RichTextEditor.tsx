@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import DOMPurify from "dompurify";
 
 // -------- Toolbar Button --------
 function ToolbarButton({
@@ -321,7 +322,7 @@ export function RichTextDisplay({ content, className = "" }: RichTextDisplayProp
   return (
     <div
       className={`prose prose-sm dark:prose-invert max-w-none text-xs leading-relaxed ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
     />
   );
 }

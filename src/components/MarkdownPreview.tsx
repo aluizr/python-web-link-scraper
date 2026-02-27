@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import DOMPurify from "dompurify";
 
 /**
  * Simple Markdown → HTML renderer.
@@ -67,7 +68,7 @@ interface MarkdownPreviewProps {
 }
 
 export function MarkdownPreview({ content, className = "" }: MarkdownPreviewProps) {
-  const html = useMemo(() => markdownToHtml(content), [content]);
+  const html = useMemo(() => DOMPurify.sanitize(markdownToHtml(content)), [content]);
 
   return (
     <div
