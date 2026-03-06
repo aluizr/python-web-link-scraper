@@ -249,6 +249,13 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     toast.success(`Prioridade atualizada para ${count} link(s)`);
   }, [selectedIds, updateLink, logActivity]);
 
+  const handleMoveToStatus = useCallback((id: string, status: LinkItem["status"]) => {
+    const link = links.find((l) => l.id === id);
+    updateLink(id, { status });
+    logActivity("link:updated", link?.title || "Link", `Status alterado para ${status}`);
+    toast.success(`Status atualizado para ${status === "backlog" ? "Backlog" : status === "in_progress" ? "Em progresso" : "Concluído"}`);
+  }, [links, updateLink, logActivity]);
+
   const handleBatchTag = useCallback((tag: string) => {
     let count = 0;
     selectedIds.forEach((id) => {
@@ -565,6 +572,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onMoveToStatus={handleMoveToStatus}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
             />

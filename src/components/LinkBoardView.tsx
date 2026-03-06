@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Star, ExternalLink, Pencil, Trash2, StickyNote } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ interface LinkBoardViewProps {
   onToggleFavorite: (id: string) => void;
   onEdit: (link: LinkItem) => void;
   onDelete: (id: string) => void;
+  onMoveToStatus: (id: string, status: LinkItem["status"]) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string, shiftKey?: boolean) => void;
 }
@@ -33,7 +34,10 @@ const statusMeta: Record<LinkItem["status"], { label: string; badgeVariant: "out
   done: { label: "Concluído", badgeVariant: "default" },
 };
 
-export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, selectedIds, onToggleSelect }: LinkBoardViewProps) {
+export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, onMoveToStatus, selectedIds, onToggleSelect }: LinkBoardViewProps) {
+  const [draggedLinkId, setDraggedLinkId] = useState<string | null>(null);
+  const [dropStatus, setDropStatus] = useState<LinkItem["status"] | null>(null);
+
   // Agrupar links por status
   const columns = useMemo(() => {
     return (["backlog", "in_progress", "done"] as LinkItem["status"][]).map((statusKey) => ({
@@ -51,7 +55,33 @@ export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, selec
         return (
         <div
           key={column.key}
-          className="flex-shrink-0 w-72 snap-start"
+          className={`flex-shrink-0 w-72 snap-start rounded-lg transition-colors ${
+            dropStatus === column.key ? "bg-primary/5" : ""
+          }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDropStatus(column.key);
+          }}
+          onDragLeave={(e) => {
+            const related = e.relatedTarget as Node | null;
+            if (!related || !e.currentTarget.contains(related)) {
+              setDropStatus((prev) => (prev === column.key ? null : prev));
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const droppedId = e.dataTransfer.getData("text/plain") || draggedLinkId;
+            if (!droppedId) {
+              setDropStatus(null);
+              return;
+            }
+            const droppedLink = links.find((link) => link.id === droppedId);
+            if (droppedLink && droppedLink.status !== column.key) {
+              onMoveToStatus(droppedId, column.key);
+            }
+            setDraggedLinkId(null);
+            setDropStatus(null);
+          }}
         >
           {/* Column header */}
           <div className="flex items-center justify-between mb-3 px-1">
@@ -66,9 +96,21 @@ export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, selec
           {/* Column cards */}
           <div className="flex flex-col gap-2">
             {column.links.map((link) => (
-              <Card key={link.id} className={`group relative overflow-hidden border hover:shadow-md transition-shadow ${
+              <Card
+                key={link.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", link.id);
+                  setDraggedLinkId(link.id);
+                }}
+                onDragEnd={() => {
+                  setDraggedLinkId(null);
+                  setDropStatus(null);
+                }}
+                className={`group relative overflow-hidden border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
                 selectedIds?.has(link.id) ? "ring-2 ring-primary border-primary" : ""
-              }`}>
+              }`}
+              >
                 {/* OG Image mini cover */}
                 {link.ogImage && (
                   <div className="w-full h-24 overflow-hidden bg-muted">
