@@ -7,7 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, ICON_BTN_MD_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
 import { Search, Upload, X, ImageIcon } from "lucide-react";
 
 interface IconPickerProps {
@@ -147,7 +147,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
                   placeholder="Buscar ícone... (ex: heart, folder, star)"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setActiveCategory(null); }}
-                  className="h-8 text-xs pl-7"
+                  className={`h-8 ${TEXT_XS_CLASS} pl-7`}
                 />
               </div>
 
@@ -206,7 +206,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
                 })}
               </div>
               {displayedIcons.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
+                <p className={`${TEXT_XS_CLASS} text-muted-foreground text-center py-2`}>
                   Nenhum ícone encontrado
                 </p>
               )}
@@ -219,7 +219,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
           ) : (
             /* Upload tab */
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">
+              <p className={`${TEXT_XS_CLASS} text-muted-foreground`}>
                 Importe um ícone do seu computador (SVG, PNG, JPG, WebP ou GIF, máx. 32KB).
               </p>
 
@@ -228,13 +228,13 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
                 <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
                   <img src={value} alt="Ícone atual" className="h-10 w-10 object-contain rounded" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium">Ícone personalizado atual</p>
+                    <p className={`${TEXT_XS_CLASS} font-medium`}>Ícone personalizado atual</p>
                     <p className="text-[10px] text-muted-foreground">Clique abaixo para trocar</p>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    className={`${ICON_BTN_MD_CLASS} text-destructive hover:text-destructive`}
                     onClick={handleRemoveCustom}
                     title="Remover ícone personalizado"
                   >
@@ -264,7 +264,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
                 }}
               >
                 <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-xs font-medium">Arraste uma imagem aqui</p>
+                <p className={`${TEXT_XS_CLASS} font-medium`}>Arraste uma imagem aqui</p>
                 <p className="text-[10px] text-muted-foreground mt-1">ou clique para selecionar</p>
               </div>
 
@@ -277,7 +277,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
               />
 
               {uploadError && (
-                <p className="text-xs text-destructive text-center">{uploadError}</p>
+                <p className={`${TEXT_XS_CLASS} text-destructive text-center`}>{uploadError}</p>
               )}
             </div>
           )}

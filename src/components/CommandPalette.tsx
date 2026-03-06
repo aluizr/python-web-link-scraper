@@ -10,6 +10,7 @@ import {
   Download, Upload, BarChart3, Star, Clock, Moon,
   Sun, Keyboard, LogOut
 } from "lucide-react";
+import { TEXT_XS_CLASS } from "@/lib/utils";
 import type { ViewMode } from "@/types/link";
 
 export interface CommandAction {
@@ -134,14 +135,14 @@ export function CommandPalette({ isOpen, onOpenChange, actions }: CommandPalette
           {filteredActions.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-sm text-muted-foreground">Nenhum comando encontrado</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
+              <p className={`${TEXT_XS_CLASS} text-muted-foreground/60 mt-1`}>
                 Tente outro termo de busca
               </p>
             </div>
           ) : (
             Array.from(grouped).map(([groupName, items]) => (
               <div key={groupName}>
-                <p className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <p className={`px-3 py-1.5 ${TEXT_XS_CLASS} font-semibold text-muted-foreground uppercase tracking-wider`}>
                   {groupName}
                 </p>
                 {items.map((item) => {
@@ -164,7 +165,7 @@ export function CommandPalette({ isOpen, onOpenChange, actions }: CommandPalette
                       <div className="flex-1 text-left">
                         <span>{item.label}</span>
                         {item.description && (
-                          <span className="ml-2 text-xs text-muted-foreground">{item.description}</span>
+                          <span className={`ml-2 ${TEXT_XS_CLASS} text-muted-foreground`}>{item.description}</span>
                         )}
                       </div>
                       {item.shortcut && (

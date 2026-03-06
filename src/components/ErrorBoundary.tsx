@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { logger } from "@/lib/logger";
+import { TEXT_XS_CLASS } from "@/lib/utils";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -122,11 +123,11 @@ function DefaultErrorFallback({ error, reset }: DefaultErrorFallbackProps) {
         {/* Detalhes do erro (somente em dev) */}
         {isDev && (
           <div className="rounded-lg border bg-muted/50 p-4 text-left">
-            <p className="mb-1 text-xs font-medium text-destructive">{error.name}</p>
-            <p className="text-xs text-muted-foreground">{error.message}</p>
+            <p className={`mb-1 ${TEXT_XS_CLASS} font-medium text-destructive`}>{error.name}</p>
+            <p className={`${TEXT_XS_CLASS} text-muted-foreground`}>{error.message}</p>
             {error.stack && (
               <details className="mt-2">
-                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                <summary className={`cursor-pointer ${TEXT_XS_CLASS} text-muted-foreground hover:text-foreground`}>
                   Stack trace
                 </summary>
                 <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-[10px] text-muted-foreground">
@@ -153,7 +154,7 @@ function DefaultErrorFallback({ error, reset }: DefaultErrorFallbackProps) {
           </button>
         </div>
 
-        <p className="text-xs text-muted-foreground">
+        <p className={`${TEXT_XS_CLASS} text-muted-foreground`}>
           Se o problema persistir, limpe o cache do navegador ou entre em contato com o suporte.
         </p>
       </div>

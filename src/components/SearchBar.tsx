@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { SearchFilters, DatePeriod, SortOption, Category } from "@/types/link";
-import { cn } from "@/lib/utils";
+import { cn, TEXT_XS_CLASS } from "@/lib/utils";
 
 interface SearchBarProps {
   filters: SearchFilters;
@@ -155,7 +155,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
               value={filters.category || "all"}
               onValueChange={handleCategoryChange}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`h-8 ${TEXT_XS_CLASS}`}>
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
@@ -170,7 +170,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
 
             {/* Period Filter */}
             <Select value={filters.period} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`h-8 ${TEXT_XS_CLASS}`}>
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -184,7 +184,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
 
             {/* Sort Filter */}
             <Select value={filters.sort} onValueChange={handleSortChange}>
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`h-8 ${TEXT_XS_CLASS}`}>
                 <SelectValue placeholder="Ordenar" />
               </SelectTrigger>
               <SelectContent>
@@ -209,7 +209,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
               />
               <label
                 htmlFor="favorites-only"
-                className="text-xs cursor-pointer font-medium"
+                className={`${TEXT_XS_CLASS} cursor-pointer font-medium`}
               >
                 Só Favoritos
               </label>
@@ -218,7 +218,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
             {/* Tag Selector */}
             {allTags.length > 0 && (
               <Select value={selectedTagForAdd} onValueChange={handleAddTag}>
-                <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectTrigger className={`h-8 w-40 ${TEXT_XS_CLASS}`}>
                   <SelectValue placeholder="Adicionar tag..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -259,7 +259,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
           <Button
             variant="outline"
             size="sm"
-            className="text-xs"
+            className={TEXT_XS_CLASS}
             onClick={handleClearFilters}
           >
             Limpar filtros
