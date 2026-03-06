@@ -1,5 +1,4 @@
 import { ExternalLink, GripVertical, Pencil, ShieldAlert, Star, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
 import {
@@ -13,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { COMPACT_BADGE_CLASS, ICON_BTN_MD_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
+import { ICON_BTN_MD_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
 import type { LinkItem } from "@/types/link";
 
 interface LinkNotionViewProps {
@@ -40,18 +39,6 @@ function safeDomain(url: string): string {
   } catch {
     return url;
   }
-}
-
-function statusLabel(status: LinkItem["status"]): string {
-  if (status === "in_progress") return "Em progresso";
-  if (status === "done") return "Concluído";
-  return "Backlog";
-}
-
-function priorityLabel(priority: LinkItem["priority"]): string {
-  if (priority === "high") return "Alta";
-  if (priority === "low") return "Baixa";
-  return "Média";
 }
 
 export function LinkNotionView({
@@ -81,9 +68,6 @@ export function LinkNotionView({
         const isSelected = selectedIds?.has(link.id);
         const domain = safeDomain(link.url);
         const health = linkStatusById?.[link.id];
-        const dueDateText = link.dueDate ? new Date(link.dueDate).toLocaleDateString("pt-BR") : "—";
-        const categoryText = link.category || "—";
-        const tagsText = link.tags.length > 0 ? link.tags.slice(0, 2).join(", ") : "—";
 
         return (
           <article
@@ -108,7 +92,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative flex items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
+            className={`group relative flex min-h-[126px] items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
@@ -150,7 +134,7 @@ export function LinkNotionView({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex max-w-full items-center gap-1.5 text-[15px] font-medium text-foreground transition-colors hover:text-primary"
+                    className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold text-foreground transition-colors hover:text-primary"
                   >
                     {health === "broken" && <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />}
                     <span className="truncate">{link.title || domain}</span>
@@ -158,7 +142,7 @@ export function LinkNotionView({
                   </a>
 
                   {link.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground/90">
                       {link.description}
                     </p>
                   )}
@@ -167,58 +151,11 @@ export function LinkNotionView({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1.5 text-xs text-foreground/80 hover:text-primary"
+                    className="mt-3 inline-flex max-w-full items-center gap-1.5 text-sm font-medium text-foreground/90 hover:text-primary"
                   >
                     <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
                     <span className="truncate">{domain}</span>
                   </a>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-1 md:hidden">
-                    <Badge variant={link.status === "done" ? "default" : link.status === "in_progress" ? "secondary" : "outline"} className={COMPACT_BADGE_CLASS}>
-                      {statusLabel(link.status)}
-                    </Badge>
-                    <Badge variant={link.priority === "high" ? "destructive" : link.priority === "medium" ? "secondary" : "outline"} className={COMPACT_BADGE_CLASS}>
-                      {priorityLabel(link.priority)}
-                    </Badge>
-                    {link.category && (
-                      <Badge variant="secondary" className={`${COMPACT_BADGE_CLASS} hidden sm:inline-flex`}>
-                        {link.category}
-                      </Badge>
-                    )}
-                    {link.tags[0] && (
-                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden md:inline-flex`}>
-                        {link.tags[0]}
-                      </Badge>
-                    )}
-                    {link.tags[1] && (
-                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden lg:inline-flex`}>
-                        {link.tags[1]}
-                      </Badge>
-                    )}
-                    {link.dueDate && (
-                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden sm:inline-flex`}>
-                        {new Date(link.dueDate).toLocaleDateString("pt-BR")}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="mt-2 hidden md:grid md:grid-cols-[88px_88px_minmax(0,124px)_90px_minmax(0,1fr)] md:items-center md:gap-2 md:text-xs">
-                    <div className="min-w-0 rounded-md bg-muted/40 px-2 py-1 text-muted-foreground">
-                      <span className="block truncate">{statusLabel(link.status)}</span>
-                    </div>
-                    <div className="min-w-0 rounded-md bg-muted/40 px-2 py-1 text-muted-foreground">
-                      <span className="block truncate">{priorityLabel(link.priority)}</span>
-                    </div>
-                    <div className="min-w-0 rounded-md bg-muted/30 px-2 py-1 text-muted-foreground">
-                      <span className="block truncate">{categoryText}</span>
-                    </div>
-                    <div className="min-w-0 rounded-md bg-muted/30 px-2 py-1 text-muted-foreground">
-                      <span className="block truncate">{dueDateText}</span>
-                    </div>
-                    <div className="min-w-0 rounded-md bg-muted/20 px-2 py-1 text-muted-foreground">
-                      <span className="block truncate">{tagsText}</span>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -253,22 +190,20 @@ export function LinkNotionView({
               </div>
             </div>
 
-            <div className="relative flex w-[92px] shrink-0 items-center justify-center border-l bg-muted/10 p-1.5 sm:w-[112px] sm:p-2 md:w-[152px]">
-              <div className="overflow-hidden rounded-md border border-border/50 bg-muted/20">
+            <div className="relative flex w-[120px] shrink-0 items-center justify-center border-l bg-muted/10 p-1.5 sm:w-[160px] sm:p-2 md:w-[240px] lg:w-[300px]">
+              <div className="h-full w-full overflow-hidden rounded-md border border-border/50 bg-muted/20">
                 {link.ogImage ? (
-                  <div className="h-[58px] w-[84px] sm:h-[68px] sm:w-[100px] md:h-[84px] md:w-[132px]">
-                    <img
-                      src={link.ogImage}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  </div>
+                  <img
+                    src={link.ogImage}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 ) : (
-                  <div className="flex h-[58px] w-[84px] items-center justify-center sm:h-[68px] sm:w-[100px] md:h-[84px] md:w-[132px]">
+                  <div className="flex h-full w-full items-center justify-center">
                     <div className="flex flex-col items-center gap-1.5 px-1 text-muted-foreground">
                       <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
                       <span className={`max-w-full truncate ${TEXT_XS_CLASS}`}>{domain}</span>
