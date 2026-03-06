@@ -7,7 +7,7 @@ export interface LinkMetadata {
   favicon: string | null;
   loading: boolean;
   error: string | null;
-  source: "microlink" | "othermeta" | "noembed" | "local" | null;
+  source: "microlink" | "noembed" | "local" | null;
 }
 
 // LRU cache with bounded size for metadata requests
@@ -143,46 +143,6 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
 }
 
 /**
- * Fallback: use other-meta API which is more permissive
- */
-async function fetchFromOtherMeta(url: string): Promise<LinkMetadata | null> {
-  try {
-    const otherMetaUrl = new URL("https://other.myjson.online/get-meta");
-    otherMetaUrl.searchParams.set("url", url);
-
-    const response = await fetchWithTimeout(otherMetaUrl.toString(), {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-
-    if (!data.meta) {
-      return null;
-    }
-
-    return {
-      title: data.meta.title || null,
-      description: data.meta.description || null,
-      image: data.meta.image || data.meta["og:image"] || null,
-      favicon: null,
-      loading: false,
-      error: null,
-      source: "othermeta",
-    };
-  } catch (err) {
-    console.debug("OtherMeta error:", err);
-    return null;
-  }
-}
-
-/**
  * Third fallback: noembed works well for common content providers
  */
 async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
@@ -232,7 +192,7 @@ async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
 
 /**
  * Hook to fetch metadata from a URL
- * Uses Microlink API as primary, with OtherMeta and noembed as fallbacks
+ * Uses Microlink API as primary, with noembed and local derivation as fallbacks
  */
 export function useMetadata() {
   const [metadata, setMetadata] = useState<LinkMetadata>({
@@ -296,11 +256,6 @@ export function useMetadata() {
 
       // Try primary API - Microlink
       let result = await fetchFromMicrolink(normalizedUrl);
-
-      // If failed, try fallback - OtherMeta
-      if (!result) {
-        result = await fetchFromOtherMeta(normalizedUrl);
-      }
 
       // Third fallback for common providers (YouTube, Vimeo, etc.)
       if (!result) {
