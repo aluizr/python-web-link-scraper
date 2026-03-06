@@ -2,6 +2,15 @@
 
 Organize seus links favoritos com estilo e segurança.
 
+## What's new — 0.14.1 (2026-03-06)
+
+- **Metadados mais confiáveis** no cadastro de links com fallback em camadas (Microlink → OtherMeta → noembed → local)
+- **Fallback local automático** para preencher título/favicon quando APIs externas falham
+- **Submit mais robusto**: busca metadados faltantes no envio e normaliza URL com `https://` quando necessário
+- **Preview melhorado** com indicador de origem dos metadados (Web vs Local)
+- **Padronização global de tokens de UI** para reduzir duplicação de classes e melhorar manutenção
+- **Validação concluída** com build de produção sem erros
+
 ## Funcionalidades
 
 ### Core
