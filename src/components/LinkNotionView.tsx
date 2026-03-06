@@ -84,23 +84,23 @@ export function LinkNotionView({
   useEffect(() => {
     if (!isResizingThumb) return;
 
-    const onMouseMove = (event: MouseEvent) => {
+    const onPointerMove = (event: PointerEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const nextWidth = clampThumbWidth(Math.round(rect.right - event.clientX));
       setThumbWidth(nextWidth);
     };
 
-    const onMouseUp = () => {
+    const onPointerUp = () => {
       setIsResizingThumb(false);
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp, { once: true });
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
 
     return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
     };
   }, [isResizingThumb]);
 
@@ -244,7 +244,7 @@ export function LinkNotionView({
               <button
                 type="button"
                 aria-label="Redimensionar thumbnail"
-                onMouseDown={(event) => {
+                onPointerDown={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
                   setIsResizingThumb(true);
@@ -254,9 +254,10 @@ export function LinkNotionView({
                   event.stopPropagation();
                   setThumbWidth(THUMB_DEFAULT_WIDTH);
                 }}
-                className="absolute -left-1 top-0 h-full w-2 cursor-col-resize bg-transparent"
+                className="absolute -left-2 top-0 h-full w-4 cursor-col-resize bg-transparent touch-none"
+                style={{ touchAction: "none" }}
               >
-                <span className="absolute left-1/2 top-1/2 h-8 w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-border/70 transition-colors group-hover:bg-border" />
+                <span className={`absolute left-1/2 top-1/2 h-10 w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${isResizingThumb ? "bg-primary" : "bg-border/80 group-hover:bg-border"}`} />
               </button>
               <div
                 className="overflow-hidden rounded-md border border-border/35 bg-muted/10"
