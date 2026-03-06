@@ -92,7 +92,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative min-h-[126px] overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
+            className={`group relative flex min-h-[126px] items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
@@ -109,7 +109,7 @@ export function LinkNotionView({
               <div className="absolute bottom-0 left-2 right-2 z-10 h-[3px] rounded-full bg-primary" />
             )}
 
-            <div className="relative min-w-0 p-3 pr-[124px] sm:pr-[146px] md:p-3.5 md:pr-[168px] lg:pr-[180px]">
+            <div className="relative min-w-0 flex-1 p-3 md:p-3.5">
               <div className="flex items-start gap-2.5">
                 <div className="pt-0.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
                   <GripVertical className="h-3.5 w-3.5" />
@@ -190,20 +190,24 @@ export function LinkNotionView({
               </div>
             </div>
 
-            <div className="absolute inset-y-0 right-0 flex w-[112px] items-center justify-center border-l bg-muted/10 p-2 sm:w-[132px] sm:p-2.5 md:w-[152px] md:p-3 lg:w-[164px]">
-              <div className="h-[72px] w-[96px] overflow-hidden rounded-md border border-border/50 bg-muted/20 sm:h-[84px] sm:w-[116px] md:h-[96px] md:w-[136px] lg:h-[104px] lg:w-[148px]">
+            <div className="relative flex w-[140px] shrink-0 items-center justify-center border-l bg-muted/10 p-2">
+              <div
+                className="overflow-hidden rounded-md border border-border/50 bg-muted/20"
+                style={{ width: "124px", height: "78px" }}
+              >
                 {link.ogImage ? (
                   <img
                     src={link.ogImage}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover"
+                    style={{ width: "124px", height: "78px", objectFit: "cover" }}
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center">
+                  <div className="flex h-full w-full items-center justify-center" style={{ width: "124px", height: "78px" }}>
                     <div className="flex flex-col items-center gap-1.5 px-1 text-muted-foreground">
                       <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
                       <span className={`max-w-full truncate ${TEXT_XS_CLASS}`}>{domain}</span>
