@@ -142,7 +142,7 @@ export function LinkNotionView({
                   />
                 )}
 
-                <div className="min-w-0 flex-1 pr-20">
+                <div className="min-w-0 flex-1 pr-24 md:pr-20">
                   <a
                     href={link.url}
                     target="_blank"
@@ -178,17 +178,22 @@ export function LinkNotionView({
                       {priorityLabel(link.priority)}
                     </Badge>
                     {link.category && (
-                      <Badge variant="secondary" className={COMPACT_BADGE_CLASS}>
+                      <Badge variant="secondary" className={`${COMPACT_BADGE_CLASS} hidden sm:inline-flex`}>
                         {link.category}
                       </Badge>
                     )}
-                    {link.tags.slice(0, 2).map((tag) => (
-                      <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>
-                        {tag}
+                    {link.tags[0] && (
+                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden md:inline-flex`}>
+                        {link.tags[0]}
                       </Badge>
-                    ))}
+                    )}
+                    {link.tags[1] && (
+                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden lg:inline-flex`}>
+                        {link.tags[1]}
+                      </Badge>
+                    )}
                     {link.dueDate && (
-                      <Badge variant="outline" className={COMPACT_BADGE_CLASS}>
+                      <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} hidden sm:inline-flex`}>
                         {new Date(link.dueDate).toLocaleDateString("pt-BR")}
                       </Badge>
                     )}
@@ -196,17 +201,17 @@ export function LinkNotionView({
                 </div>
               </div>
 
-              <div className="absolute right-2.5 top-2.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 md:right-3 md:top-3">
-                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7`} onClick={() => onToggleFavorite(link.id)}>
-                  <Star className={`h-4 w-4 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+              <div className="absolute right-2 top-2 flex gap-0.5 opacity-100 transition-opacity md:right-3 md:top-3 md:opacity-0 md:group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7`} onClick={() => onToggleFavorite(link.id)}>
+                  <Star className={`h-4 w-4 md:h-3.5 md:w-3.5 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 </Button>
-                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7`} onClick={() => onEdit(link)}>
-                  <Pencil className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7`} onClick={() => onEdit(link)}>
+                  <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7 text-destructive`}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7 text-destructive`}>
+                      <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
