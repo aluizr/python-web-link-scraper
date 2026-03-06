@@ -74,7 +74,7 @@ export function LinkNotionView({
   const dragEnabled = Boolean(onDragStart);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-background">
       {links.map((link) => {
         const isDragging = draggedLinkId === link.id;
         const isDropZone = dropZoneId === link.id && draggedLinkId !== null && !isDragging;
@@ -105,14 +105,14 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative grid grid-cols-1 md:grid-cols-[1fr_320px] overflow-hidden rounded-2xl border bg-card transition-all duration-200 ${
+            className={`group relative grid grid-cols-1 md:grid-cols-[1fr_264px] overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
-              isSelected ? "ring-2 ring-primary border-primary" : "border-border/60"
+              isSelected ? "bg-primary/5" : ""
             } ${
-              isDragging ? "opacity-30 scale-[0.99]" : "hover:border-border hover:shadow-md"
+              isDragging ? "opacity-30" : "hover:bg-muted/30"
             } ${
-              isDropZone ? "border-primary/50 bg-primary/5 shadow-lg shadow-primary/10" : ""
+              isDropZone ? "bg-primary/8" : ""
             }`}
           >
             {isDropZone && dragDirection === "above" && (
@@ -122,10 +122,10 @@ export function LinkNotionView({
               <div className="absolute bottom-0 left-2 right-2 z-10 h-[3px] rounded-full bg-primary" />
             )}
 
-            <div className="relative p-4 md:p-5">
-              <div className="flex items-start gap-3">
-                <div className="pt-1 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
-                  <GripVertical className="h-4 w-4" />
+            <div className="relative p-3.5 md:p-4">
+              <div className="flex items-start gap-2.5">
+                <div className="pt-0.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
+                  <GripVertical className="h-3.5 w-3.5" />
                 </div>
 
                 {onToggleSelect && (
@@ -134,7 +134,7 @@ export function LinkNotionView({
                       e.stopPropagation();
                       onToggleSelect(link.id, e.shiftKey);
                     }}
-                    className={`mt-1 h-5 w-5 shrink-0 rounded border-2 transition-all ${
+                    className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border transition-all ${
                       isSelected
                         ? "border-primary bg-primary"
                         : "border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100"
@@ -147,15 +147,15 @@ export function LinkNotionView({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex max-w-full items-center gap-1.5 text-lg font-semibold text-foreground transition-colors hover:text-primary md:text-2xl"
+                    className="inline-flex max-w-full items-center gap-1.5 text-[15px] font-medium text-foreground transition-colors hover:text-primary md:text-base"
                   >
                     {health === "broken" && <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />}
                     <span className="truncate">{link.title || domain}</span>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                    <ExternalLink className="h-3 w-3 shrink-0 opacity-45" />
                   </a>
 
                   {link.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground md:text-base">
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {link.description}
                     </p>
                   )}
@@ -164,13 +164,13 @@ export function LinkNotionView({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-2 text-sm text-foreground/90 hover:text-primary"
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-foreground/85 hover:text-primary"
                   >
-                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
-                    <span className="truncate">{link.url}</span>
+                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
+                    <span className="truncate">{domain}</span>
                   </a>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                     <Badge variant={link.status === "done" ? "default" : link.status === "in_progress" ? "secondary" : "outline"} className={COMPACT_BADGE_CLASS}>
                       {statusLabel(link.status)}
                     </Badge>
@@ -182,7 +182,7 @@ export function LinkNotionView({
                         {link.category}
                       </Badge>
                     )}
-                    {link.tags.slice(0, 3).map((tag) => (
+                    {link.tags.slice(0, 2).map((tag) => (
                       <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>
                         {tag}
                       </Badge>
@@ -196,17 +196,17 @@ export function LinkNotionView({
                 </div>
               </div>
 
-              <div className="absolute right-3 top-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={() => onToggleFavorite(link.id)}>
+              <div className="absolute right-2.5 top-2.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 md:right-3 md:top-3">
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7`} onClick={() => onToggleFavorite(link.id)}>
                   <Star className={`h-4 w-4 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 </Button>
-                <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={() => onEdit(link)}>
-                  <Pencil className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7`} onClick={() => onEdit(link)}>
+                  <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} text-destructive`}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-7 w-7 text-destructive`}>
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -227,7 +227,7 @@ export function LinkNotionView({
               </div>
             </div>
 
-            <div className="relative min-h-[140px] border-t bg-muted/30 md:min-h-[160px] md:border-l md:border-t-0">
+            <div className="relative min-h-[108px] border-t bg-muted/20 md:min-h-[112px] md:border-l md:border-t-0">
               {link.ogImage ? (
                 <img
                   src={link.ogImage}
@@ -240,8 +240,8 @@ export function LinkNotionView({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={28} />
+                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
+                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={22} />
                     <span className={TEXT_XS_CLASS}>{domain}</span>
                   </div>
                 </div>
