@@ -47,6 +47,18 @@ class LRUCache<K, V> {
 
 const metadataCache = new LRUCache<string, LinkMetadata>(100);
 
+const FETCH_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Normalize URL for consistent cache keys */
 function normalizeUrl(url: string): string {
   try {
@@ -66,7 +78,7 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     const microlinkUrl = new URL("https://api.microlink.io");
     microlinkUrl.searchParams.set("url", url);
 
-    const response = await fetch(microlinkUrl.toString(), {
+    const response = await fetchWithTimeout(microlinkUrl.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -110,7 +122,7 @@ async function fetchFromOtherMeta(url: string): Promise<LinkMetadata | null> {
     const otherMetaUrl = new URL("https://other.myjson.online/get-meta");
     otherMetaUrl.searchParams.set("url", url);
 
-    const response = await fetch(otherMetaUrl.toString(), {
+    const response = await fetchWithTimeout(otherMetaUrl.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -142,8 +154,55 @@ async function fetchFromOtherMeta(url: string): Promise<LinkMetadata | null> {
 }
 
 /**
+ * Third fallback: noembed works well for common content providers
+ */
+async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
+  try {
+    const noembedUrl = new URL("https://noembed.com/embed");
+    noembedUrl.searchParams.set("url", url);
+
+    const response = await fetchWithTimeout(noembedUrl.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      return null;
+    }
+
+    const title = data.title || data.author_name || data.provider_name || null;
+    const description = data.provider_name || null;
+    const image = data.thumbnail_url || null;
+
+    if (!title && !description && !image) {
+      return null;
+    }
+
+    return {
+      title,
+      description,
+      image,
+      favicon: null,
+      loading: false,
+      error: null,
+    };
+  } catch (err) {
+    console.debug("Noembed error:", err);
+    return null;
+  }
+}
+
+/**
  * Hook to fetch metadata from a URL
- * Uses Microlink API as primary, with OtherMeta as fallback
+ * Uses Microlink API as primary, with OtherMeta and noembed as fallbacks
  */
 export function useMetadata() {
   const [metadata, setMetadata] = useState<LinkMetadata>({
@@ -210,6 +269,11 @@ export function useMetadata() {
         result = await fetchFromOtherMeta(normalizedUrl);
       }
 
+      // Third fallback for common providers (YouTube, Vimeo, etc.)
+      if (!result) {
+        result = await fetchFromNoembed(normalizedUrl);
+      }
+
       // If still no result, create empty result (don't show error, just empty preview)
       if (!result) {
         result = {
@@ -228,7 +292,6 @@ export function useMetadata() {
       setMetadata(result);
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err.message : "Failed to fetch metadata";
       const result: LinkMetadata = {
         title: null,
         description: null,
