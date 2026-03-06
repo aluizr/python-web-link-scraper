@@ -82,7 +82,6 @@ export function LinkCard({
 }: LinkCardProps) {
   const dragEnabled = Boolean(onDragStart);
 
-  console.log('LinkCard ogImage:', link.ogImage);
   return (
     <Card
       draggable={dragEnabled}
@@ -148,7 +147,7 @@ export function LinkCard({
 
       {/* OG Image Cover */}
       {link.ogImage && (
-        <div className="w-full h-36 overflow-hidden bg-muted">
+        <div className="w-full h-24 overflow-hidden bg-muted">
           <img
             src={link.ogImage}
             alt=""

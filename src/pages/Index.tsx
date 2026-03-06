@@ -86,7 +86,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [gridColumns, setGridColumns] = useState<GridColumns>(3);
   const [cardSize, setCardSize] = useState<CardSize>("md");
   const [statsOpen, setStatsOpen] = useState(false);
