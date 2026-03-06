@@ -2,6 +2,8 @@
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
+Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
+
 ---
 
 ## [0.14.1] — 2026-03-06
