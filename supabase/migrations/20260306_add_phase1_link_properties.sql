@@ -41,6 +41,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP FUNCTION IF EXISTS public.search_links(TEXT, UUID);
+
 CREATE OR REPLACE FUNCTION public.search_links(
 	search_query TEXT,
 	user_id_param UUID
@@ -96,6 +98,8 @@ BEGIN
 	ORDER BY rank DESC;
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.search_links(TEXT, UUID) TO authenticated;
 
 UPDATE public.links SET search_vector =
 	setweight(to_tsvector('portuguese', coalesce(title, '')), 'A') ||
