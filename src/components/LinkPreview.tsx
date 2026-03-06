@@ -7,6 +7,18 @@ interface LinkPreviewProps {
   url: string;
 }
 
+function getHostname(rawUrl: string): string {
+  try {
+    return new URL(rawUrl).hostname;
+  } catch {
+    try {
+      return new URL(`https://${rawUrl}`).hostname;
+    } catch {
+      return rawUrl;
+    }
+  }
+}
+
 export function LinkPreview({ metadata, url }: LinkPreviewProps) {
   if (!url) {
     return null;
@@ -64,7 +76,7 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
             </p>
           )}
           <p className="text-xs text-muted-foreground mt-2 truncate">
-            {new URL(url).hostname}
+            {getHostname(url)}
           </p>
         </div>
       </div>

@@ -26,9 +26,16 @@ interface LinkFormProps {
   categories: Category[];
   links: LinkItem[];
   editingLink?: LinkItem | null;
-  onSubmit: (data: Omit<LinkItem, "id" | "createdAt" | "position">) => void;
+  onSubmit: (data: Omit<LinkItem, "id" | "createdAt" | "position">) => void | Promise<void>;
   onEditDuplicate?: (link: LinkItem) => void;
 }
+
+const normalizeUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
 
 export function LinkForm({ open, onOpenChange, categories, links, editingLink, onSubmit, onEditDuplicate }: LinkFormProps) {
   const [url, setUrl] = useState("");
@@ -204,7 +211,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     setTagInput("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
 
@@ -216,17 +223,31 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
     const selectedOption = categoryOptions.find((opt) => opt.id === selectedCategoryId);
     const categoryValue = selectedOption?.fullName ?? "";
-    console.log('LinkForm submit ogImage:', ogImage);
-    onSubmit({
-      url: url.trim(),
-      title: title.trim() || url.trim(),
-      description: description.trim(),
+    const finalUrl = normalizeUrl(url);
+
+    let fetchedTitle: string | null = null;
+    let fetchedDescription: string | null = null;
+    let fetchedImage: string | null = null;
+    let fetchedFavicon: string | null = null;
+
+    if (!editingLink && (!title.trim() || !description.trim() || !ogImage || !favicon)) {
+      const fetched = await fetchMetadata(finalUrl);
+      fetchedTitle = fetched.title;
+      fetchedDescription = fetched.description;
+      fetchedImage = fetched.image;
+      fetchedFavicon = fetched.favicon;
+    }
+
+    await onSubmit({
+      url: finalUrl,
+      title: title.trim() || fetchedTitle || finalUrl,
+      description: description.trim() || fetchedDescription || "",
       category: categoryValue,
       tags,
       notes: notes.trim(),
       isFavorite: editingLink?.isFavorite ?? false,
-      favicon,
-      ogImage,
+      favicon: favicon || fetchedFavicon || "",
+      ogImage: ogImage || fetchedImage || "",
     });
     // Limpar rascunho após envio bem-sucedido
     clearDraft();
