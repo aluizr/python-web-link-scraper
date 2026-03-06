@@ -21,7 +21,7 @@ const views: { mode: ViewMode; label: string; icon: React.ElementType; descripti
   { mode: "list", label: "Lista", icon: List, description: "Cards em coluna" },
   { mode: "cards", label: "Cartões", icon: SquareStack, description: "Tiles compactos" },
   { mode: "table", label: "Tabela", icon: Table2, description: "Linhas compactas" },
-  { mode: "board", label: "Board", icon: Columns3, description: "Kanban por categoria" },
+  { mode: "board", label: "Board", icon: Columns3, description: "Kanban por status" },
   { mode: "gallery", label: "Galeria", icon: GalleryHorizontalEnd, description: "Masonry com covers" },
 ];
 

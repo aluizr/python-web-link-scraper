@@ -233,6 +233,22 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     toast.success(`${count} link(s) movido(s) para "${categoryName || "Sem categoria"}"`);
   }, [selectedIds, updateLink, logActivity]);
 
+  const handleBatchStatus = useCallback((status: LinkItem["status"]) => {
+    const count = selectedIds.size;
+    selectedIds.forEach((id) => updateLink(id, { status }));
+    logActivity("link:updated", `${count} links com status atualizado`, `Status: ${status}`);
+    setSelectedIds(new Set());
+    toast.success(`Status atualizado para ${count} link(s)`);
+  }, [selectedIds, updateLink, logActivity]);
+
+  const handleBatchPriority = useCallback((priority: LinkItem["priority"]) => {
+    const count = selectedIds.size;
+    selectedIds.forEach((id) => updateLink(id, { priority }));
+    logActivity("link:updated", `${count} links com prioridade atualizada`, `Prioridade: ${priority}`);
+    setSelectedIds(new Set());
+    toast.success(`Prioridade atualizada para ${count} link(s)`);
+  }, [selectedIds, updateLink, logActivity]);
+
   const handleBatchTag = useCallback((tag: string) => {
     let count = 0;
     selectedIds.forEach((id) => {
@@ -546,7 +562,6 @@ const Index = ({ user, onSignOut }: IndexProps) => {
           ) : viewMode === "board" ? (
             <LinkBoardView
               links={filteredLinks}
-              categories={categories}
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -666,6 +681,8 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         onBatchFavorite={handleBatchFavorite}
         onBatchUnfavorite={handleBatchUnfavorite}
         onBatchMove={handleBatchMove}
+        onBatchStatus={handleBatchStatus}
+        onBatchPriority={handleBatchPriority}
         onBatchTag={handleBatchTag}
         onBatchRemoveTag={handleBatchRemoveTag}
         onSelectAll={handleSelectAll}

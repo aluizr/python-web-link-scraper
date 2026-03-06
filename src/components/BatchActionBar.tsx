@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2, Star, FolderInput, Tag, Tags, X, CheckSquare } from "lucide-react";
+import { Trash2, Star, FolderInput, Tag, Tags, X, CheckSquare, ListTodo, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ICON_BTN_MD_CLASS } from "@/lib/utils";
-import type { Category } from "@/types/link";
+import type { Category, LinkPriority, LinkStatus } from "@/types/link";
 
 interface BatchActionBarProps {
   selectedCount: number;
@@ -29,6 +29,8 @@ interface BatchActionBarProps {
   onBatchFavorite: () => void;
   onBatchUnfavorite: () => void;
   onBatchMove: (categoryFullName: string) => void;
+  onBatchStatus: (status: LinkStatus) => void;
+  onBatchPriority: (priority: LinkPriority) => void;
   onBatchTag: (tag: string) => void;
   onBatchRemoveTag: (tag: string) => void;
   onSelectAll: () => void;
@@ -55,6 +57,8 @@ export function BatchActionBar({
   onBatchFavorite,
   onBatchUnfavorite,
   onBatchMove,
+  onBatchStatus,
+  onBatchPriority,
   onBatchTag,
   onBatchRemoveTag,
   onSelectAll,
@@ -139,6 +143,66 @@ export function BatchActionBar({
                 {opt.label}
               </button>
             ))}
+          </PopoverContent>
+        </Popover>
+
+        {/* Update status */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" title="Alterar status">
+              <ListTodo className="h-4 w-4 mr-1" />
+              Status
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="center" className="w-56 p-1">
+            <button
+              onClick={() => onBatchStatus("backlog")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Backlog
+            </button>
+            <button
+              onClick={() => onBatchStatus("in_progress")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Em progresso
+            </button>
+            <button
+              onClick={() => onBatchStatus("done")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Concluído
+            </button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Update priority */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" title="Alterar prioridade">
+              <Flag className="h-4 w-4 mr-1" />
+              Prioridade
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="center" className="w-56 p-1">
+            <button
+              onClick={() => onBatchPriority("low")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Baixa
+            </button>
+            <button
+              onClick={() => onBatchPriority("medium")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Média
+            </button>
+            <button
+              onClick={() => onBatchPriority("high")}
+              className="flex items-center w-full px-3 py-2 rounded-md text-sm hover:bg-muted text-left"
+            >
+              Alta
+            </button>
           </PopoverContent>
         </Popover>
 

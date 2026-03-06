@@ -16,11 +16,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { COMPACT_BADGE_CLASS, ICON_BTN_SM_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
-import type { LinkItem, Category } from "@/types/link";
+import type { LinkItem } from "@/types/link";
 
 interface LinkBoardViewProps {
   links: LinkItem[];
-  categories: Category[];
   onToggleFavorite: (id: string) => void;
   onEdit: (link: LinkItem) => void;
   onDelete: (id: string) => void;
@@ -28,97 +27,45 @@ interface LinkBoardViewProps {
   onToggleSelect?: (id: string, shiftKey?: boolean) => void;
 }
 
-export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onDelete, selectedIds, onToggleSelect }: LinkBoardViewProps) {
-  // Agrupar links por categoria (top-level), com subcategorias como seções
+const statusMeta: Record<LinkItem["status"], { label: string; badgeVariant: "outline" | "secondary" | "default" }> = {
+  backlog: { label: "Backlog", badgeVariant: "outline" },
+  in_progress: { label: "Em progresso", badgeVariant: "secondary" },
+  done: { label: "Concluído", badgeVariant: "default" },
+};
+
+export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, selectedIds, onToggleSelect }: LinkBoardViewProps) {
+  // Agrupar links por status
   const columns = useMemo(() => {
-    const grouped = new Map<string, { subcategories: Map<string, LinkItem[]> }>();
-
-    // "Sem categoria" sempre primeiro
-    grouped.set("", { subcategories: new Map([["", []]]) });
-
-    // Criar colunas para categorias top-level
-    const parentCategories = categories.filter((c) => !c.parentId)
-      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    for (const cat of parentCategories) {
-      grouped.set(cat.name, { subcategories: new Map([["", []]]) });
-    }
-
-    // Distribuir links nas colunas, separando por subcategoria
-    for (const link of links) {
-      const categoryKey = link.category || "";
-      const parts = categoryKey.split(" / ");
-      const topLevel = parts[0] || "";
-      const subCategory = parts.length > 1 ? parts.slice(1).join(" / ") : "";
-
-      if (grouped.has(topLevel)) {
-        const col = grouped.get(topLevel)!;
-        if (!col.subcategories.has(subCategory)) {
-          col.subcategories.set(subCategory, []);
-        }
-        col.subcategories.get(subCategory)!.push(link);
-      } else {
-        grouped.get("")!.subcategories.get("")!.push(link);
-      }
-    }
-
-    // Build result
-    const result: { name: string; color?: string | null; sections: { name: string; links: LinkItem[] }[] }[] = [];
-    for (const [name, col] of grouped) {
-      const totalLinks = Array.from(col.subcategories.values()).reduce((sum, arr) => sum + arr.length, 0);
-      if (totalLinks > 0 || name === "") {
-        const cat = parentCategories.find((c) => c.name === name);
-        const sections = Array.from(col.subcategories.entries())
-          .filter(([, items]) => items.length > 0 || name === "")
-          .map(([subName, items]) => ({ name: subName, links: items }));
-        result.push({
-          name: name || "Sem categoria",
-          color: cat?.color,
-          sections,
-        });
-      }
-    }
-
-    return result;
-  }, [links, categories]);
+    return (["backlog", "in_progress", "done"] as LinkItem["status"][]).map((statusKey) => ({
+      key: statusKey,
+      name: statusMeta[statusKey].label,
+      badgeVariant: statusMeta[statusKey].badgeVariant,
+      links: links.filter((link) => link.status === statusKey),
+    }));
+  }, [links]);
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
       {columns.map((column) => {
-        const allLinks = column.sections.flatMap((s) => s.links);
+        const allLinks = column.links;
         return (
         <div
-          key={column.name}
+          key={column.key}
           className="flex-shrink-0 w-72 snap-start"
         >
           {/* Column header */}
           <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-1.5">
-              {column.color && (
-                <div
-                  className="h-3 w-3 rounded-full shrink-0"
-                  style={{ backgroundColor: column.color }}
-                />
-              )}
-              <h3 className="font-semibold text-sm text-foreground truncate">
-                {column.name}
-              </h3>
-            </div>
+            <Badge variant={column.badgeVariant} className={`${COMPACT_BADGE_CLASS} shrink-0`}>
+              {column.name}
+            </Badge>
             <Badge variant="secondary" className={`${COMPACT_BADGE_CLASS} ml-2 shrink-0`}>
               {allLinks.length}
             </Badge>
           </div>
 
-          {/* Column cards grouped by subcategory */}
+          {/* Column cards */}
           <div className="flex flex-col gap-2">
-            {column.sections.map((section) => (
-              <div key={section.name || "__root__"}>
-                {/* Subcategory label */}
-                {section.name && (
-                  <div className="px-1 pb-1 pt-2">
-                    <p className={`${TEXT_XS_CLASS} font-medium text-muted-foreground`}>{section.name}</p>
-                  </div>
-                )}
-                {section.links.map((link) => (
+            {column.links.map((link) => (
               <Card key={link.id} className={`group relative overflow-hidden border hover:shadow-md transition-shadow ${
                 selectedIds?.has(link.id) ? "ring-2 ring-primary border-primary" : ""
               }`}>
@@ -188,6 +135,17 @@ export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onD
                         </div>
                       )}
 
+                      <div className="mt-1.5 flex items-center gap-1">
+                        <Badge variant="outline" className={COMPACT_BADGE_CLASS}>
+                          {link.priority === "high" ? "Alta" : link.priority === "medium" ? "Média" : "Baixa"}
+                        </Badge>
+                        {link.dueDate && (
+                          <Badge variant="outline" className={COMPACT_BADGE_CLASS}>
+                            {new Date(link.dueDate).toLocaleDateString("pt-BR")}
+                          </Badge>
+                        )}
+                      </div>
+
                       {link.notes && (
                         <span className={`inline-flex items-center gap-0.5 ${TEXT_XS_CLASS} text-muted-foreground mt-1`} title={link.notes}>
                           <StickyNote className="h-3 w-3" />
@@ -238,8 +196,6 @@ export function LinkBoardView({ links, categories, onToggleFavorite, onEdit, onD
                   </div>
                 </CardContent>
               </Card>
-            ))}
-              </div>
             ))}
 
             {allLinks.length === 0 && (
