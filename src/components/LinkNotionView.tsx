@@ -92,7 +92,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative grid min-h-[126px] grid-cols-2 items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
+            className={`group relative grid min-h-[126px] grid-cols-[3fr_2fr] items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
