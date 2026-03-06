@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ICON_BTN_MD_CLASS } from "@/lib/utils";
 import type { Category } from "@/types/link";
 
 interface BatchActionBarProps {
@@ -218,7 +219,7 @@ export function BatchActionBar({
         <div className="h-5 w-px bg-border mx-1" />
 
         {/* Close */}
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClearSelection}>
+        <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={onClearSelection}>
           <X className="h-4 w-4" />
         </Button>
       </div>

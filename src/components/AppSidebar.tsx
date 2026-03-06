@@ -43,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ICON_BTN_SM_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
 import type { Category } from "@/types/link";
 
 interface AppSidebarProps {
@@ -291,7 +292,7 @@ export function AppSidebar({
                 autoFocus
                 id={`edit-category-${cat.id}`}
                 name="editCategory"
-                className="h-7 text-xs"
+                className={`h-7 ${TEXT_XS_CLASS}`}
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 onKeyDown={(e) => {
@@ -305,7 +306,7 @@ export function AppSidebar({
                   if (e.key === "Escape") setEditingId(null);
                 }}
               />
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+              <Button variant="ghost" size="icon" className={ICON_BTN_SM_CLASS} onClick={() => {
                 if (editName.trim()) onRenameCategory(cat.id, editName.trim());
                 if (onUpdateCategoryIcon && editIcon !== cat.icon) {
                   onUpdateCategoryIcon(cat.id, editIcon);
@@ -314,7 +315,7 @@ export function AppSidebar({
               }}>
                 <Check className="h-3 w-3" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingId(null)}>
+              <Button variant="ghost" size="icon" className={ICON_BTN_SM_CLASS} onClick={() => setEditingId(null)}>
                 <X className="h-3 w-3" />
               </Button>
             </div>
@@ -462,7 +463,7 @@ export function AppSidebar({
                 autoFocus
                 id={`new-subcategory-${cat.id}`}
                 name="newSubcategory"
-                className="h-7 text-xs flex-1"
+                className={`h-7 ${TEXT_XS_CLASS} flex-1`}
                 value={newSubcat}
                 onChange={(e) => setNewSubcat(e.target.value)}
                 onKeyDown={(e) => {
@@ -480,7 +481,7 @@ export function AppSidebar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className={ICON_BTN_SM_CLASS}
                 onClick={() => {
                   if (newSubcat.trim()) {
                     onAddCategory(newSubcat.trim(), newSubcatIcon, cat.id, newSubcatColor);
@@ -564,7 +565,7 @@ export function AppSidebar({
                       autoFocus
                       id="new-category"
                       name="newCategory"
-                      className="h-7 text-xs flex-1"
+                      className={`h-7 ${TEXT_XS_CLASS} flex-1`}
                       value={newCat}
                       onChange={(e) => setNewCat(e.target.value)}
                       onKeyDown={(e) => {
@@ -582,7 +583,7 @@ export function AppSidebar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className={ICON_BTN_SM_CLASS}
                       onClick={() => {
                         if (newCat.trim()) {
                           onAddCategory(newCat.trim(), newCatIcon, null, newCatColor);
