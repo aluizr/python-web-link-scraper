@@ -14,6 +14,18 @@ import {
 } from "@/lib/offline-cache";
 import type { LinkItem, Category, SearchFilters } from "@/types/link";
 
+const LINKS_SELECT_PHASE1 = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id";
+const LINKS_SELECT_LEGACY = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, created_at, position, deleted_at, user_id";
+
+function isPhase1SchemaError(error: any): boolean {
+  const message = String(error?.message || "").toLowerCase();
+  const details = String(error?.details || "").toLowerCase();
+  const text = `${message} ${details}`;
+  const mentionsMissing = text.includes("column") || text.includes("does not exist") || text.includes("could not find");
+  const mentionsPhase1Field = text.includes("status") || text.includes("priority") || text.includes("due_date");
+  return mentionsMissing && mentionsPhase1Field;
+}
+
 /** Helper para executar operação com rate limiting */
 function withRateLimit(operation: string, fn: () => Promise<void>): Promise<void> {
   try {
@@ -43,6 +55,8 @@ export function useLinks(userId: string | undefined) {
     priority: "all",
     dueDate: "all",
   });
+  const phase1SchemaAvailableRef = useRef(true);
+  const phase1FallbackWarnedRef = useRef(false);
 
   const getCategoryFullName = useCallback((cat: Category, parent?: Category | null) => {
     return parent ? `${parent.name} / ${cat.name}` : cat.name;
@@ -64,10 +78,29 @@ export function useLinks(userId: string | undefined) {
         return;
       }
 
-      const [linksRes, catsRes] = await Promise.all([
-        supabase.from("links").select("id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id").order("position", { ascending: true }), // ✅ Ordenar por position
-        supabase.from("categories").select("*").order("position", { ascending: true }), // ✅ Ordenar categorias por position
-      ]);
+      let linksRes = await supabase
+        .from("links")
+        .select(phase1SchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_LEGACY)
+        .order("position", { ascending: true });
+
+      if (linksRes.error && phase1SchemaAvailableRef.current && isPhase1SchemaError(linksRes.error)) {
+        phase1SchemaAvailableRef.current = false;
+        linksRes = await supabase.from("links").select(LINKS_SELECT_LEGACY).order("position", { ascending: true });
+        if (!phase1FallbackWarnedRef.current) {
+          toast.warning("Banco sem colunas da Fase 1; usando modo de compatibilidade");
+          phase1FallbackWarnedRef.current = true;
+        }
+      }
+
+      const catsRes = await supabase.from("categories").select("*").order("position", { ascending: true }); // ✅ Ordenar categorias por position
+
+      if (linksRes.error) {
+        logger.error("Erro ao buscar links", linksRes.error);
+      }
+      if (catsRes.error) {
+        logger.error("Erro ao buscar categorias", catsRes.error);
+      }
+
       if (linksRes.data) {
         const mappedLinks = linksRes.data.map((r: any) => ({
           id: r.id,
@@ -127,9 +160,7 @@ export function useLinks(userId: string | undefined) {
     const v = parsed.data;
     // ✅ Calcular position (novo link vai para o topo)
     const maxPosition = Math.max(...links.map(l => l.position || 0), -1);
-    const { data, error }: { data: any; error: any } = await supabase
-      .from("links")
-      .insert({
+    const basePayload: Record<string, any> = {
         url: v.url,
         title: v.title,
         description: v.description,
@@ -139,14 +170,32 @@ export function useLinks(userId: string | undefined) {
         favicon: v.favicon || "",
         og_image: v.ogImage || "",
         notes: v.notes || "",
-        status: v.status,
-        priority: v.priority,
-        due_date: v.dueDate || null,
         user_id: userId,
         position: maxPosition + 1, // ✅ Adicionar position
-      })
-      .select("id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id")
+      };
+
+    const payload = phase1SchemaAvailableRef.current
+      ? { ...basePayload, status: v.status, priority: v.priority, due_date: v.dueDate || null }
+      : basePayload;
+
+    let { data, error }: { data: any; error: any } = await supabase
+      .from("links")
+      .insert(payload)
+      .select(phase1SchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_LEGACY)
       .single();
+
+    if (error && phase1SchemaAvailableRef.current && isPhase1SchemaError(error)) {
+      phase1SchemaAvailableRef.current = false;
+      ({ data, error } = await supabase
+        .from("links")
+        .insert(basePayload)
+        .select(LINKS_SELECT_LEGACY)
+        .single());
+      if (!phase1FallbackWarnedRef.current) {
+        toast.warning("Banco sem colunas da Fase 1; usando modo de compatibilidade");
+        phase1FallbackWarnedRef.current = true;
+      }
+    }
     if (error) {
       logger.error("Erro ao adicionar link", error, { url: v.url });
     }
@@ -213,11 +262,38 @@ export function useLinks(userId: string | undefined) {
     if (data.favicon !== undefined) partial.favicon = data.favicon;
     if (data.ogImage !== undefined) partial.og_image = data.ogImage;
     if (data.notes !== undefined) partial.notes = data.notes;
-    if (data.status !== undefined) partial.status = data.status;
-    if (data.priority !== undefined) partial.priority = data.priority;
-    if (data.dueDate !== undefined) partial.due_date = data.dueDate;
+    const hasPhase1InPayload = data.status !== undefined || data.priority !== undefined || data.dueDate !== undefined;
+    if (phase1SchemaAvailableRef.current) {
+      if (data.status !== undefined) partial.status = data.status;
+      if (data.priority !== undefined) partial.priority = data.priority;
+      if (data.dueDate !== undefined) partial.due_date = data.dueDate;
+    }
 
-    const { error } = await supabase.from("links").update(partial).eq("id", id);
+    if (Object.keys(partial).length === 0) {
+      if (hasPhase1InPayload && !phase1FallbackWarnedRef.current) {
+        toast.warning("Atualize as migrações do banco para usar status/prioridade/prazo");
+        phase1FallbackWarnedRef.current = true;
+      }
+      return;
+    }
+
+    let { error } = await supabase.from("links").update(partial).eq("id", id);
+
+    if (error && phase1SchemaAvailableRef.current && isPhase1SchemaError(error)) {
+      phase1SchemaAvailableRef.current = false;
+      delete partial.status;
+      delete partial.priority;
+      delete partial.due_date;
+      if (Object.keys(partial).length > 0) {
+        ({ error } = await supabase.from("links").update(partial).eq("id", id));
+      } else {
+        error = null;
+      }
+      if (!phase1FallbackWarnedRef.current) {
+        toast.warning("Banco sem colunas da Fase 1; usando modo de compatibilidade");
+        phase1FallbackWarnedRef.current = true;
+      }
+    }
     if (error) {
       logger.error("Erro ao atualizar link", error, { linkId: id });
     } else {
