@@ -60,6 +60,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     deleteCategory,
     renameCategory,
     reorderLinks,
+    reorderLinksInStatus,
     reorderCategories,
     updateCategoryColor,
     updateCategoryIcon,
@@ -251,36 +252,54 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
   const handleMoveToStatus = useCallback((id: string, status: LinkItem["status"]) => {
     const link = links.find((l) => l.id === id);
-    updateLink(id, { status });
+    if (!link) return;
+
+    const nextPositionInStatus =
+      Math.max(
+        ...links
+          .filter((l) => l.status === status)
+          .map((l) => l.positionInStatus ?? l.position ?? 0),
+        -1
+      ) + 1;
+
+    reorderLinksInStatus([
+      {
+        id,
+        status,
+        positionInStatus: nextPositionInStatus,
+      },
+    ]);
     logActivity("link:updated", link?.title || "Link", `Status alterado para ${status}`);
     toast.success(`Status atualizado para ${status === "backlog" ? "Backlog" : status === "in_progress" ? "Em progresso" : "Concluído"}`);
-  }, [links, updateLink, logActivity]);
+  }, [links, reorderLinksInStatus, logActivity]);
 
   const handleReorderWithinStatus = useCallback((draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
 
-    const ordered = [...links].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    const draggedIndex = ordered.findIndex((l) => l.id === draggedId);
-    const targetIndex = ordered.findIndex((l) => l.id === targetId);
+    const draggedLink = links.find((l) => l.id === draggedId);
+    const targetLink = links.find((l) => l.id === targetId);
+    if (!draggedLink || !targetLink || draggedLink.status !== targetLink.status) return;
 
+    const statusGroup = links
+      .filter((l) => l.status === draggedLink.status)
+      .sort((a, b) => (a.positionInStatus ?? a.position ?? 0) - (b.positionInStatus ?? b.position ?? 0));
+
+    const draggedIndex = statusGroup.findIndex((l) => l.id === draggedId);
+    const targetIndex = statusGroup.findIndex((l) => l.id === targetId);
     if (draggedIndex === -1 || targetIndex === -1) return;
 
-    const draggedLink = ordered[draggedIndex];
-    const targetLink = ordered[targetIndex];
-    if (draggedLink.status !== targetLink.status) return;
+    const next = statusGroup.filter((l) => l.id !== draggedId);
+    next.splice(targetIndex, 0, draggedLink);
 
-    const next = ordered.filter((l) => l.id !== draggedId);
-    const insertIndex = next.findIndex((l) => l.id === targetId);
-    next.splice(insertIndex, 0, draggedLink);
-
-    const repositioned = next.map((link, index) => ({
-      ...link,
-      position: index,
+    const updates = next.map((link, index) => ({
+      id: link.id,
+      status: link.status,
+      positionInStatus: index,
     }));
 
-    reorderLinks(repositioned);
+    reorderLinksInStatus(updates);
     logActivity("link:reordered", "Links reordenados no board", `Status: ${draggedLink.status}`);
-  }, [links, reorderLinks, logActivity]);
+  }, [links, reorderLinksInStatus, logActivity]);
 
   const handleBatchTag = useCallback((tag: string) => {
     let count = 0;

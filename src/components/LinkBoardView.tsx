@@ -45,7 +45,9 @@ export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, onMov
       key: statusKey,
       name: statusMeta[statusKey].label,
       badgeVariant: statusMeta[statusKey].badgeVariant,
-      links: links.filter((link) => link.status === statusKey),
+      links: links
+        .filter((link) => link.status === statusKey)
+        .sort((a, b) => (a.positionInStatus ?? a.position ?? 0) - (b.positionInStatus ?? b.position ?? 0)),
     }));
   }, [links]);
 

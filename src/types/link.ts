@@ -12,6 +12,7 @@ export interface LinkItem {
   status: LinkStatus;
   priority: LinkPriority;
   dueDate?: string | null;
+  positionInStatus?: number;
   createdAt: string;
   position: number; // ✅ Para drag & drop ordering
   deletedAt?: string | null; // ✅ Soft delete — null = ativo, ISO date = na lixeira

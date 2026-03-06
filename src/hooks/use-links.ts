@@ -14,7 +14,8 @@ import {
 } from "@/lib/offline-cache";
 import type { LinkItem, Category, SearchFilters } from "@/types/link";
 
-const LINKS_SELECT_PHASE1 = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id";
+const LINKS_SELECT_PHASE1 = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, position_in_status, created_at, position, deleted_at, user_id";
+const LINKS_SELECT_PHASE1_NO_STATUS_ORDER = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id";
 const LINKS_SELECT_LEGACY = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, created_at, position, deleted_at, user_id";
 
 function isPhase1SchemaError(error: any): boolean {
@@ -22,7 +23,11 @@ function isPhase1SchemaError(error: any): boolean {
   const details = String(error?.details || "").toLowerCase();
   const text = `${message} ${details}`;
   const mentionsMissing = text.includes("column") || text.includes("does not exist") || text.includes("could not find");
-  const mentionsPhase1Field = text.includes("status") || text.includes("priority") || text.includes("due_date");
+  const mentionsPhase1Field =
+    text.includes("status") ||
+    text.includes("priority") ||
+    text.includes("due_date") ||
+    text.includes("position_in_status");
   return mentionsMissing && mentionsPhase1Field;
 }
 
@@ -56,6 +61,7 @@ export function useLinks(userId: string | undefined) {
     dueDate: "all",
   });
   const phase1SchemaAvailableRef = useRef(true);
+  const statusOrderSchemaAvailableRef = useRef(true);
   const phase1FallbackWarnedRef = useRef(false);
 
   const getCategoryFullName = useCallback((cat: Category, parent?: Category | null) => {
@@ -80,12 +86,22 @@ export function useLinks(userId: string | undefined) {
 
       let linksRes = await supabase
         .from("links")
-        .select(phase1SchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_LEGACY)
+        .select(
+          phase1SchemaAvailableRef.current
+            ? (statusOrderSchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_PHASE1_NO_STATUS_ORDER)
+            : LINKS_SELECT_LEGACY
+        )
         .order("position", { ascending: true });
 
       if (linksRes.error && phase1SchemaAvailableRef.current && isPhase1SchemaError(linksRes.error)) {
-        phase1SchemaAvailableRef.current = false;
-        linksRes = await supabase.from("links").select(LINKS_SELECT_LEGACY).order("position", { ascending: true });
+        const errorText = `${String(linksRes.error?.message || "")} ${String(linksRes.error?.details || "")}`.toLowerCase();
+        if (errorText.includes("position_in_status")) {
+          statusOrderSchemaAvailableRef.current = false;
+          linksRes = await supabase.from("links").select(LINKS_SELECT_PHASE1_NO_STATUS_ORDER).order("position", { ascending: true });
+        } else {
+          phase1SchemaAvailableRef.current = false;
+          linksRes = await supabase.from("links").select(LINKS_SELECT_LEGACY).order("position", { ascending: true });
+        }
         if (!phase1FallbackWarnedRef.current) {
           toast.warning("Banco sem colunas da Fase 1; usando modo de compatibilidade");
           phase1FallbackWarnedRef.current = true;
@@ -116,6 +132,7 @@ export function useLinks(userId: string | undefined) {
           status: r.status || "backlog",
           priority: r.priority || "medium",
           dueDate: r.due_date || null,
+          positionInStatus: r.position_in_status ?? r.position ?? 0,
           createdAt: r.created_at,
           position: r.position || 0, // ✅ Adicionar position
           deletedAt: r.deleted_at ?? null, // ✅ Soft delete
@@ -175,22 +192,52 @@ export function useLinks(userId: string | undefined) {
       };
 
     const payload = phase1SchemaAvailableRef.current
-      ? { ...basePayload, status: v.status, priority: v.priority, due_date: v.dueDate || null }
+      ? {
+          ...basePayload,
+          status: v.status,
+          priority: v.priority,
+          due_date: v.dueDate || null,
+          ...(statusOrderSchemaAvailableRef.current
+            ? {
+                position_in_status:
+                  Math.max(
+                    ...links
+                      .filter((l) => l.status === v.status)
+                      .map((l) => l.positionInStatus ?? l.position ?? 0),
+                    -1
+                  ) + 1,
+              }
+            : {}),
+        }
       : basePayload;
 
     let { data, error }: { data: any; error: any } = await supabase
       .from("links")
       .insert(payload)
-      .select(phase1SchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_LEGACY)
+      .select(
+        phase1SchemaAvailableRef.current
+          ? (statusOrderSchemaAvailableRef.current ? LINKS_SELECT_PHASE1 : LINKS_SELECT_PHASE1_NO_STATUS_ORDER)
+          : LINKS_SELECT_LEGACY
+      )
       .single();
 
     if (error && phase1SchemaAvailableRef.current && isPhase1SchemaError(error)) {
-      phase1SchemaAvailableRef.current = false;
-      ({ data, error } = await supabase
-        .from("links")
-        .insert(basePayload)
-        .select(LINKS_SELECT_LEGACY)
-        .single());
+      const errorText = `${String(error?.message || "")} ${String(error?.details || "")}`.toLowerCase();
+      if (errorText.includes("position_in_status")) {
+        statusOrderSchemaAvailableRef.current = false;
+        ({ data, error } = await supabase
+          .from("links")
+          .insert({ ...basePayload, status: v.status, priority: v.priority, due_date: v.dueDate || null })
+          .select(LINKS_SELECT_PHASE1_NO_STATUS_ORDER)
+          .single());
+      } else {
+        phase1SchemaAvailableRef.current = false;
+        ({ data, error } = await supabase
+          .from("links")
+          .insert(basePayload)
+          .select(LINKS_SELECT_LEGACY)
+          .single());
+      }
       if (!phase1FallbackWarnedRef.current) {
         toast.warning("Banco sem colunas da Fase 1; usando modo de compatibilidade");
         phase1FallbackWarnedRef.current = true;
@@ -225,6 +272,7 @@ export function useLinks(userId: string | undefined) {
         status: data.status || "backlog",
         priority: data.priority || "medium",
         dueDate: data.due_date || null,
+        positionInStatus: data.position_in_status ?? data.position ?? 0,
         createdAt: data.created_at,
         position: data.position || 0, // ✅ Adicionar position
       };
@@ -267,6 +315,7 @@ export function useLinks(userId: string | undefined) {
       if (data.status !== undefined) partial.status = data.status;
       if (data.priority !== undefined) partial.priority = data.priority;
       if (data.dueDate !== undefined) partial.due_date = data.dueDate;
+      if (statusOrderSchemaAvailableRef.current && data.positionInStatus !== undefined) partial.position_in_status = data.positionInStatus;
     }
 
     if (Object.keys(partial).length === 0) {
@@ -284,6 +333,7 @@ export function useLinks(userId: string | undefined) {
       delete partial.status;
       delete partial.priority;
       delete partial.due_date;
+      delete partial.position_in_status;
       if (Object.keys(partial).length > 0) {
         ({ error } = await supabase.from("links").update(partial).eq("id", id));
       } else {
@@ -551,6 +601,37 @@ export function useLinks(userId: string | undefined) {
     }); // withRateLimit
   }, []);
 
+  const reorderLinksInStatus = useCallback(async (updates: Array<{ id: string; status: LinkItem["status"]; positionInStatus: number }>) => {
+    return withRateLimit("link:reorder", async () => {
+      try {
+        if (updates.length === 0) return;
+
+        setLinks((prev) =>
+          prev.map((link) => {
+            const update = updates.find((u) => u.id === link.id);
+            if (!update) return link;
+            return {
+              ...link,
+              status: update.status,
+              positionInStatus: update.positionInStatus,
+            };
+          })
+        );
+
+        await Promise.all(
+          updates.map(({ id, status, positionInStatus }) => {
+            const payload: Record<string, any> = { status };
+            if (statusOrderSchemaAvailableRef.current) payload.position_in_status = positionInStatus;
+            return (supabase.from("links") as any).update(payload).eq("id", id);
+          })
+        );
+      } catch (error) {
+        logger.error("Erro ao reordenar links por status", error instanceof Error ? error : new Error(String(error)));
+        toast.error("Erro ao reordenar links no board");
+      }
+    });
+  }, []);
+
   // ✅ Função para reordenar categorias via drag & drop
   const reorderCategories = useCallback(async (reorderedCategories: Category[]) => {
     return withRateLimit("category:reorder", async () => {
@@ -640,6 +721,7 @@ export function useLinks(userId: string | undefined) {
           status: r.status || "backlog",
           priority: r.priority || "medium",
           dueDate: r.due_date || null,
+          positionInStatus: r.position_in_status ?? r.position ?? 0,
           createdAt: r.created_at,
           position: r.position || 0,
         }));
@@ -716,6 +798,7 @@ export function useLinks(userId: string | undefined) {
     deleteCategory,
     renameCategory,
     reorderLinks, // ✅ Adicionar função de reorder
+    reorderLinksInStatus,
     reorderCategories, // ✅ Reordenar categorias
     updateCategoryColor, // ✅ Atualizar cor
     updateCategoryIcon, // ✅ Atualizar ícone
