@@ -92,7 +92,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative flex min-h-[126px] items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
+            className={`group relative grid min-h-[126px] grid-cols-2 items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
@@ -190,7 +190,7 @@ export function LinkNotionView({
               </div>
             </div>
 
-            <div className="relative flex w-[120px] shrink-0 items-center justify-center border-l bg-muted/10 p-1.5 sm:w-[160px] sm:p-2 md:w-[240px] lg:w-[300px]">
+            <div className="relative flex min-w-0 items-center justify-center border-l bg-muted/10 p-1.5 sm:p-2">
               <div className="h-full w-full overflow-hidden rounded-md border border-border/50 bg-muted/20">
                 {link.ogImage ? (
                   <img
