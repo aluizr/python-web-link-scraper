@@ -2,6 +2,7 @@ import { AlertCircle, Loader2, Globe } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import type { LinkMetadata } from "@/hooks/use-metadata";
+import { COMPACT_BADGE_CLASS } from "@/lib/utils";
 
 interface LinkPreviewProps {
   metadata: LinkMetadata;
@@ -84,12 +85,12 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
 
       {metadata.title && (
         <div className="flex flex-wrap gap-1.5">
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge variant="secondary" className={COMPACT_BADGE_CLASS}>
             {metadata.source === "local" ? "Local" : "Web"}
           </Badge>
-          <Badge variant="outline" className="text-[10px]">Auto</Badge>
-          {metadata.description && <Badge variant="outline" className="text-[10px]">Desc</Badge>}
-          {metadata.image && <Badge variant="outline" className="text-[10px]">Img</Badge>}
+          <Badge variant="outline" className={COMPACT_BADGE_CLASS}>Auto</Badge>
+          {metadata.description && <Badge variant="outline" className={COMPACT_BADGE_CLASS}>Desc</Badge>}
+          {metadata.image && <Badge variant="outline" className={COMPACT_BADGE_CLASS}>Img</Badge>}
         </div>
       )}
     </div>

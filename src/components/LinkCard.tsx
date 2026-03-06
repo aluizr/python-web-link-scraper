@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { COMPACT_BADGE_CLASS } from "@/lib/utils";
 import type { LinkItem, Category } from "@/types/link";
 
 interface LinkCardProps {
@@ -199,7 +200,7 @@ export function LinkCard({
               {link.category && (
                 <Badge
                   variant="secondary"
-                  className="text-[10px] px-1.5 py-0 h-[18px]"
+                  className={COMPACT_BADGE_CLASS}
                   style={(() => {
                     // ✅ Find color from category hierarchy
                     if (!categories) return {};
@@ -227,7 +228,7 @@ export function LinkCard({
                 </Badge>
               )}
               {link.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 h-[18px]">
+                <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>
                   {tag}
                 </Badge>
               ))}

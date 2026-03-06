@@ -6,6 +6,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const COMPACT_BADGE_CLASS = "text-[10px] px-1.5 py-0 h-[18px]";
+
 // ✅ Filtrar e ordenar links baseado em SearchFilters
 export function filterAndSortLinks(
   links: LinkItem[],

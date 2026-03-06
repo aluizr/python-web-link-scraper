@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { COMPACT_BADGE_CLASS } from "@/lib/utils";
 import type { LinkItem } from "@/types/link";
 
 interface LinkTableViewProps {
@@ -130,7 +131,7 @@ export function LinkTableView({ links, onToggleFavorite, onEdit, onDelete, selec
                 {/* Category */}
                 <td className="px-4 py-3 hidden sm:table-cell">
                   {link.category ? (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-[18px]">
+                    <Badge variant="secondary" className={COMPACT_BADGE_CLASS}>
                       {link.category}
                     </Badge>
                   ) : (
@@ -143,7 +144,7 @@ export function LinkTableView({ links, onToggleFavorite, onEdit, onDelete, selec
                   <div className="flex flex-wrap gap-1 max-w-[180px]">
                     {link.tags.length > 0 ? (
                       link.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0 h-[18px]">
+                        <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>
                           {tag}
                         </Badge>
                       ))

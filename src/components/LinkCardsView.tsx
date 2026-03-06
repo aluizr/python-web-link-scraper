@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { COMPACT_BADGE_CLASS } from "@/lib/utils";
 import type { LinkItem } from "@/types/link";
 import type { CardSize } from "@/components/ViewSwitcher";
 
@@ -50,7 +51,7 @@ const descLines: Record<CardSize, string> = {
 
 const badgeClasses: Record<CardSize, string> = {
   sm: "text-[9px] px-1.5 py-0 h-4",
-  md: "text-[10px] px-1.5 py-0 h-[18px]",
+  md: COMPACT_BADGE_CLASS,
   lg: "text-xs px-2 py-0.5 h-5",
 };
 
