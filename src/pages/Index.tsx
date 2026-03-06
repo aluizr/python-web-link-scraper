@@ -256,6 +256,32 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     toast.success(`Status atualizado para ${status === "backlog" ? "Backlog" : status === "in_progress" ? "Em progresso" : "Concluído"}`);
   }, [links, updateLink, logActivity]);
 
+  const handleReorderWithinStatus = useCallback((draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+
+    const ordered = [...links].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const draggedIndex = ordered.findIndex((l) => l.id === draggedId);
+    const targetIndex = ordered.findIndex((l) => l.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const draggedLink = ordered[draggedIndex];
+    const targetLink = ordered[targetIndex];
+    if (draggedLink.status !== targetLink.status) return;
+
+    const next = ordered.filter((l) => l.id !== draggedId);
+    const insertIndex = next.findIndex((l) => l.id === targetId);
+    next.splice(insertIndex, 0, draggedLink);
+
+    const repositioned = next.map((link, index) => ({
+      ...link,
+      position: index,
+    }));
+
+    reorderLinks(repositioned);
+    logActivity("link:reordered", "Links reordenados no board", `Status: ${draggedLink.status}`);
+  }, [links, reorderLinks, logActivity]);
+
   const handleBatchTag = useCallback((tag: string) => {
     let count = 0;
     selectedIds.forEach((id) => {
@@ -573,6 +599,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onMoveToStatus={handleMoveToStatus}
+              onReorderWithinStatus={handleReorderWithinStatus}
               selectedIds={selectedIds}
               onToggleSelect={handleToggleSelect}
             />

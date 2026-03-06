@@ -24,6 +24,7 @@ interface LinkBoardViewProps {
   onEdit: (link: LinkItem) => void;
   onDelete: (id: string) => void;
   onMoveToStatus: (id: string, status: LinkItem["status"]) => void;
+  onReorderWithinStatus: (draggedId: string, targetId: string) => void;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string, shiftKey?: boolean) => void;
 }
@@ -34,7 +35,7 @@ const statusMeta: Record<LinkItem["status"], { label: string; badgeVariant: "out
   done: { label: "Concluído", badgeVariant: "default" },
 };
 
-export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, onMoveToStatus, selectedIds, onToggleSelect }: LinkBoardViewProps) {
+export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, onMoveToStatus, onReorderWithinStatus, selectedIds, onToggleSelect }: LinkBoardViewProps) {
   const [draggedLinkId, setDraggedLinkId] = useState<string | null>(null);
   const [dropStatus, setDropStatus] = useState<LinkItem["status"] | null>(null);
 
@@ -102,6 +103,37 @@ export function LinkBoardView({ links, onToggleFavorite, onEdit, onDelete, onMov
                 onDragStart={(e) => {
                   e.dataTransfer.setData("text/plain", link.id);
                   setDraggedLinkId(link.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDropStatus(column.key);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const droppedId = e.dataTransfer.getData("text/plain") || draggedLinkId;
+                  if (!droppedId || droppedId === link.id) {
+                    setDraggedLinkId(null);
+                    setDropStatus(null);
+                    return;
+                  }
+
+                  const droppedLink = links.find((item) => item.id === droppedId);
+                  if (!droppedLink) {
+                    setDraggedLinkId(null);
+                    setDropStatus(null);
+                    return;
+                  }
+
+                  if (droppedLink.status === link.status) {
+                    onReorderWithinStatus(droppedId, link.id);
+                  } else {
+                    onMoveToStatus(droppedId, link.status);
+                  }
+
+                  setDraggedLinkId(null);
+                  setDropStatus(null);
                 }}
                 onDragEnd={() => {
                   setDraggedLinkId(null);
