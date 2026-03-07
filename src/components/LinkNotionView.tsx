@@ -71,7 +71,7 @@ const DENSITY_STYLES: Record<ListDensity, {
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-[15px]",
     descriptionClass: "mt-0.5 text-xs",
-    domainClass: "mt-2 text-xs",
+    domainClass: "mt-3 text-xs",
     thumbPadding: "p-1.5 pt-2",
   },
   normal: {
@@ -80,7 +80,7 @@ const DENSITY_STYLES: Record<ListDensity, {
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base",
     descriptionClass: "mt-1 text-sm",
-    domainClass: "mt-3 text-sm",
+    domainClass: "mt-4 text-sm",
     thumbPadding: "p-2 pt-3",
   },
   comfortable: {
@@ -89,7 +89,7 @@ const DENSITY_STYLES: Record<ListDensity, {
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base md:text-[17px]",
     descriptionClass: "mt-1.5 text-sm",
-    domainClass: "mt-3.5 text-sm",
+    domainClass: "mt-5 text-sm",
     thumbPadding: "p-2.5 pt-3.5",
   },
 };
