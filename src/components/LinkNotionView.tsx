@@ -64,56 +64,34 @@ const DENSITY_STYLES: Record<ListDensity, {
   descriptionClass: string;
   domainClass: string;
   thumbPadding: string;
-  actionsWrapClass: string;
-  actionsLayoutClass: string;
-  actionsButtonClass: string;
-  actionsIconClass: string;
 }> = {
   compact: {
     rowMinHeight: "min-h-[108px]",
     contentPadding: "p-2.5 md:p-3",
-    textRightPadding: "pr-2",
+    textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-[15px]",
     descriptionClass: "mt-0.5 text-xs",
     domainClass: "mt-2 text-xs",
     thumbPadding: "p-1.5 pt-2",
-    actionsWrapClass: "gap-0.5",
-    actionsLayoutClass: "flex-row",
-    actionsButtonClass: "h-7 w-7",
-    actionsIconClass: "h-3 w-3",
   },
   normal: {
     rowMinHeight: "min-h-[126px]",
     contentPadding: "p-3 md:p-3.5",
-    textRightPadding: "pr-2",
+    textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base",
     descriptionClass: "mt-1 text-sm",
     domainClass: "mt-3 text-sm",
     thumbPadding: "p-2 pt-3",
-    actionsWrapClass: "gap-0.5",
-    actionsLayoutClass: "flex-col",
-    actionsButtonClass: "h-7 w-7",
-    actionsIconClass: "h-3.5 w-3.5",
   },
   comfortable: {
     rowMinHeight: "min-h-[144px]",
     contentPadding: "p-4 md:p-4",
-    textRightPadding: "pr-2",
+    textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base md:text-[17px]",
     descriptionClass: "mt-1.5 text-sm",
     domainClass: "mt-3.5 text-sm",
     thumbPadding: "p-2.5 pt-3.5",
-    actionsWrapClass: "gap-1",
-    actionsLayoutClass: "flex-col",
-    actionsButtonClass: "h-8 w-8",
-    actionsIconClass: "h-4 w-4",
   },
-};
-
-const ACTIONS_COLUMN_WIDTH_BY_DENSITY: Record<ListDensity, number> = {
-  compact: 72,
-  normal: 88,
-  comfortable: 96,
 };
 
 function clampThumbWidth(value: number): number {
@@ -151,7 +129,6 @@ export function LinkNotionView({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragEnabled = Boolean(onDragStart) && !isResizingThumb;
   const densityStyle = DENSITY_STYLES[density];
-  const actionsColumnWidth = ACTIONS_COLUMN_WIDTH_BY_DENSITY[density];
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -217,7 +194,7 @@ export function LinkNotionView({
   const thumbFrameHeight = Math.max(62, Math.round(thumbFrameWidth * 0.63));
 
   return (
-    <div ref={containerRef} className="overflow-hidden rounded-lg border border-border/60 bg-background">
+    <div ref={containerRef} className="flex flex-col gap-3">
       <div className="sticky top-0 z-20 flex items-center border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-sm md:px-3.5">
         <div className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Conteudo
@@ -237,12 +214,6 @@ export function LinkNotionView({
               {option.label}
             </button>
           ))}
-        </div>
-        <div
-          className="flex items-center justify-center border-l border-border/60 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-          style={{ width: `${actionsColumnWidth}px` }}
-        >
-          Acoes
         </div>
         <div
           className="flex items-center justify-center border-l border-border/60 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
@@ -283,7 +254,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative flex items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${densityStyle.rowMinHeight} ${
+            className={`group relative flex items-stretch overflow-hidden rounded-xl border border-border/40 bg-background transition-colors duration-150 ${densityStyle.rowMinHeight} ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
@@ -384,36 +355,17 @@ export function LinkNotionView({
                 </div>
               </div>
 
-            </div>
-
-            <div
-              className="relative flex shrink-0 items-start justify-center border-l border-border/60 bg-background/70 p-2 pt-3"
-              style={{ width: `${actionsColumnWidth}px` }}
-            >
-              <div className="flex flex-col items-center gap-1 opacity-100 transition-opacity md:opacity-65 md:group-hover:opacity-100">
-                <div className={`flex items-center ${densityStyle.actionsLayoutClass} ${densityStyle.actionsWrapClass}`}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={link.isFavorite ? "Remover favorito" : "Favoritar"}
-                  className={`${ICON_BTN_MD_CLASS} ${densityStyle.actionsButtonClass}`}
-                  onClick={() => onToggleFavorite(link.id)}
-                >
-                  <Star className={`${densityStyle.actionsIconClass} ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+              <div className="absolute right-2 top-2 flex gap-0.5 opacity-100 transition-opacity md:right-3 md:top-3 md:opacity-0 md:group-hover:opacity-100">
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7`} onClick={() => onToggleFavorite(link.id)}>
+                  <Star className={`h-4 w-4 md:h-3.5 md:w-3.5 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="Editar"
-                  className={`${ICON_BTN_MD_CLASS} ${densityStyle.actionsButtonClass}`}
-                  onClick={() => onEdit(link)}
-                >
-                  <Pencil className={densityStyle.actionsIconClass} />
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7`} onClick={() => onEdit(link)}>
+                  <Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" />
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" title="Excluir" className={`${ICON_BTN_MD_CLASS} ${densityStyle.actionsButtonClass} text-destructive`}>
-                      <Trash2 className={densityStyle.actionsIconClass} />
+                    <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} h-8 w-8 md:h-7 md:w-7 text-destructive`}>
+                      <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
@@ -431,8 +383,8 @@ export function LinkNotionView({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-                </div>
               </div>
+
             </div>
 
             <div
@@ -456,7 +408,7 @@ export function LinkNotionView({
                 </span>
               </button>
               <div
-                className="overflow-hidden rounded-md border border-border/35 bg-muted/10"
+                className="overflow-hidden rounded-lg border border-border/30 bg-muted/10"
                 style={{ width: `${thumbFrameWidth}px`, height: `${thumbFrameHeight}px` }}
               >
                 {link.ogImage ? (
