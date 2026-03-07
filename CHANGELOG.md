@@ -23,6 +23,9 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Ações contextuais**: ações principais no hover com visual mais discreto e alinhado ao estilo Notion
 - **Controles externos à linha**: grip + checkbox movidos para gutter externo à esquerda, aproximando o comportamento visual do Notion
 - **Ajustes finos de tipografia e espaçamento**: melhor separação entre descrição e URL, alinhamento vertical do texto e bordas suavizadas
+- **Persistência de visualização**: `viewMode` agora é salvo em `localStorage` e restaurado automaticamente ao reabrir a aplicação
+- **Ações no mobile via menu `...`**: adicionado menu contextual na lista para `Editar` e `Excluir`, com fechamento ao clicar fora
+- **Presets de thumbnail no header**: botões `S / M / L` para alternar rapidamente a largura da preview sem arrastar a alça
 
 ### Correções de Metadados (Adicionar Link)
 
