@@ -45,6 +45,7 @@ function safeDomain(url: string): string {
 const THUMB_MIN_WIDTH = 112;
 const THUMB_MAX_WIDTH = 220;
 const THUMB_DEFAULT_WIDTH = 140;
+const THUMB_STORAGE_KEY = "notion-thumb-width";
 
 function clampThumbWidth(value: number): number {
   return Math.min(THUMB_MAX_WIDTH, Math.max(THUMB_MIN_WIDTH, value));
@@ -69,7 +70,7 @@ export function LinkNotionView({
 }: LinkNotionViewProps) {
   const [thumbWidth, setThumbWidth] = useState<number>(() => {
     if (typeof window === "undefined") return THUMB_DEFAULT_WIDTH;
-    const saved = Number(window.localStorage.getItem("notion-thumb-width"));
+    const saved = Number(window.localStorage.getItem(THUMB_STORAGE_KEY));
     return Number.isFinite(saved) ? clampThumbWidth(saved) : THUMB_DEFAULT_WIDTH;
   });
   const [isResizingThumb, setIsResizingThumb] = useState(false);
@@ -78,7 +79,7 @@ export function LinkNotionView({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("notion-thumb-width", String(thumbWidth));
+    window.localStorage.setItem(THUMB_STORAGE_KEY, String(thumbWidth));
   }, [thumbWidth]);
 
   useEffect(() => {
@@ -103,6 +104,33 @@ export function LinkNotionView({
       window.removeEventListener("pointerup", onPointerUp);
     };
   }, [isResizingThumb]);
+
+  useEffect(() => {
+    if (!isResizingThumb || typeof document === "undefined") return;
+
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [isResizingThumb]);
+
+  const startResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsResizingThumb(true);
+  };
+
+  const resetResize = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setThumbWidth(THUMB_DEFAULT_WIDTH);
+  };
 
   const thumbFrameWidth = Math.max(96, thumbWidth - 16);
   const thumbFrameHeight = Math.max(62, Math.round(thumbFrameWidth * 0.63));
@@ -244,16 +272,8 @@ export function LinkNotionView({
               <button
                 type="button"
                 aria-label="Redimensionar thumbnail"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setIsResizingThumb(true);
-                }}
-                onDoubleClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setThumbWidth(THUMB_DEFAULT_WIDTH);
-                }}
+                onPointerDown={startResize}
+                onDoubleClick={resetResize}
                 className="absolute -left-2 top-0 h-full w-4 cursor-col-resize bg-transparent touch-none"
                 style={{ touchAction: "none" }}
               >
@@ -269,13 +289,12 @@ export function LinkNotionView({
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover"
-                    style={{ width: `${thumbFrameWidth}px`, height: `${thumbFrameHeight}px`, objectFit: "cover" }}
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center" style={{ width: `${thumbFrameWidth}px`, height: `${thumbFrameHeight}px` }}>
+                  <div className="flex h-full w-full items-center justify-center">
                     <div className="flex flex-col items-center gap-1.5 px-1 text-muted-foreground">
                       <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
                       <span className={`max-w-full truncate ${TEXT_XS_CLASS}`}>{domain}</span>
