@@ -59,6 +59,7 @@ const DENSITY_OPTIONS: Array<{ value: ListDensity; label: string }> = [
 const DENSITY_STYLES: Record<ListDensity, {
   rowMinHeight: string;
   contentPadding: string;
+  contentLeftPadding: string;
   textRightPadding: string;
   titleClass: string;
   descriptionClass: string;
@@ -68,6 +69,7 @@ const DENSITY_STYLES: Record<ListDensity, {
   compact: {
     rowMinHeight: "min-h-[108px]",
     contentPadding: "p-2.5 md:p-3",
+    contentLeftPadding: "pl-11",
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-[15px]",
     descriptionClass: "mt-0.5 text-xs",
@@ -77,6 +79,7 @@ const DENSITY_STYLES: Record<ListDensity, {
   normal: {
     rowMinHeight: "min-h-[126px]",
     contentPadding: "p-3 md:p-3.5",
+    contentLeftPadding: "pl-11",
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base",
     descriptionClass: "mt-1 text-sm",
@@ -86,6 +89,7 @@ const DENSITY_STYLES: Record<ListDensity, {
   comfortable: {
     rowMinHeight: "min-h-[144px]",
     contentPadding: "p-4 md:p-4",
+    contentLeftPadding: "pl-12",
     textRightPadding: "pr-20 md:pr-24",
     titleClass: "text-base md:text-[17px]",
     descriptionClass: "mt-1.5 text-sm",
@@ -194,7 +198,7 @@ export function LinkNotionView({
   const thumbFrameHeight = Math.max(62, Math.round(thumbFrameWidth * 0.63));
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-3">
+    <div ref={containerRef} className="mx-2 flex flex-col gap-3 md:mx-4">
       <div className="sticky top-0 z-20 flex items-center border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-sm md:px-3.5">
         <div className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Conteudo
@@ -271,27 +275,29 @@ export function LinkNotionView({
               <div className="absolute bottom-0 left-2 right-2 z-10 h-[3px] rounded-full bg-primary" />
             )}
 
-            <div className={`relative min-w-0 flex flex-1 items-center ${densityStyle.contentPadding}`}>
-              <div className="flex w-full items-center gap-3.5">
-                <div className="self-center text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
-                  <GripVertical className="h-3.5 w-3.5" />
-                </div>
+            <div className="absolute left-3 top-3 z-10 flex items-start gap-2">
+              <div className="pt-0.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
+                <GripVertical className="h-3.5 w-3.5" />
+              </div>
 
-                {onToggleSelect && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSelect(link.id, e.shiftKey);
-                    }}
-                    className={`mt-0.5 h-4 w-4 shrink-0 self-start rounded-sm border transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100"
-                    }`}
-                  />
-                )}
+              {onToggleSelect && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSelect(link.id, e.shiftKey);
+                  }}
+                  className={`h-4 w-4 rounded-sm border transition-all ${
+                    isSelected
+                      ? "border-primary bg-primary"
+                      : "border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100"
+                  }`}
+                />
+              )}
+            </div>
 
-                <div className={`min-w-0 flex-1 pl-1 ${densityStyle.textRightPadding} flex flex-col justify-center`}>
+            <div className={`relative min-w-0 flex flex-1 items-center ${densityStyle.contentPadding} ${densityStyle.contentLeftPadding}`}>
+              <div className="flex w-full items-center">
+                <div className={`min-w-0 flex-1 ${densityStyle.textRightPadding} flex flex-col justify-center`}>
                   <a
                     href={link.url}
                     target="_blank"
