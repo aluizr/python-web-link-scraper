@@ -300,9 +300,9 @@ export function LinkNotionView({
               <div className="absolute bottom-0 left-2 right-2 z-10 h-[3px] rounded-full bg-primary" />
             )}
 
-            <div className={`relative min-w-0 flex-1 ${densityStyle.contentPadding}`}>
-              <div className="flex items-start gap-2.5">
-                <div className="pt-0.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className={`relative min-w-0 flex flex-1 items-center ${densityStyle.contentPadding}`}>
+              <div className="flex w-full items-center gap-3.5">
+                <div className="self-center text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
                   <GripVertical className="h-3.5 w-3.5" />
                 </div>
 
@@ -312,7 +312,7 @@ export function LinkNotionView({
                       e.stopPropagation();
                       onToggleSelect(link.id, e.shiftKey);
                     }}
-                    className={`mt-0.5 h-4 w-4 shrink-0 rounded-sm border transition-all ${
+                    className={`mt-0.5 h-4 w-4 shrink-0 self-start rounded-sm border transition-all ${
                       isSelected
                         ? "border-primary bg-primary"
                         : "border-muted-foreground/40 bg-background opacity-0 group-hover:opacity-100"
@@ -320,7 +320,7 @@ export function LinkNotionView({
                   />
                 )}
 
-                <div className={`min-w-0 flex-1 ${densityStyle.textRightPadding}`}>
+                <div className={`min-w-0 flex-1 pl-1 ${densityStyle.textRightPadding} flex flex-col justify-center`}>
                   <a
                     href={link.url}
                     target="_blank"
