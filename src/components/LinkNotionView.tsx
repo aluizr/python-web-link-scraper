@@ -274,10 +274,14 @@ export function LinkNotionView({
                 aria-label="Redimensionar thumbnail"
                 onPointerDown={startResize}
                 onDoubleClick={resetResize}
+                title="Arraste para redimensionar (duplo clique para resetar)"
                 className="absolute -left-2 top-0 h-full w-4 cursor-col-resize bg-transparent touch-none"
                 style={{ touchAction: "none" }}
               >
-                <span className={`absolute left-1/2 top-1/2 h-10 w-[2px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${isResizingThumb ? "bg-primary" : "bg-border/80 group-hover:bg-border"}`} />
+                <span className={`absolute left-1/2 top-1/2 h-12 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${isResizingThumb ? "bg-primary" : "bg-border group-hover:bg-foreground/50"}`} />
+                <span className={`pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded bg-background/95 px-1.5 py-0.5 text-[10px] text-muted-foreground shadow-sm transition-opacity ${isResizingThumb ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                  Arraste
+                </span>
               </button>
               <div
                 className="overflow-hidden rounded-md border border-border/35 bg-muted/10"
