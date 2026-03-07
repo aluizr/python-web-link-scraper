@@ -46,6 +46,53 @@ const THUMB_MIN_WIDTH = 112;
 const THUMB_MAX_WIDTH = 220;
 const THUMB_DEFAULT_WIDTH = 140;
 const THUMB_STORAGE_KEY = "notion-thumb-width";
+const DENSITY_STORAGE_KEY = "notion-list-density";
+
+type ListDensity = "compact" | "normal" | "comfortable";
+
+const DENSITY_OPTIONS: Array<{ value: ListDensity; label: string }> = [
+  { value: "compact", label: "Compacto" },
+  { value: "normal", label: "Normal" },
+  { value: "comfortable", label: "Conforto" },
+];
+
+const DENSITY_STYLES: Record<ListDensity, {
+  rowMinHeight: string;
+  contentPadding: string;
+  textRightPadding: string;
+  titleClass: string;
+  descriptionClass: string;
+  domainClass: string;
+  thumbPadding: string;
+}> = {
+  compact: {
+    rowMinHeight: "min-h-[108px]",
+    contentPadding: "p-2.5 md:p-3",
+    textRightPadding: "pr-24 md:pr-20",
+    titleClass: "text-[15px]",
+    descriptionClass: "mt-0.5 text-xs",
+    domainClass: "mt-2 text-xs",
+    thumbPadding: "p-1.5 pt-2",
+  },
+  normal: {
+    rowMinHeight: "min-h-[126px]",
+    contentPadding: "p-3 md:p-3.5",
+    textRightPadding: "pr-24 md:pr-20",
+    titleClass: "text-base",
+    descriptionClass: "mt-1 text-sm",
+    domainClass: "mt-3 text-sm",
+    thumbPadding: "p-2 pt-3",
+  },
+  comfortable: {
+    rowMinHeight: "min-h-[144px]",
+    contentPadding: "p-4 md:p-4",
+    textRightPadding: "pr-24 md:pr-20",
+    titleClass: "text-base md:text-[17px]",
+    descriptionClass: "mt-1.5 text-sm",
+    domainClass: "mt-3.5 text-sm",
+    thumbPadding: "p-2.5 pt-3.5",
+  },
+};
 
 function clampThumbWidth(value: number): number {
   return Math.min(THUMB_MAX_WIDTH, Math.max(THUMB_MIN_WIDTH, value));
@@ -74,13 +121,24 @@ export function LinkNotionView({
     return Number.isFinite(saved) ? clampThumbWidth(saved) : THUMB_DEFAULT_WIDTH;
   });
   const [isResizingThumb, setIsResizingThumb] = useState(false);
+  const [density, setDensity] = useState<ListDensity>(() => {
+    if (typeof window === "undefined") return "normal";
+    const saved = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+    return saved === "compact" || saved === "normal" || saved === "comfortable" ? saved : "normal";
+  });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragEnabled = Boolean(onDragStart) && !isResizingThumb;
+  const densityStyle = DENSITY_STYLES[density];
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(THUMB_STORAGE_KEY, String(thumbWidth));
   }, [thumbWidth]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
+  }, [density]);
 
   useEffect(() => {
     if (!isResizingThumb) return;
@@ -137,6 +195,31 @@ export function LinkNotionView({
 
   return (
     <div ref={containerRef} className="overflow-hidden rounded-lg border border-border/60 bg-background">
+      <div className="sticky top-0 z-20 flex items-center border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-sm md:px-3.5">
+        <div className="min-w-0 flex-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Conteudo
+        </div>
+        <div className="mr-2 flex items-center gap-1">
+          {DENSITY_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDensity(option.value)}
+              className={`rounded px-1.5 py-1 text-[10px] font-medium transition-colors ${
+                density === option.value
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" style={{ width: `${thumbWidth}px` }}>
+          Preview
+        </div>
+      </div>
+
       {links.map((link, index) => {
         const isDragging = draggedLinkId === link.id;
         const isDropZone = dropZoneId === link.id && draggedLinkId !== null && !isDragging;
@@ -168,7 +251,7 @@ export function LinkNotionView({
             }}
             onDragEnd={(e) => onDragEnd?.(e)}
             data-card-id={link.id}
-            className={`group relative flex min-h-[126px] items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${
+            className={`group relative flex items-stretch overflow-hidden border-b border-border/60 bg-background transition-colors duration-150 last:border-b-0 ${densityStyle.rowMinHeight} ${
               dragEnabled ? "cursor-grab active:cursor-grabbing" : ""
             } ${
               isSelected ? "bg-primary/5" : ""
@@ -185,7 +268,7 @@ export function LinkNotionView({
               <div className="absolute bottom-0 left-2 right-2 z-10 h-[3px] rounded-full bg-primary" />
             )}
 
-            <div className="relative min-w-0 flex-1 p-3 md:p-3.5">
+            <div className={`relative min-w-0 flex-1 ${densityStyle.contentPadding}`}>
               <div className="flex items-start gap-2.5">
                 <div className="pt-0.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">
                   <GripVertical className="h-3.5 w-3.5" />
@@ -205,12 +288,12 @@ export function LinkNotionView({
                   />
                 )}
 
-                <div className="min-w-0 flex-1 pr-24 md:pr-20">
+                <div className={`min-w-0 flex-1 ${densityStyle.textRightPadding}`}>
                   <a
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold text-foreground transition-colors hover:text-primary"
+                    className={`inline-flex max-w-full items-center gap-1.5 font-semibold text-foreground transition-colors hover:text-primary ${densityStyle.titleClass}`}
                   >
                     {health === "broken" && <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" />}
                     <span className="truncate">{link.title || domain}</span>
@@ -218,7 +301,7 @@ export function LinkNotionView({
                   </a>
 
                   {link.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground/90">
+                    <p className={`line-clamp-2 text-muted-foreground/90 ${densityStyle.descriptionClass}`}>
                       {link.description}
                     </p>
                   )}
@@ -227,11 +310,45 @@ export function LinkNotionView({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex max-w-full items-center gap-1.5 text-sm font-medium text-foreground/90 hover:text-primary"
+                    className={`inline-flex max-w-full items-center gap-1.5 font-medium text-foreground/90 hover:text-primary ${densityStyle.domainClass}`}
                   >
                     <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
                     <span className="truncate">{domain}</span>
                   </a>
+
+                  <div className="mt-2 hidden items-center gap-2 text-xs text-muted-foreground transition-opacity md:flex md:opacity-0 md:group-hover:opacity-100">
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Abrir
+                    </a>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(link);
+                      }}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(link.id);
+                      }}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 hover:bg-muted hover:text-foreground"
+                    >
+                      <Star className={`h-3 w-3 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                      {link.isFavorite ? "Favorito" : "Favoritar"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -267,7 +384,7 @@ export function LinkNotionView({
             </div>
 
             <div
-              className="relative flex shrink-0 items-start justify-center border-l bg-muted/5 p-2 pt-3"
+              className={`relative flex shrink-0 items-start justify-center border-l bg-muted/5 ${densityStyle.thumbPadding}`}
               style={{ width: `${thumbWidth}px` }}
             >
               <button
