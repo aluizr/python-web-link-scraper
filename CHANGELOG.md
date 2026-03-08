@@ -61,6 +61,11 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Build de produção validado** após cada bloco de mudanças (`npm run build`)
 - **Sem erros de tipagem** nos arquivos alterados durante a refatoração
 
+### Correções (0.14.1)
+
+- **Temas personalizados restaurados**: corrigida a importação global de estilos em `src/main.tsx` para usar `src/index.css` (em vez de `public/output.css`), garantindo aplicação correta das paletas `Oceano`, `Floresta`, `Rosé` e demais temas.
+- **Remoção de CSS legado**: arquivo `public/output.css` removido para evitar regressões e importações acidentais no bootstrap da aplicação.
+
 ---
 
 ## [0.14.0] — 2026-02-22
