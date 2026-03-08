@@ -1,7 +1,15 @@
-import { Star, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Star, ExternalLink, Pencil, Trash2, Flame, Sparkles, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +34,11 @@ interface LinkGalleryViewProps {
   onToggleSelect?: (id: string, shiftKey?: boolean) => void;
 }
 
+type CatalogSort = "newest" | "alphabetical" | "favorites" | "priority";
+type CurationFilter = "all" | "featured" | "new" | "trending";
+
+const GALLERY_FILTERS_STORAGE_KEY = "gallery-catalog-filters-v1";
+
 function getHostname(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -43,10 +56,246 @@ export function LinkGalleryView({
   selectedIds,
   onToggleSelect,
 }: LinkGalleryViewProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [curationFilter, setCurationFilter] = useState<CurationFilter>("all");
+  const [sortBy, setSortBy] = useState<CatalogSort>("newest");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(GALLERY_FILTERS_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as {
+        selectedCategory?: unknown;
+        selectedTag?: unknown;
+        curationFilter?: unknown;
+        sortBy?: unknown;
+      };
+
+      if (typeof parsed.selectedCategory === "string") setSelectedCategory(parsed.selectedCategory);
+      if (typeof parsed.selectedTag === "string") setSelectedTag(parsed.selectedTag);
+
+      if (parsed.curationFilter === "all" || parsed.curationFilter === "featured" || parsed.curationFilter === "new" || parsed.curationFilter === "trending") {
+        setCurationFilter(parsed.curationFilter);
+      }
+
+      if (parsed.sortBy === "newest" || parsed.sortBy === "alphabetical" || parsed.sortBy === "favorites" || parsed.sortBy === "priority") {
+        setSortBy(parsed.sortBy);
+      }
+    } catch {
+      // Ignore invalid persisted filters and keep defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        GALLERY_FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          selectedCategory,
+          selectedTag,
+          curationFilter,
+          sortBy,
+        })
+      );
+    } catch {
+      // Ignore persistence errors (private mode/quota).
+    }
+  }, [selectedCategory, selectedTag, curationFilter, sortBy]);
+
+  const isNew = (link: LinkItem) => {
+    const created = new Date(link.createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    return now - created.getTime() <= sevenDays;
+  };
+
+  const isTrending = (link: LinkItem) => {
+    const created = new Date(link.createdAt);
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    const recent = !Number.isNaN(created.getTime()) && (Date.now() - created.getTime() <= thirtyDays);
+    return (link.isFavorite && recent) || link.tags.length >= 3;
+  };
+
+  const isFeatured = (link: LinkItem) => link.priority === "high" || (link.isFavorite && link.tags.length > 0);
+
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const link of links) {
+      const key = link.category || "Sem categoria";
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+
+    const preferredOrder = (categories ?? []).map((cat) => cat.name);
+    return Array.from(map.entries())
+      .sort(([a], [b]) => {
+        const ai = preferredOrder.indexOf(a);
+        const bi = preferredOrder.indexOf(b);
+        if (ai !== -1 || bi !== -1) {
+          return (ai === -1 ? Number.MAX_SAFE_INTEGER : ai) - (bi === -1 ? Number.MAX_SAFE_INTEGER : bi);
+        }
+        return a.localeCompare(b);
+      });
+  }, [links, categories]);
+
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const link of links) {
+      for (const tag of link.tags) {
+        map.set(tag, (map.get(tag) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  }, [links]);
+
+  const catalogLinks = useMemo(() => {
+    let next = [...links];
+
+    if (selectedCategory !== "all") {
+      if (selectedCategory === "Sem categoria") {
+        next = next.filter((link) => !link.category);
+      } else {
+        next = next.filter((link) => link.category === selectedCategory);
+      }
+    }
+
+    if (selectedTag !== "all") {
+      next = next.filter((link) => link.tags.includes(selectedTag));
+    }
+
+    if (curationFilter === "featured") {
+      next = next.filter((link) => isFeatured(link));
+    }
+
+    if (curationFilter === "new") {
+      next = next.filter((link) => isNew(link));
+    }
+
+    if (curationFilter === "trending") {
+      next = next.filter((link) => isTrending(link));
+    }
+
+    if (sortBy === "alphabetical") {
+      next.sort((a, b) => (a.title || a.url).localeCompare(b.title || b.url));
+    }
+
+    if (sortBy === "favorites") {
+      next.sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite));
+    }
+
+    if (sortBy === "priority") {
+      const rank = { high: 3, medium: 2, low: 1 } as const;
+      next.sort((a, b) => rank[b.priority] - rank[a.priority]);
+    }
+
+    if (sortBy === "newest") {
+      next.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return next;
+  }, [links, selectedCategory, selectedTag, curationFilter, sortBy]);
+
   return (
-    <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-      {links.map((link) => {
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card/50 p-3">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="text-[11px]">
+            Catalogo: {catalogLinks.length}/{links.length}
+          </Badge>
+
+          <Select value={sortBy} onValueChange={(value: CatalogSort) => setSortBy(value)}>
+            <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectValue placeholder="Ordenacao" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Mais recentes</SelectItem>
+              <SelectItem value="alphabetical">A-Z</SelectItem>
+              <SelectItem value="favorites">Favoritos primeiro</SelectItem>
+              <SelectItem value="priority">Prioridade</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Curadoria:</span>
+          {[
+            { id: "all", label: "Todos" },
+            { id: "featured", label: "Destaque" },
+            { id: "new", label: "Novo" },
+            { id: "trending", label: "Trending" },
+          ].map((item) => (
+            <Button
+              key={item.id}
+              type="button"
+              variant={curationFilter === item.id ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setCurationFilter(item.id as CurationFilter)}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Categoria:</span>
+          <Button
+            type="button"
+            variant={selectedCategory === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setSelectedCategory("all")}
+          >
+            Todas
+          </Button>
+          {categoryCounts.slice(0, 10).map(([name, count]) => (
+            <Button
+              key={name}
+              type="button"
+              variant={selectedCategory === name ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setSelectedCategory(name)}
+            >
+              {name} ({count})
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Tags:</span>
+          <Button
+            type="button"
+            variant={selectedTag === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setSelectedTag("all")}
+          >
+            Todas
+          </Button>
+          {tagCounts.slice(0, 10).map(([tag, count]) => (
+            <Button
+              key={tag}
+              type="button"
+              variant={selectedTag === tag ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setSelectedTag(tag)}
+            >
+              #{tag} ({count})
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+      {catalogLinks.map((link) => {
         const isSelected = selectedIds?.has(link.id);
+        const showNew = isNew(link);
+        const showFeatured = isFeatured(link);
+        const showTrending = isTrending(link);
         return (
           <div
             key={link.id}
@@ -103,6 +352,29 @@ export function LinkGalleryView({
                 className={`h-4 w-4 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
               />
             </Button>
+
+            {(showNew || showFeatured || showTrending) && (
+              <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-1">
+                {showNew && (
+                  <Badge className="h-5 border-0 bg-sky-500/95 px-1.5 text-[10px] text-white">
+                    <Clock3 className="mr-1 h-3 w-3" />
+                    Novo
+                  </Badge>
+                )}
+                {showFeatured && (
+                  <Badge className="h-5 border-0 bg-amber-500/95 px-1.5 text-[10px] text-white">
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Destaque
+                  </Badge>
+                )}
+                {showTrending && (
+                  <Badge className="h-5 border-0 bg-rose-500/95 px-1.5 text-[10px] text-white">
+                    <Flame className="mr-1 h-3 w-3" />
+                    Trending
+                  </Badge>
+                )}
+              </div>
+            )}
 
             {/* Content */}
             <div className="p-3.5">
@@ -181,6 +453,7 @@ export function LinkGalleryView({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

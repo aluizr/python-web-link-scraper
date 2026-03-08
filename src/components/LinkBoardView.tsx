@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Star, ExternalLink, Pencil, Trash2, StickyNote } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Star, ExternalLink, Pencil, Trash2, StickyNote, Flame, Sparkles, Clock3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,15 @@ interface LinkBoardViewProps {
 }
 
 type BoardColumnFilter = "all" | "favorites" | "high" | "urgent";
+type CatalogSort = "newest" | "alphabetical" | "favorites" | "priority";
+type CurationFilter = "all" | "featured" | "new" | "trending";
+
+const BOARD_FILTERS_STORAGE_KEY = "board-catalog-filters-v1";
+const DEFAULT_COLUMN_FILTERS: Record<LinkItem["status"], BoardColumnFilter> = {
+  backlog: "all",
+  in_progress: "all",
+  done: "all",
+};
 
 const statusMeta: Record<LinkItem["status"], { label: string; badgeVariant: "outline" | "secondary" | "default" }> = {
   backlog: { label: "Backlog", badgeVariant: "outline" },
@@ -51,11 +60,86 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
   const [dropStatus, setDropStatus] = useState<LinkItem["status"] | null>(null);
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [columnFilters, setColumnFilters] = useState<Record<LinkItem["status"], BoardColumnFilter>>({
-    backlog: "all",
-    in_progress: "all",
-    done: "all",
-  });
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [curationFilter, setCurationFilter] = useState<CurationFilter>("all");
+  const [sortBy, setSortBy] = useState<CatalogSort>("newest");
+  const [columnFilters, setColumnFilters] = useState<Record<LinkItem["status"], BoardColumnFilter>>(DEFAULT_COLUMN_FILTERS);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BOARD_FILTERS_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as {
+        selectedCategory?: unknown;
+        selectedTag?: unknown;
+        curationFilter?: unknown;
+        sortBy?: unknown;
+        columnFilters?: Partial<Record<LinkItem["status"], unknown>>;
+      };
+
+      if (typeof parsed.selectedCategory === "string") setSelectedCategory(parsed.selectedCategory);
+      if (typeof parsed.selectedTag === "string") setSelectedTag(parsed.selectedTag);
+
+      if (parsed.curationFilter === "all" || parsed.curationFilter === "featured" || parsed.curationFilter === "new" || parsed.curationFilter === "trending") {
+        setCurationFilter(parsed.curationFilter);
+      }
+
+      if (parsed.sortBy === "newest" || parsed.sortBy === "alphabetical" || parsed.sortBy === "favorites" || parsed.sortBy === "priority") {
+        setSortBy(parsed.sortBy);
+      }
+
+      const cf = parsed.columnFilters;
+      if (cf && typeof cf === "object") {
+        const normalize = (value: unknown): BoardColumnFilter => {
+          if (value === "favorites" || value === "high" || value === "urgent") return value;
+          return "all";
+        };
+
+        setColumnFilters({
+          backlog: normalize(cf.backlog),
+          in_progress: normalize(cf.in_progress),
+          done: normalize(cf.done),
+        });
+      }
+    } catch {
+      // Ignore invalid persisted filters and keep defaults.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        BOARD_FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          selectedCategory,
+          selectedTag,
+          curationFilter,
+          sortBy,
+          columnFilters,
+        })
+      );
+    } catch {
+      // Ignore persistence errors (private mode/quota).
+    }
+  }, [selectedCategory, selectedTag, curationFilter, sortBy, columnFilters]);
+
+  const isNew = (link: LinkItem) => {
+    const created = new Date(link.createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    return Date.now() - created.getTime() <= sevenDays;
+  };
+
+  const isTrending = (link: LinkItem) => {
+    const created = new Date(link.createdAt);
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    const recent = !Number.isNaN(created.getTime()) && Date.now() - created.getTime() <= thirtyDays;
+    return (link.isFavorite && recent) || link.tags.length >= 3;
+  };
+
+  const isFeatured = (link: LinkItem) => link.priority === "high" || (link.isFavorite && link.tags.length > 0);
 
   const dueState = (dueDate?: string | null): "none" | "overdue" | "today" | "upcoming" => {
     if (!dueDate) return "none";
@@ -100,6 +184,77 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     setEditingTitle("");
   };
 
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const link of links) {
+      const key = link.category || "Sem categoria";
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [links]);
+
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const link of links) {
+      for (const tag of link.tags) {
+        map.set(tag, (map.get(tag) ?? 0) + 1);
+      }
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 20);
+  }, [links]);
+
+  const baseLinks = useMemo(() => {
+    let next = [...links];
+
+    if (selectedCategory !== "all") {
+      if (selectedCategory === "Sem categoria") {
+        next = next.filter((link) => !link.category);
+      } else {
+        next = next.filter((link) => link.category === selectedCategory);
+      }
+    }
+
+    if (selectedTag !== "all") {
+      next = next.filter((link) => link.tags.includes(selectedTag));
+    }
+
+    if (curationFilter === "featured") {
+      next = next.filter((link) => isFeatured(link));
+    }
+    if (curationFilter === "new") {
+      next = next.filter((link) => isNew(link));
+    }
+    if (curationFilter === "trending") {
+      next = next.filter((link) => isTrending(link));
+    }
+
+    return next;
+  }, [links, selectedCategory, selectedTag, curationFilter]);
+
+  const sortBySelection = (items: LinkItem[]) => {
+    const next = [...items];
+
+    if (sortBy === "alphabetical") {
+      next.sort((a, b) => (a.title || a.url).localeCompare(b.title || b.url));
+      return next;
+    }
+    if (sortBy === "favorites") {
+      next.sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite));
+      return next;
+    }
+    if (sortBy === "priority") {
+      const rank = { high: 3, medium: 2, low: 1 } as const;
+      next.sort((a, b) => rank[b.priority] - rank[a.priority]);
+      return next;
+    }
+    if (sortBy === "newest") {
+      next.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return next;
+    }
+
+    return next.sort((a, b) => (a.positionInStatus ?? a.position ?? 0) - (b.positionInStatus ?? b.position ?? 0));
+  };
+
   // Agrupar links por status
   const columns = useMemo(() => {
     return (["backlog", "in_progress", "done"] as LinkItem["status"][]).map((statusKey) => ({
@@ -107,18 +262,108 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
       name: statusMeta[statusKey].label,
       badgeVariant: statusMeta[statusKey].badgeVariant,
       links: applyColumnFilter(
-        links
-        .filter((link) => link.status === statusKey)
-        .sort((a, b) => (a.positionInStatus ?? a.position ?? 0) - (b.positionInStatus ?? b.position ?? 0)),
+        sortBySelection(baseLinks.filter((link) => link.status === statusKey)),
         columnFilters[statusKey]
       ),
-      total: links.filter((link) => link.status === statusKey).length,
+      total: baseLinks.filter((link) => link.status === statusKey).length,
       filter: columnFilters[statusKey],
     }));
-  }, [links, columnFilters]);
+  }, [baseLinks, columnFilters, sortBy]);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card/50 p-3">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <Badge variant="secondary" className="text-[11px]">
+            Catalogo: {baseLinks.length}/{links.length}
+          </Badge>
+
+          <Select value={sortBy} onValueChange={(value: CatalogSort) => setSortBy(value)}>
+            <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectValue placeholder="Ordenacao" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Mais recentes</SelectItem>
+              <SelectItem value="alphabetical">A-Z</SelectItem>
+              <SelectItem value="favorites">Favoritos primeiro</SelectItem>
+              <SelectItem value="priority">Prioridade</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Curadoria:</span>
+          {[
+            { id: "all", label: "Todos" },
+            { id: "featured", label: "Destaque" },
+            { id: "new", label: "Novo" },
+            { id: "trending", label: "Trending" },
+          ].map((item) => (
+            <Button
+              key={item.id}
+              type="button"
+              variant={curationFilter === item.id ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setCurationFilter(item.id as CurationFilter)}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Categoria:</span>
+          <Button
+            type="button"
+            variant={selectedCategory === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setSelectedCategory("all")}
+          >
+            Todas
+          </Button>
+          {categoryCounts.slice(0, 10).map(([name, count]) => (
+            <Button
+              key={name}
+              type="button"
+              variant={selectedCategory === name ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setSelectedCategory(name)}
+            >
+              {name} ({count})
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Tags:</span>
+          <Button
+            type="button"
+            variant={selectedTag === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-6 px-2 text-[11px]"
+            onClick={() => setSelectedTag("all")}
+          >
+            Todas
+          </Button>
+          {tagCounts.slice(0, 10).map(([tag, count]) => (
+            <Button
+              key={tag}
+              type="button"
+              variant={selectedTag === tag ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setSelectedTag(tag)}
+            >
+              #{tag} ({count})
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
       {columns.map((column) => {
         const allLinks = column.links;
         return (
@@ -184,7 +429,12 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
           {/* Column cards */}
           <div className="flex flex-col gap-2">
-            {column.links.map((link) => (
+            {column.links.map((link) => {
+              const showNew = isNew(link);
+              const showFeatured = isFeatured(link);
+              const showTrending = isTrending(link);
+
+              return (
               <Card
                 key={link.id}
                 draggable
@@ -371,6 +621,29 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                           <StickyNote className="h-3 w-3" />
                         </span>
                       )}
+
+                      {(showNew || showFeatured || showTrending) && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {showNew && (
+                            <Badge className="h-5 border-0 bg-sky-500/95 px-1.5 text-[10px] text-white">
+                              <Clock3 className="mr-1 h-3 w-3" />
+                              Novo
+                            </Badge>
+                          )}
+                          {showFeatured && (
+                            <Badge className="h-5 border-0 bg-amber-500/95 px-1.5 text-[10px] text-white">
+                              <Sparkles className="mr-1 h-3 w-3" />
+                              Destaque
+                            </Badge>
+                          )}
+                          {showTrending && (
+                            <Badge className="h-5 border-0 bg-rose-500/95 px-1.5 text-[10px] text-white">
+                              <Flame className="mr-1 h-3 w-3" />
+                              Trending
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -416,7 +689,8 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
 
             {allLinks.length === 0 && (
               <div className="rounded-lg border-2 border-dashed border-muted-foreground/20 p-6 text-center">
@@ -427,6 +701,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
         </div>
         );
       })}
+      </div>
     </div>
   );
 }

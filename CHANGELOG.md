@@ -86,6 +86,28 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Contador filtrado por coluna**: exibicao `visiveis/total` em cada cabecalho de coluna para feedback imediato dos filtros.
 - **Prioridade inline no card**: seletor direto no Board para alterar prioridade sem abrir modal.
 - **Status inline no card**: seletor direto no Board para mover entre `Backlog`, `Em progresso` e `Concluido` sem depender apenas de drag & drop.
+- **Painel global de catalogo**: barra superior com filtros por `Curadoria`, `Categoria`, `Tags` e contador `X/Y` no Board.
+- **Ordenacao no Board**: opcoes `Mais recentes`, `A-Z`, `Favoritos primeiro` e `Prioridade` antes da distribuicao em colunas.
+- **Selos editoriais no Board**: badges `Novo`, `Destaque` e `Trending` exibidos diretamente nos cards.
+- **Persistencia de filtros no Board**: estado de `Curadoria`, `Categoria`, `Tags`, `Ordenacao` e filtros por coluna salvo em `localStorage` e restaurado ao reabrir.
+
+### Galeria (Catalogo V1)
+
+- **Modo catalogo na Galeria**: nova barra superior com estado `X/Y` para mostrar itens filtrados vs total.
+- **Facetas com contagem**: filtros rapidos por `Categoria` e `Tags` com chips e contadores por valor.
+- **Curadoria rapida**: atalhos `Todos`, `Destaque`, `Novo` e `Trending` para triagem editorial dos links.
+- **Ordenacao configuravel**: opcoes `Mais recentes`, `A-Z`, `Favoritos primeiro` e `Prioridade`.
+- **Selos editoriais no card**: badges contextuais `Novo`, `Destaque` e `Trending` sobre a capa para leitura mais rapida.
+- **Persistencia na Galeria**: filtros de catalogo (`Curadoria`, `Categoria`, `Tags`, `Ordenacao`) salvos em `localStorage` e restaurados automaticamente.
+
+### Cartoes (Catalogo V1)
+
+- **Modo catalogo nos Cartoes**: painel superior com estado `X/Y` para total filtrado.
+- **Facetas com contagem**: filtros rapidos por `Categoria` e `Tags` com chips e contador por valor.
+- **Curadoria rapida**: atalhos `Todos`, `Destaque`, `Novo` e `Trending` aplicados na grade de cartoes.
+- **Ordenacao configuravel**: `Mais recentes`, `A-Z`, `Favoritos primeiro` e `Prioridade`.
+- **Selos editoriais na capa**: badges `Novo`, `Destaque` e `Trending` integrados ao overlay do card.
+- **Persistencia nos Cartoes**: filtros de catalogo (`Curadoria`, `Categoria`, `Tags`, `Ordenacao`) salvos em `localStorage` e restaurados ao reabrir.
 
 ### Correções de Metadados (Adicionar Link)
 
