@@ -1,5 +1,6 @@
 import { Moon, Sun, Waves, Sunset, TreePine, Flower2, Sparkles, Eclipse, Palette, Check, ScrollText, Leaf, Citrus } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,6 +8,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const THEME_MOTION_STORAGE_KEY = "theme-motion-intensity";
+type ThemeMotionIntensity = "soft" | "strong";
 
 const themes = [
   {
@@ -98,6 +102,21 @@ const classicThemes = classicThemeIds.map((id) => themeMap[id]);
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const [motionIntensity, setMotionIntensity] = useState<ThemeMotionIntensity>("soft");
+
+  useEffect(() => {
+    const value = window.localStorage.getItem(THEME_MOTION_STORAGE_KEY);
+    const initialValue: ThemeMotionIntensity = value === "strong" ? "strong" : "soft";
+
+    setMotionIntensity(initialValue);
+    document.documentElement.setAttribute("data-theme-motion", initialValue);
+  }, []);
+
+  const updateMotionIntensity = (value: ThemeMotionIntensity) => {
+    setMotionIntensity(value);
+    window.localStorage.setItem(THEME_MOTION_STORAGE_KEY, value);
+    document.documentElement.setAttribute("data-theme-motion", value);
+  };
 
   const renderThemeButton = (t: (typeof themes)[number]) => {
     const Icon = t.icon;
@@ -152,6 +171,32 @@ export function ThemeToggle() {
             Classicos
           </p>
           {classicThemes.map(renderThemeButton)}
+
+          <div className="my-1 h-px bg-border" />
+
+          <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Animacao
+          </p>
+          <div className="grid grid-cols-2 gap-1 px-1 pb-1">
+            <Button
+              type="button"
+              variant={motionIntensity === "soft" ? "default" : "outline"}
+              size="sm"
+              onClick={() => updateMotionIntensity("soft")}
+              className="h-8"
+            >
+              Suave
+            </Button>
+            <Button
+              type="button"
+              variant={motionIntensity === "strong" ? "default" : "outline"}
+              size="sm"
+              onClick={() => updateMotionIntensity("strong")}
+              className="h-8"
+            >
+              Forte
+            </Button>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

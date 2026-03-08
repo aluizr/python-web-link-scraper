@@ -41,6 +41,12 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Diferença visual reforçada**: ajustes de `background`, `card`, `accent`, `border` e atmosfera de fundo por tema para reduzir semelhança entre os modos claros
 - **Integração completa**: novos temas disponíveis no seletor (`ThemeToggle`), no `ThemeProvider` e no atalho de teclado `D` (ciclo de temas)
 
+### Tema Escuro e Transição de Tema
+
+- **Legibilidade no escuro melhorada**: tokens do tema `dark` ajustados para superfícies mais claras e maior contraste de texto/bordas.
+- **Animação configurável de troca de tema**: novo controle `Suave/Forte` no seletor de temas com persistência em `localStorage` (`theme-motion-intensity`).
+- **Efeito global com acessibilidade**: transição visual aplicada no `html` via `data-theme-motion`, respeitando `prefers-reduced-motion`.
+
 ### Correções de Metadados (Adicionar Link)
 
 - **Resiliência no carregamento de metadados**: fluxo do `useMetadata` com cadeia de fallback `Microlink -> OtherMeta -> noembed -> local`
