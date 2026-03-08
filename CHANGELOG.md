@@ -48,6 +48,19 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Modo sem animação**: adicionada opção `Sem` no seletor para desativar completamente o efeito de troca de tema.
 - **Efeito global com acessibilidade**: transição visual aplicada no `html` via `data-theme-motion`, respeitando `prefers-reduced-motion`.
 
+### Tabela (Pacote V1)
+
+- **Colunas configuráveis com persistência**: mostrar/ocultar colunas da tabela e salvar preferências em `localStorage`.
+- **Presets de layout da tabela**: atalhos `Compacta`, `Analise` e `Completa` para alternar rapidamente conjuntos de colunas.
+- **Redimensionamento de colunas**: arraste no header para resize com persistência de largura; duplo clique na alca para auto-fit.
+- **Ordenação multi-coluna**: clique no header para ordenar; `Shift+clique` adiciona novos critérios de ordenação.
+- **Filtros por coluna**: filtros rápidos para texto, categoria, tag, status, prioridade e favoritos.
+- **Contador e limpeza rapida**: indicador `X de Y links` + botao para limpar filtros e ordenacao.
+- **Edicao inline**: atualizacao direta em celula para `titulo`, `categoria`, `tags` e `prazo`, alem de `status` e `prioridade` via seletor na propria linha.
+- **Navegacao por teclado na edicao**: suporte a `Tab` e `Shift+Tab` para avancar/retroceder entre celulas editaveis, incluindo troca para a proxima/anterior linha.
+- **Foco visual de celula ativa**: destaque da celula em edicao inline com realce de borda/fundo para leitura tipo planilha.
+- **Contexto de linha ativa**: linha com celula em edicao recebe realce sutil para facilitar orientacao em tabelas largas.
+
 ### Correções de Metadados (Adicionar Link)
 
 - **Resiliência no carregamento de metadados**: fluxo do `useMetadata` com cadeia de fallback `Microlink -> OtherMeta -> noembed -> local`
