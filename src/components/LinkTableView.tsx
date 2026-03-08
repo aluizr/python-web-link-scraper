@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { COMPACT_BADGE_CLASS, ICON_BTN_MD_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
 import type { LinkItem } from "@/types/link";
+import { toast } from "sonner";
 
 const statusLabel: Record<LinkItem["status"], string> = {
   backlog: "Backlog",
@@ -63,12 +64,13 @@ interface TableFilters {
   status: "all" | LinkItem["status"];
   priority: "all" | LinkItem["priority"];
   favorite: "all" | "yes" | "no";
+  dueDate: "all" | "overdue" | "today" | "next7" | "none";
 }
 
-type InlineEditableColumn = "title" | "category" | "tags" | "dueDate";
+type InlineEditableColumn = "title" | "description" | "category" | "tags" | "dueDate";
 type TableDensity = "compact" | "normal";
 
-const INLINE_EDIT_SEQUENCE: InlineEditableColumn[] = ["title", "category", "tags", "dueDate"];
+const INLINE_EDIT_SEQUENCE: InlineEditableColumn[] = ["title", "description", "category", "tags", "dueDate"];
 
 interface ColumnConfig {
   id: TableColumnId;
@@ -118,6 +120,7 @@ const DEFAULT_FILTERS: TableFilters = {
   status: "all",
   priority: "all",
   favorite: "all",
+  dueDate: "all",
 };
 
 const COLUMN_MAP: Record<TableColumnId, ColumnConfig> = Object.fromEntries(
@@ -234,6 +237,7 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
   const getInlineInitialValue = (link: LinkItem, column: InlineEditableColumn) => {
     if (column === "title") return link.title || "";
+    if (column === "description") return link.description || "";
     if (column === "category") return link.category || "";
     if (column === "tags") return link.tags.join(", ");
     if (!link.dueDate) return "";
@@ -255,33 +259,57 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     setEditingValue("");
   };
 
+  const applyUpdateWithUndo = useCallback(
+    (
+      link: LinkItem,
+      patch: Partial<Omit<LinkItem, "id" | "createdAt" | "position">>,
+      label: string,
+      previousPatch: Partial<Omit<LinkItem, "id" | "createdAt" | "position">>
+    ) => {
+      onUpdateLink(link.id, patch);
+      toast.success(`${label} atualizado`, {
+        action: {
+          label: "Desfazer",
+          onClick: () => onUpdateLink(link.id, previousPatch),
+        },
+      });
+    },
+    [onUpdateLink]
+  );
+
   const commitInlineEdit = useCallback((cell: { id: string; column: InlineEditableColumn } | null, value: string) => {
     if (!cell) return;
+    const link = links.find((item) => item.id === cell.id);
+    if (!link) return;
 
     const rawValue = value.trim();
 
     if (cell.column === "title") {
-      onUpdateLink(cell.id, { title: rawValue });
+      applyUpdateWithUndo(link, { title: rawValue }, "Titulo", { title: link.title || "" });
+    }
+
+    if (cell.column === "description") {
+      applyUpdateWithUndo(link, { description: rawValue }, "Descricao", { description: link.description || "" });
     }
 
     if (cell.column === "category") {
-      onUpdateLink(cell.id, { category: rawValue });
+      applyUpdateWithUndo(link, { category: rawValue }, "Categoria", { category: link.category || "" });
     }
 
     if (cell.column === "tags") {
       const tags = rawValue
         ? rawValue.split(",").map((tag) => tag.trim()).filter(Boolean)
         : [];
-      onUpdateLink(cell.id, { tags });
+      applyUpdateWithUndo(link, { tags }, "Tags", { tags: link.tags });
     }
 
     if (cell.column === "dueDate") {
-      onUpdateLink(cell.id, { dueDate: rawValue || null });
+      applyUpdateWithUndo(link, { dueDate: rawValue || null }, "Prazo", { dueDate: link.dueDate || null });
     }
 
     setEditingCell(null);
     setEditingValue("");
-  }, [onUpdateLink]);
+  }, [applyUpdateWithUndo, links]);
 
   const moveInlineEdit = useCallback((cell: { id: string; column: InlineEditableColumn }, backward: boolean, list: LinkItem[]) => {
     const rowIndex = list.findIndex((link) => link.id === cell.id);
@@ -306,8 +334,15 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     beginInlineEdit(list[nextRowIndex], INLINE_EDIT_SEQUENCE[nextColIndex]);
   }, []);
 
-  const handleInlineInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>, linkList: LinkItem[]) => {
+  const handleInlineInputKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    linkList: LinkItem[]
+  ) => {
     if (!editingCell) return;
+
+    if (event.key === "Enter" && event.currentTarget.tagName === "TEXTAREA" && !event.ctrlKey && !event.metaKey) {
+      return;
+    }
 
     if (event.key === "Enter") {
       event.preventDefault();
@@ -380,6 +415,35 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
     if (filters.favorite === "no") {
       next = next.filter((link) => !link.isFavorite);
+    }
+
+    if (filters.dueDate !== "all") {
+      const now = new Date();
+      const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endToday = new Date(startToday);
+      endToday.setDate(endToday.getDate() + 1);
+      const next7 = new Date(endToday);
+      next7.setDate(next7.getDate() + 7);
+
+      if (filters.dueDate === "none") {
+        next = next.filter((link) => !link.dueDate);
+      } else {
+        next = next.filter((link) => {
+          if (!link.dueDate) return false;
+          const due = new Date(link.dueDate);
+          if (Number.isNaN(due.getTime())) return false;
+
+          if (filters.dueDate === "overdue") {
+            return due < startToday;
+          }
+
+          if (filters.dueDate === "today") {
+            return due >= startToday && due < endToday;
+          }
+
+          return due >= startToday && due < next7;
+        });
+      }
     }
 
     if (sortRules.length > 0) {
@@ -696,6 +760,28 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
           </Select>
         </div>
 
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Prazo:</span>
+          {[
+            { id: "all", label: "Todos" },
+            { id: "overdue", label: "Vencido" },
+            { id: "today", label: "Hoje" },
+            { id: "next7", label: "7 dias" },
+            { id: "none", label: "Sem prazo" },
+          ].map((chip) => (
+            <Button
+              key={chip.id}
+              type="button"
+              variant={filters.dueDate === chip.id ? "default" : "outline"}
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              onClick={() => setFilters((prev) => ({ ...prev, dueDate: chip.id as TableFilters["dueDate"] }))}
+            >
+              {chip.label}
+            </Button>
+          ))}
+        </div>
+
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -931,7 +1017,31 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
                     {columnId === "description" && (
                       <div>
-                        <p className={`whitespace-normal break-words text-muted-foreground ${TEXT_XS_CLASS}`}>{link.description || "-"}</p>
+                        {editingCell?.id === link.id && editingCell.column === "description" ? (
+                          <textarea
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => {
+                              if (skipNextBlurCommitRef.current) {
+                                skipNextBlurCommitRef.current = false;
+                                return;
+                              }
+                              commitInlineEdit(editingCell, editingValue);
+                            }}
+                            onKeyDown={(e) => handleInlineInputKeyDown(e, processedLinks)}
+                            rows={density === "compact" ? 2 : 3}
+                            className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+                          />
+                        ) : (
+                          <p
+                            className={`whitespace-normal break-words text-muted-foreground ${TEXT_XS_CLASS}`}
+                            onDoubleClick={() => beginInlineEdit(link, "description")}
+                            title="Duplo clique para editar descricao"
+                          >
+                            {link.description || "-"}
+                          </p>
+                        )}
                         {link.notes && (
                           <span className={`mt-0.5 inline-flex items-center gap-0.5 ${TEXT_XS_CLASS} text-muted-foreground`} title={link.notes}>
                             <StickyNote className="h-3 w-3" />
@@ -1017,7 +1127,9 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                     {columnId === "status" && (
                       <Select
                         value={link.status}
-                        onValueChange={(value: LinkItem["status"]) => onUpdateLink(link.id, { status: value })}
+                        onValueChange={(value: LinkItem["status"]) =>
+                          applyUpdateWithUndo(link, { status: value }, "Status", { status: link.status })
+                        }
                       >
                         <SelectTrigger className={`${density === "compact" ? "h-7 text-xs min-w-[116px]" : "h-8 min-w-[132px]"}`}>
                           <SelectValue />
@@ -1033,7 +1145,9 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                     {columnId === "priority" && (
                       <Select
                         value={link.priority}
-                        onValueChange={(value: LinkItem["priority"]) => onUpdateLink(link.id, { priority: value })}
+                        onValueChange={(value: LinkItem["priority"]) =>
+                          applyUpdateWithUndo(link, { priority: value }, "Prioridade", { priority: link.priority })
+                        }
                       >
                         <SelectTrigger className={`${density === "compact" ? "h-7 text-xs min-w-[116px]" : "h-8 min-w-[132px]"}`}>
                           <SelectValue />

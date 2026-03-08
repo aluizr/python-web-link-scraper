@@ -66,6 +66,9 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Indicadores de scroll horizontal**: fade nas bordas esquerda/direita da tabela sinaliza conteudo fora da viewport.
 - **Snap horizontal suave**: ao parar o scroll lateral, a tabela alinha automaticamente na borda de coluna mais proxima (respeitando `prefers-reduced-motion`).
 - **Modo de densidade da tabela**: novo controle `Compacta/Normal` com persistencia em `localStorage` para caber mais conteudo na mesma pagina.
+- **Descricao editavel inline**: duplo clique na descricao para edicao direta na celula (textarea), com `Ctrl+Enter` para salvar rapido.
+- **Chips de prazo na tabela**: filtros rapidos `Vencido`, `Hoje`, `7 dias` e `Sem prazo` para triagem de tarefas com data.
+- **Desfazer em edicoes inline**: toast de confirmacao com acao `Desfazer` para atualizacoes inline (titulo, descricao, categoria, tags, prazo, status e prioridade).
 
 ### Correções de Metadados (Adicionar Link)
 
