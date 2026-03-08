@@ -105,6 +105,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
   const [presets, setPresets] = useState<BoardCatalogPreset[]>([]);
   const [activePresetName, setActivePresetName] = useState<string>("none");
   const [showCurationRules, setShowCurationRules] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [curationRules, setCurationRules] = useState<CurationRules>(DEFAULT_CURATION_RULES);
 
   useEffect(() => {
@@ -595,6 +596,8 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     }));
   }, [baseLinks, columnFilters, sortBy]);
 
+  const hasActiveFilters = selectedCategory !== "all" || selectedTags.length > 0 || statusFilter !== "all" || priorityFilter !== "all" || dueFilter !== "all" || curationFilter !== "all" || sortBy !== "newest";
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border bg-card/50 p-3">
@@ -614,57 +617,6 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
               ))}
             </SelectContent>
           </Select>
-
-          <Button type="button" variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={saveCurrentPreset}>
-            Salvar vista
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            disabled={!activePreset}
-            onClick={duplicateActivePreset}
-          >
-            Duplicar vista
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            disabled={!activePreset}
-            onClick={renameActivePreset}
-          >
-            Renomear vista
-          </Button>
-          <Button
-            type="button"
-            variant={isActivePresetDirty ? "default" : "outline"}
-            size="sm"
-            className="h-8 px-2 text-xs"
-            disabled={!activePreset || !isActivePresetDirty}
-            onClick={updateActivePreset}
-          >
-            Atualizar vista
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            disabled={activePresetName === "none"}
-            onClick={deleteActivePreset}
-          >
-            Excluir
-          </Button>
-
-          {activePreset && isActivePresetDirty && (
-            <Badge variant="secondary" className="h-6 text-[10px]">
-              Alteracoes nao salvas
-            </Badge>
-          )}
-
           <Select value={sortBy} onValueChange={(value: CatalogSort) => setSortBy(value)}>
             <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Ordenacao" />
@@ -679,119 +631,38 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
           <Button
             type="button"
-            variant="outline"
+            variant={showAdvancedFilters ? "default" : "outline"}
             size="sm"
             className="h-8 px-2 text-xs"
-            onClick={() => setShowCurationRules((prev) => !prev)}
+            onClick={() => setShowAdvancedFilters((prev) => !prev)}
           >
-            Regras curadoria
+            {showAdvancedFilters ? "Ocultar filtros" : "Mais filtros"}
           </Button>
-        </div>
 
-        {showCurationRules && (
-          <div className="mb-2 rounded-md border border-border/60 bg-background/60 p-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Novo (dias)</span>
-              <Input
-                type="number"
-                min={1}
-                className="h-7 w-20 text-xs"
-                value={curationRules.newDays}
-                onChange={(e) => setCurationRules((prev) => ({ ...prev, newDays: Math.max(1, Number(e.target.value || 1)) }))}
-              />
-
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending janela</span>
-              <Input
-                type="number"
-                min={1}
-                className="h-7 w-20 text-xs"
-                value={curationRules.trendingRecentDays}
-                onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingRecentDays: Math.max(1, Number(e.target.value || 1)) }))}
-              />
-
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending min tags</span>
-              <Input
-                type="number"
-                min={1}
-                className="h-7 w-20 text-xs"
-                value={curationRules.trendingMinTags}
-                onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingMinTags: Math.max(1, Number(e.target.value || 1)) }))}
-              />
-            </div>
-
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant={curationRules.featuredUseHighPriority ? "default" : "outline"}
-                size="sm"
-                className="h-6 px-2 text-[11px]"
-                onClick={() => setCurationRules((prev) => ({ ...prev, featuredUseHighPriority: !prev.featuredUseHighPriority }))}
-              >
-                Alta prioridade em destaque
-              </Button>
-
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Fav min tags</span>
-              <Input
-                type="number"
-                min={0}
-                className="h-7 w-20 text-xs"
-                value={curationRules.featuredFavoriteMinTags}
-                onChange={(e) => setCurationRules((prev) => ({ ...prev, featuredFavoriteMinTags: Math.max(0, Number(e.target.value || 0)) }))}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <Select value={statusFilter} onValueChange={(value: "all" | LinkItem["status"]) => setStatusFilter(value)}>
-            <SelectTrigger className="h-8 w-[160px] text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Status: Todos</SelectItem>
-              <SelectItem value="backlog">Backlog</SelectItem>
-              <SelectItem value="in_progress">Em progresso</SelectItem>
-              <SelectItem value="done">Concluido</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={priorityFilter} onValueChange={(value: "all" | LinkItem["priority"]) => setPriorityFilter(value)}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder="Prioridade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Prioridade: Todas</SelectItem>
-              <SelectItem value="high">Alta</SelectItem>
-              <SelectItem value="medium">Media</SelectItem>
-              <SelectItem value="low">Baixa</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Prazo:</span>
-          {[
-            { id: "all", label: "Todos" },
-            { id: "overdue", label: "Vencido" },
-            { id: "today", label: "Hoje" },
-            { id: "7d", label: "7 dias" },
-            { id: "30d", label: "30 dias" },
-            { id: "no_due", label: "Sem prazo" },
-          ].map((item) => (
+          {hasActiveFilters && (
             <Button
-              key={item.id}
               type="button"
-              variant={dueFilter === item.id ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => setDueFilter(item.id as DueFilter)}
+              className="h-8 px-2 text-xs"
+              onClick={() => {
+                setSelectedCategory("all");
+                setSelectedTags([]);
+                setStatusFilter("all");
+                setPriorityFilter("all");
+                setDueFilter("all");
+                setCurationFilter("all");
+                setSortBy("newest");
+              }}
             >
-              {item.label}
+              Limpar filtros
             </Button>
-          ))}
+          )}
         </div>
 
-        {(selectedCategory !== "all" || selectedTags.length > 0 || statusFilter !== "all" || priorityFilter !== "all" || dueFilter !== "all" || curationFilter !== "all" || sortBy !== "newest") && (
+        {hasActiveFilters && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Filtros ativos:</span>
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Ativos:</span>
             {selectedCategory !== "all" && (
               <Button type="button" variant="secondary" size="sm" className="h-6 px-2 text-[11px]" onClick={() => clearSingleFilter("category")}>
                 Cat: {selectedCategory} x
@@ -830,94 +701,261 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
           </div>
         )}
 
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Curadoria:</span>
-          {[
-            { id: "all", label: "Todos" },
-            { id: "featured", label: "Destaque" },
-            { id: "new", label: "Novo" },
-            { id: "trending", label: "Trending" },
-          ].map((item) => (
-            <Button
-              key={item.id}
-              type="button"
-              variant={curationFilter === item.id ? "default" : "outline"}
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => setCurationFilter(item.id as CurationFilter)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
+        {showAdvancedFilters && (
+          <>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Button type="button" variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={saveCurrentPreset}>
+                Salvar vista
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!activePreset}
+                onClick={duplicateActivePreset}
+              >
+                Duplicar vista
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!activePreset}
+                onClick={renameActivePreset}
+              >
+                Renomear vista
+              </Button>
+              <Button
+                type="button"
+                variant={isActivePresetDirty ? "default" : "outline"}
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={!activePreset || !isActivePresetDirty}
+                onClick={updateActivePreset}
+              >
+                Atualizar vista
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                disabled={activePresetName === "none"}
+                onClick={deleteActivePreset}
+              >
+                Excluir
+              </Button>
 
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Categoria:</span>
-          <Button
-            type="button"
-            variant={selectedCategory === "all" ? "default" : "outline"}
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => setSelectedCategory("all")}
-          >
-            Todas
-          </Button>
-          {categoryCounts.slice(0, 10).map(([name, count]) => (
-            <Button
-              key={name}
-              type="button"
-              variant={selectedCategory === name ? "default" : "outline"}
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => setSelectedCategory(name)}
-            >
-              {name} ({count})
-            </Button>
-          ))}
-        </div>
+              {activePreset && isActivePresetDirty && (
+                <Badge variant="secondary" className="h-6 text-[10px]">
+                  Alteracoes nao salvas
+                </Badge>
+              )}
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Tags:</span>
-          <Button
-            type="button"
-            variant={tagMatchMode === "or" ? "default" : "outline"}
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => setTagMatchMode("or")}
-          >
-            OR
-          </Button>
-          <Button
-            type="button"
-            variant={tagMatchMode === "and" ? "default" : "outline"}
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => setTagMatchMode("and")}
-          >
-            AND
-          </Button>
-          <Button
-            type="button"
-            variant={selectedTags.length === 0 ? "default" : "outline"}
-            size="sm"
-            className="h-6 px-2 text-[11px]"
-            onClick={() => setSelectedTags([])}
-          >
-            Todas
-          </Button>
-          {tagCounts.slice(0, 10).map(([tag, count]) => (
-            <Button
-              key={tag}
-              type="button"
-              variant={selectedTags.includes(tag) ? "default" : "outline"}
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => toggleTag(tag)}
-            >
-              #{tag} ({count})
-            </Button>
-          ))}
-        </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => setShowCurationRules((prev) => !prev)}
+              >
+                Regras curadoria
+              </Button>
+            </div>
+
+            {showCurationRules && (
+              <div className="mb-2 rounded-md border border-border/60 bg-background/60 p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Novo (dias)</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-7 w-20 text-xs"
+                    value={curationRules.newDays}
+                    onChange={(e) => setCurationRules((prev) => ({ ...prev, newDays: Math.max(1, Number(e.target.value || 1)) }))}
+                  />
+
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending janela</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-7 w-20 text-xs"
+                    value={curationRules.trendingRecentDays}
+                    onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingRecentDays: Math.max(1, Number(e.target.value || 1)) }))}
+                  />
+
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending min tags</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-7 w-20 text-xs"
+                    value={curationRules.trendingMinTags}
+                    onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingMinTags: Math.max(1, Number(e.target.value || 1)) }))}
+                  />
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={curationRules.featuredUseHighPriority ? "default" : "outline"}
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() => setCurationRules((prev) => ({ ...prev, featuredUseHighPriority: !prev.featuredUseHighPriority }))}
+                  >
+                    Alta prioridade em destaque
+                  </Button>
+
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Fav min tags</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-7 w-20 text-xs"
+                    value={curationRules.featuredFavoriteMinTags}
+                    onChange={(e) => setCurationRules((prev) => ({ ...prev, featuredFavoriteMinTags: Math.max(0, Number(e.target.value || 0)) }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <Select value={statusFilter} onValueChange={(value: "all" | LinkItem["status"]) => setStatusFilter(value)}>
+                <SelectTrigger className="h-8 w-[160px] text-xs">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Status: Todos</SelectItem>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  <SelectItem value="in_progress">Em progresso</SelectItem>
+                  <SelectItem value="done">Concluido</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={priorityFilter} onValueChange={(value: "all" | LinkItem["priority"]) => setPriorityFilter(value)}>
+                <SelectTrigger className="h-8 w-[170px] text-xs">
+                  <SelectValue placeholder="Prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Prioridade: Todas</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Media</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Prazo:</span>
+              {[
+                { id: "all", label: "Todos" },
+                { id: "overdue", label: "Vencido" },
+                { id: "today", label: "Hoje" },
+                { id: "7d", label: "7 dias" },
+                { id: "30d", label: "30 dias" },
+                { id: "no_due", label: "Sem prazo" },
+              ].map((item) => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  variant={dueFilter === item.id ? "default" : "outline"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setDueFilter(item.id as DueFilter)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Curadoria:</span>
+              {[
+                { id: "all", label: "Todos" },
+                { id: "featured", label: "Destaque" },
+                { id: "new", label: "Novo" },
+                { id: "trending", label: "Trending" },
+              ].map((item) => (
+                <Button
+                  key={item.id}
+                  type="button"
+                  variant={curationFilter === item.id ? "default" : "outline"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setCurationFilter(item.id as CurationFilter)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="mb-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Categoria:</span>
+              <Button
+                type="button"
+                variant={selectedCategory === "all" ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setSelectedCategory("all")}
+              >
+                Todas
+              </Button>
+              {categoryCounts.slice(0, 10).map(([name, count]) => (
+                <Button
+                  key={name}
+                  type="button"
+                  variant={selectedCategory === name ? "default" : "outline"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setSelectedCategory(name)}
+                >
+                  {name} ({count})
+                </Button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Tags:</span>
+              <Button
+                type="button"
+                variant={tagMatchMode === "or" ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setTagMatchMode("or")}
+              >
+                OR
+              </Button>
+              <Button
+                type="button"
+                variant={tagMatchMode === "and" ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setTagMatchMode("and")}
+              >
+                AND
+              </Button>
+              <Button
+                type="button"
+                variant={selectedTags.length === 0 ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setSelectedTags([])}
+              >
+                Todas
+              </Button>
+              {tagCounts.slice(0, 10).map(([tag, count]) => (
+                <Button
+                  key={tag}
+                  type="button"
+                  variant={selectedTags.includes(tag) ? "default" : "outline"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => toggleTag(tag)}
+                >
+                  #{tag} ({count})
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
