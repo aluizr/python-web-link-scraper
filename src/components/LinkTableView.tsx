@@ -931,7 +931,7 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
 
                     {columnId === "description" && (
                       <div>
-                        <p className={`truncate text-muted-foreground ${TEXT_XS_CLASS}`}>{link.description || "-"}</p>
+                        <p className={`whitespace-normal break-words text-muted-foreground ${TEXT_XS_CLASS}`}>{link.description || "-"}</p>
                         {link.notes && (
                           <span className={`mt-0.5 inline-flex items-center gap-0.5 ${TEXT_XS_CLASS} text-muted-foreground`} title={link.notes}>
                             <StickyNote className="h-3 w-3" />
