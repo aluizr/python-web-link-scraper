@@ -1,27 +1,16 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect, lazy, Suspense } from "react";
 import { Plus, Download, Upload, LogOut, BarChart3, Clock, Command, Trash2, ShieldCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { LinkCard } from "@/components/LinkCard";
-import { LinkTableView } from "@/components/LinkTableView";
-import { LinkBoardView } from "@/components/LinkBoardView";
-import { LinkCardsView } from "@/components/LinkCardsView";
-import { LinkGalleryView } from "@/components/LinkGalleryView";
 import { LinkNotionView } from "@/components/LinkNotionView";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import type { GridColumns, CardSize } from "@/components/ViewSwitcher";
-import { LinkForm } from "@/components/LinkForm";
 import { SearchBar } from "@/components/SearchBar";
 import { DragDropOverlay } from "@/components/DragDropOverlay";
 import { BreadcrumbNav } from "@/components/BreadcrumbNav";
-import { StatsDashboard } from "@/components/StatsDashboard";
-import { ExportFormatDialog } from "@/components/ExportFormatDialog";
-import { ImportFormatDialog } from "@/components/ImportFormatDialog";
-import { ActivityPanel } from "@/components/ActivityPanel";
-import { TrashView } from "@/components/TrashView";
-import { LinkCheckerPanel } from "@/components/LinkCheckerPanel";
 import { useLinkChecker } from "@/hooks/use-link-checker";
 import { CommandPalette, buildDefaultCommands } from "@/components/CommandPalette";
 import { BatchActionBar } from "@/components/BatchActionBar";
@@ -33,6 +22,18 @@ import { toast } from "sonner";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { LinkItem, SearchFilters, ViewMode } from "@/types/link";
 import type { User } from "@supabase/supabase-js";
+
+const LinkForm = lazy(() => import("@/components/LinkForm").then((m) => ({ default: m.LinkForm })));
+const StatsDashboard = lazy(() => import("@/components/StatsDashboard").then((m) => ({ default: m.StatsDashboard })));
+const ExportFormatDialog = lazy(() => import("@/components/ExportFormatDialog").then((m) => ({ default: m.ExportFormatDialog })));
+const ImportFormatDialog = lazy(() => import("@/components/ImportFormatDialog").then((m) => ({ default: m.ImportFormatDialog })));
+const ActivityPanel = lazy(() => import("@/components/ActivityPanel").then((m) => ({ default: m.ActivityPanel })));
+const TrashView = lazy(() => import("@/components/TrashView").then((m) => ({ default: m.TrashView })));
+const LinkCheckerPanel = lazy(() => import("@/components/LinkCheckerPanel").then((m) => ({ default: m.LinkCheckerPanel })));
+const LinkTableView = lazy(() => import("@/components/LinkTableView").then((m) => ({ default: m.LinkTableView })));
+const LinkBoardView = lazy(() => import("@/components/LinkBoardView").then((m) => ({ default: m.LinkBoardView })));
+const LinkCardsView = lazy(() => import("@/components/LinkCardsView").then((m) => ({ default: m.LinkCardsView })));
+const LinkGalleryView = lazy(() => import("@/components/LinkGalleryView").then((m) => ({ default: m.LinkGalleryView })));
 
 interface IndexProps {
   user: User;
@@ -580,6 +581,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
           {/* Links Grid/List */}
           <div className={viewMode === "list" ? "mt-4" : "mt-6"}>
+          <Suspense fallback={<div className="py-6 text-sm text-muted-foreground">Carregando visualizacao...</div>}>
           {filteredLinks.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <p className="text-lg text-muted-foreground">
@@ -699,6 +701,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               ))}
             </div>
           )}
+          </Suspense>
           </div>
         </main>
 
@@ -712,49 +715,51 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         />
       </div>
 
-      <LinkForm
-        open={formOpen}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditingLink(null);
-        }}
-        categories={categories}
-        links={links}
-        editingLink={editingLink}
-        onSubmit={handleSubmit}
-        onEditDuplicate={(link) => {
-          setEditingLink(link);
-          setFormOpen(true);
-        }}
-      />
+      <Suspense fallback={null}>
+        <LinkForm
+          open={formOpen}
+          onOpenChange={(open) => {
+            setFormOpen(open);
+            if (!open) setEditingLink(null);
+          }}
+          categories={categories}
+          links={links}
+          editingLink={editingLink}
+          onSubmit={handleSubmit}
+          onEditDuplicate={(link) => {
+            setEditingLink(link);
+            setFormOpen(true);
+          }}
+        />
 
-      <StatsDashboard isOpen={statsOpen} onClose={() => setStatsOpen(false)} links={links} />
+        <StatsDashboard isOpen={statsOpen} onClose={() => setStatsOpen(false)} links={links} />
 
-      <ExportFormatDialog isOpen={exportOpen} onClose={() => setExportOpen(false)} links={links} categories={categories} />
+        <ExportFormatDialog isOpen={exportOpen} onClose={() => setExportOpen(false)} links={links} categories={categories} />
 
-      <ImportFormatDialog isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImportLinks} />
+        <ImportFormatDialog isOpen={importOpen} onClose={() => setImportOpen(false)} onImport={handleImportLinks} />
 
-      <ActivityPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} entries={activityEntries} onClear={clearLog} />
+        <ActivityPanel isOpen={historyOpen} onClose={() => setHistoryOpen(false)} entries={activityEntries} onClear={clearLog} />
 
-      <TrashView
-        isOpen={trashOpen}
-        onClose={() => setTrashOpen(false)}
-        trashedLinks={trashedLinks}
-        onRestore={(id) => {
-          const link = links.find((l) => l.id === id) ?? trashedLinks.find((l) => l.id === id);
-          restoreLink(id);
-          logActivity("link:restored", link?.title || "Link restaurado", link?.url);
-        }}
-        onPermanentDelete={(id) => {
-          const link = trashedLinks.find((l) => l.id === id);
-          permanentDeleteLink(id);
-          logActivity("link:deleted", link?.title || "Link excluído", link?.url);
-        }}
-        onEmptyTrash={() => {
-          emptyTrash();
-          logActivity("link:deleted", `${trashedLinks.length} links excluídos permanentemente`);
-        }}
-      />
+        <TrashView
+          isOpen={trashOpen}
+          onClose={() => setTrashOpen(false)}
+          trashedLinks={trashedLinks}
+          onRestore={(id) => {
+            const link = links.find((l) => l.id === id) ?? trashedLinks.find((l) => l.id === id);
+            restoreLink(id);
+            logActivity("link:restored", link?.title || "Link restaurado", link?.url);
+          }}
+          onPermanentDelete={(id) => {
+            const link = trashedLinks.find((l) => l.id === id);
+            permanentDeleteLink(id);
+            logActivity("link:deleted", link?.title || "Link excluído", link?.url);
+          }}
+          onEmptyTrash={() => {
+            emptyTrash();
+            logActivity("link:deleted", `${trashedLinks.length} links excluídos permanentemente`);
+          }}
+        />
+      </Suspense>
 
       <CommandPalette isOpen={commandOpen} onOpenChange={setCommandOpen} actions={commands} />
 
@@ -781,17 +786,19 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         })()}
       />
 
-      <LinkCheckerPanel
-        isOpen={linkCheckerOpen}
-        onClose={() => setLinkCheckerOpen(false)}
-        links={links}
-        results={linkCheckResults}
-        checking={linkChecking}
-        progress={linkCheckProgress}
-        onCheckAll={() => checkLinks(links.map((l) => ({ id: l.id, url: l.url })))}
-        onCancel={cancelLinkCheck}
-        onClear={clearLinkCheckResults}
-      />
+      <Suspense fallback={null}>
+        <LinkCheckerPanel
+          isOpen={linkCheckerOpen}
+          onClose={() => setLinkCheckerOpen(false)}
+          links={links}
+          results={linkCheckResults}
+          checking={linkChecking}
+          progress={linkCheckProgress}
+          onCheckAll={() => checkLinks(links.map((l) => ({ id: l.id, url: l.url })))}
+          onCancel={cancelLinkCheck}
+          onClear={clearLinkCheckResults}
+        />
+      </Suspense>
     </SidebarProvider>
   );
 };

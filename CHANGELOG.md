@@ -97,6 +97,7 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Fase 3 - Facetas avancadas no Board**: filtros globais de `Status`, `Prioridade` e `Prazo` (`Vencido`, `Hoje`, `7 dias`, `30 dias`, `Sem prazo`).
 - **Tags multi-selecao com operador**: combinacao de tags com modos `OR` e `AND` para consultas mais precisas.
 - **Chips removiveis de filtros ativos**: cada filtro aplicado aparece como chip e pode ser removido individualmente.
+- **Fase 4 - Curadoria configuravel no Board**: novo painel `Regras curadoria` para ajustar thresholds de `Novo`, `Trending` e `Destaque` com persistencia local.
 
 ### Galeria (Catalogo V1)
 
@@ -113,6 +114,7 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Fase 3 - Facetas avancadas na Galeria**: novos filtros de `Status`, `Prioridade` e `Prazo` com atalhos rapidos.
 - **Tags multi-selecao com operador**: suporte a `OR/AND` para combinar varias tags ao mesmo tempo.
 - **Chips removiveis de filtros ativos**: limpeza rapida de filtros individuais direto no painel.
+- **Fase 4 - Curadoria configuravel na Galeria**: painel `Regras curadoria` com parametros editaveis para `Novo`, `Trending` e `Destaque`.
 
 ### Cartoes (Catalogo V1)
 
@@ -129,6 +131,17 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Fase 3 - Facetas avancadas nos Cartoes**: filtros adicionais de `Status`, `Prioridade` e `Prazo`.
 - **Tags multi-selecao com operador**: suporte a combinacoes `OR/AND` para busca por multiplas tags.
 - **Chips removiveis de filtros ativos**: visibilidade e remocao individual dos filtros aplicados.
+- **Fase 4 - Curadoria configuravel nos Cartoes**: painel `Regras curadoria` com thresholds de classificacao persistidos por view.
+
+### Performance (Fase 5)
+
+- **Code splitting por demanda no `Index`**: componentes pesados carregados com `React.lazy` (`LinkForm`, `StatsDashboard`, `ExportFormatDialog`, `ImportFormatDialog`, `ActivityPanel`, `TrashView`, `LinkCheckerPanel`).
+- **Carregamento sob demanda de dialogs/paineis**: modais e paines secundarios saem do chunk inicial e viram chunks independentes.
+- **Chunking de vendors refinado no Vite**: `manualChunks` expandido para separar `vendor-ui-utils`, `vendor-editor` e `vendor-utils`.
+- **Bundle inicial reduzido**: chunk principal de `Index` caiu de ~852 kB para ~798 kB apos minificacao.
+- **Lazy loading por `viewMode`**: `LinkTableView`, `LinkBoardView`, `LinkCardsView` e `LinkGalleryView` agora carregam sob demanda.
+- **Nova reducao do chunk principal**: `Index` caiu de ~798 kB para ~710 kB apos o split das views.
+- **Split por pagina/rota**: `Auth` e `NotFound` agora carregam com `lazy` no `App`, reduzindo codigo eager no bootstrap.
 
 ### Correções de Metadados (Adicionar Link)
 

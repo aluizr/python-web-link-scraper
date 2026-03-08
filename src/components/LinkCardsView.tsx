@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Star, ExternalLink, Pencil, Trash2, StickyNote, GripVertical, Globe, Flame, Sparkles, Clock3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -121,6 +122,23 @@ type DueFilter = "all" | "overdue" | "today" | "7d" | "30d" | "no_due";
 const CARDS_FILTERS_STORAGE_KEY = "cards-catalog-filters-v1";
 
 const CARDS_PRESETS_STORAGE_KEY = "cards-catalog-presets-v1";
+const CARDS_CURATION_RULES_STORAGE_KEY = "cards-curation-rules-v1";
+
+type CurationRules = {
+  newDays: number;
+  trendingRecentDays: number;
+  trendingMinTags: number;
+  featuredUseHighPriority: boolean;
+  featuredFavoriteMinTags: number;
+};
+
+const DEFAULT_CURATION_RULES: CurationRules = {
+  newDays: 7,
+  trendingRecentDays: 30,
+  trendingMinTags: 3,
+  featuredUseHighPriority: true,
+  featuredFavoriteMinTags: 1,
+};
 
 type CardsCatalogPreset = {
   name: string;
@@ -161,6 +179,8 @@ export function LinkCardsView({
   const [sortBy, setSortBy] = useState<CatalogSort>("newest");
   const [presets, setPresets] = useState<CardsCatalogPreset[]>([]);
   const [activePresetName, setActivePresetName] = useState<string>("none");
+  const [showCurationRules, setShowCurationRules] = useState(false);
+  const [curationRules, setCurationRules] = useState<CurationRules>(DEFAULT_CURATION_RULES);
 
   useEffect(() => {
     try {
@@ -268,6 +288,32 @@ export function LinkCardsView({
       // Ignore persistence errors.
     }
   }, [presets]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CARDS_CURATION_RULES_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as Partial<CurationRules>;
+      setCurationRules({
+        newDays: Math.max(1, Number(parsed.newDays ?? DEFAULT_CURATION_RULES.newDays)),
+        trendingRecentDays: Math.max(1, Number(parsed.trendingRecentDays ?? DEFAULT_CURATION_RULES.trendingRecentDays)),
+        trendingMinTags: Math.max(1, Number(parsed.trendingMinTags ?? DEFAULT_CURATION_RULES.trendingMinTags)),
+        featuredUseHighPriority: parsed.featuredUseHighPriority !== false,
+        featuredFavoriteMinTags: Math.max(0, Number(parsed.featuredFavoriteMinTags ?? DEFAULT_CURATION_RULES.featuredFavoriteMinTags)),
+      });
+    } catch {
+      // Ignore invalid rules payload.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CARDS_CURATION_RULES_STORAGE_KEY, JSON.stringify(curationRules));
+    } catch {
+      // Ignore persistence errors.
+    }
+  }, [curationRules]);
 
   const applyPreset = (name: string) => {
     if (name === "none") {
@@ -439,18 +485,21 @@ export function LinkCardsView({
   const isNew = (link: LinkItem) => {
     const created = new Date(link.createdAt);
     if (Number.isNaN(created.getTime())) return false;
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    return Date.now() - created.getTime() <= sevenDays;
+    const threshold = Math.max(1, curationRules.newDays) * 24 * 60 * 60 * 1000;
+    return Date.now() - created.getTime() <= threshold;
   };
 
   const isTrending = (link: LinkItem) => {
     const created = new Date(link.createdAt);
-    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-    const recent = !Number.isNaN(created.getTime()) && Date.now() - created.getTime() <= thirtyDays;
-    return (link.isFavorite && recent) || link.tags.length >= 3;
+    const recencyMs = Math.max(1, curationRules.trendingRecentDays) * 24 * 60 * 60 * 1000;
+    const recent = !Number.isNaN(created.getTime()) && Date.now() - created.getTime() <= recencyMs;
+    return (link.isFavorite && recent) || link.tags.length >= Math.max(1, curationRules.trendingMinTags);
   };
 
-  const isFeatured = (link: LinkItem) => link.priority === "high" || (link.isFavorite && link.tags.length > 0);
+  const isFeatured = (link: LinkItem) => (
+    (curationRules.featuredUseHighPriority && link.priority === "high") ||
+    (link.isFavorite && link.tags.length >= Math.max(0, curationRules.featuredFavoriteMinTags))
+  );
 
   const categoryCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -611,7 +660,71 @@ export function LinkCardsView({
               <SelectItem value="priority">Prioridade</SelectItem>
             </SelectContent>
           </Select>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            onClick={() => setShowCurationRules((prev) => !prev)}
+          >
+            Regras curadoria
+          </Button>
         </div>
+
+        {showCurationRules && (
+          <div className="mb-2 rounded-md border border-border/60 bg-background/60 p-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Novo (dias)</span>
+              <Input
+                type="number"
+                min={1}
+                className="h-7 w-20 text-xs"
+                value={curationRules.newDays}
+                onChange={(e) => setCurationRules((prev) => ({ ...prev, newDays: Math.max(1, Number(e.target.value || 1)) }))}
+              />
+
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending janela</span>
+              <Input
+                type="number"
+                min={1}
+                className="h-7 w-20 text-xs"
+                value={curationRules.trendingRecentDays}
+                onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingRecentDays: Math.max(1, Number(e.target.value || 1)) }))}
+              />
+
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Trending min tags</span>
+              <Input
+                type="number"
+                min={1}
+                className="h-7 w-20 text-xs"
+                value={curationRules.trendingMinTags}
+                onChange={(e) => setCurationRules((prev) => ({ ...prev, trendingMinTags: Math.max(1, Number(e.target.value || 1)) }))}
+              />
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={curationRules.featuredUseHighPriority ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={() => setCurationRules((prev) => ({ ...prev, featuredUseHighPriority: !prev.featuredUseHighPriority }))}
+              >
+                Alta prioridade em destaque
+              </Button>
+
+              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Fav min tags</span>
+              <Input
+                type="number"
+                min={0}
+                className="h-7 w-20 text-xs"
+                value={curationRules.featuredFavoriteMinTags}
+                onChange={(e) => setCurationRules((prev) => ({ ...prev, featuredFavoriteMinTags: Math.max(0, Number(e.target.value || 0)) }))}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <Select value={statusFilter} onValueChange={(value: "all" | LinkItem["status"]) => setStatusFilter(value)}>

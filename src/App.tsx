@@ -8,8 +8,6 @@ import { StrictMode, lazy, Suspense, useMemo, useEffect, useRef } from "react";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { usePWA } from "@/hooks/use-pwa";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
 
 const THEME_MOTION_STORAGE_KEY = "theme-motion-intensity";
 type ThemeMotionIntensity = "off" | "soft" | "strong";
@@ -30,6 +28,8 @@ function getThemeMotionIntensity(): ThemeMotionIntensity {
 
 // Lazy load da página principal (inclui recharts via StatsDashboard)
 const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const LoadingSpinner = () => (
   <div className="flex min-h-screen items-center justify-center">Carregando...</div>
@@ -52,7 +52,14 @@ function AppRoutes() {
               </Suspense>
             ),
           },
-          { path: "*", element: <NotFound /> },
+          {
+            path: "*",
+            element: (
+              <Suspense fallback={<LoadingSpinner />}>
+                <NotFound />
+              </Suspense>
+            ),
+          },
         ],
         { future: { v7_startTransition: true } }
       ),
@@ -64,7 +71,11 @@ function AppRoutes() {
   }
 
   if (!user) {
-    return <Auth onSignIn={signIn} onSignUp={signUp} />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <Auth onSignIn={signIn} onSignUp={signUp} />
+      </Suspense>
+    );
   }
 
   return <RouterProvider router={router} />;

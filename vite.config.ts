@@ -39,6 +39,9 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) {
               return 'vendor-react';
             }
+            if (id.includes('lucide-react') || id.includes('clsx') || id.includes('class-variance-authority') || id.includes('tailwind-merge')) {
+              return 'vendor-ui-utils';
+            }
             if (id.includes('@supabase')) {
               return 'vendor-supabase';
             }
@@ -47,6 +50,12 @@ export default defineConfig(({ mode }) => ({
             }
             if (id.includes('recharts') || id.includes('d3-')) {
               return 'vendor-charts';
+            }
+            if (id.includes('@tiptap') || id.includes('prosemirror')) {
+              return 'vendor-editor';
+            }
+            if (id.includes('zod') || id.includes('date-fns')) {
+              return 'vendor-utils';
             }
           }
         },
