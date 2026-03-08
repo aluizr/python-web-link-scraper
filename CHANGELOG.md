@@ -142,6 +142,16 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Lazy loading por `viewMode`**: `LinkTableView`, `LinkBoardView`, `LinkCardsView` e `LinkGalleryView` agora carregam sob demanda.
 - **Nova reducao do chunk principal**: `Index` caiu de ~798 kB para ~710 kB apos o split das views.
 - **Split por pagina/rota**: `Auth` e `NotFound` agora carregam com `lazy` no `App`, reduzindo codigo eager no bootstrap.
+- **Correcao de configuracao ativa do Vite**: alinhado `vite.config.js` (config efetiva no build) com a estrategia de chunking otimizada.
+- **Fonte unica de configuracao Vite**: removido `vite.config.ts` para evitar conflitos de precedencia entre arquivos de config.
+- **Queda expressiva do bundle principal**: `Index` reduziu para ~159 kB e `vendor-react` para ~269 kB apos consolidar a configuracao ativa.
+- **Charts acoplados ao fluxo lazy de estatisticas**: `recharts` saiu do chunk global e passou a compor o chunk lazy de `StatsDashboard`.
+- **Warning de chunk grande eliminado**: distribuicao de chunks ficou abaixo do limite padrao de alerta do Vite.
+
+### CSP / Segurança
+
+- **Correção de bloqueio CSP para script inline conhecido**: adicionado hash `sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk=` em `script-src` para permitir apenas o inline esperado.
+- **Ajuste seguro para desenvolvimento**: CSP no Vite permite `unsafe-inline` apenas em `development` para compatibilidade com preamble/HMR do React Refresh.
 
 ### Correções de Metadados (Adicionar Link)
 
