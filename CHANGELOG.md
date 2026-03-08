@@ -35,6 +35,12 @@ Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
 - **Persistência de visualização**: `viewMode` agora é salvo em `localStorage` e restaurado automaticamente ao reabrir a aplicação
 - **Presets de thumbnail no header**: botões `S / M / L` para alternar rapidamente a largura da preview sem arrastar a alça
 
+### Temas Claros (Mais Distintos)
+
+- **Novos perfis claros autorais**: adicionados temas `Paper`, `Mint` e `Peach` com identidade visual própria
+- **Diferença visual reforçada**: ajustes de `background`, `card`, `accent`, `border` e atmosfera de fundo por tema para reduzir semelhança entre os modos claros
+- **Integração completa**: novos temas disponíveis no seletor (`ThemeToggle`), no `ThemeProvider` e no atalho de teclado `D` (ciclo de temas)
+
 ### Correções de Metadados (Adicionar Link)
 
 - **Resiliência no carregamento de metadados**: fluxo do `useMetadata` com cadeia de fallback `Microlink -> OtherMeta -> noembed -> local`

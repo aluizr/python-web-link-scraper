@@ -88,10 +88,43 @@ const themes = [
   },
 ] as const;
 
+const recommendedThemeIds = ["paper", "mint", "peach"] as const;
+const classicThemeIds = ["light", "ocean", "sunset", "forest", "rose", "lavender", "dark", "midnight"] as const;
+
+const themeMap = Object.fromEntries(themes.map((t) => [t.id, t])) as Record<(typeof themes)[number]["id"], (typeof themes)[number]>;
+
+const recommendedThemes = recommendedThemeIds.map((id) => themeMap[id]);
+const classicThemes = classicThemeIds.map((id) => themeMap[id]);
+
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  const currentTheme = themes.find((t) => t.id === theme) ?? themes[0];
+  const renderThemeButton = (t: (typeof themes)[number]) => {
+    const Icon = t.icon;
+    const isActive = theme === t.id;
+
+    return (
+      <button
+        key={t.id}
+        onClick={() => setTheme(t.id)}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+          isActive && "bg-accent text-accent-foreground"
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-full border-2",
+            t.preview
+          )}
+        >
+          <Icon className={cn("h-3.5 w-3.5", t.color)} />
+        </div>
+        <span className="flex-1 text-left">{t.label}</span>
+        {isActive && <Check className="h-4 w-4 text-primary" />}
+      </button>
+    );
+  };
 
   return (
     <Popover>
@@ -108,34 +141,17 @@ export function ThemeToggle() {
 
       <PopoverContent className="w-56 p-2" align="end">
         <div className="grid gap-1">
-          <p className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-            Tema
+          <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Recomendados
           </p>
-          {themes.map((t) => {
-            const Icon = t.icon;
-            const isActive = theme === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                  isActive && "bg-accent text-accent-foreground"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex h-6 w-6 items-center justify-center rounded-full border-2",
-                    t.preview
-                  )}
-                >
-                  <Icon className={cn("h-3.5 w-3.5", t.color)} />
-                </div>
-                <span className="flex-1 text-left">{t.label}</span>
-                {isActive && <Check className="h-4 w-4 text-primary" />}
-              </button>
-            );
-          })}
+          {recommendedThemes.map(renderThemeButton)}
+
+          <div className="my-1 h-px bg-border" />
+
+          <p className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Classicos
+          </p>
+          {classicThemes.map(renderThemeButton)}
         </div>
       </PopoverContent>
     </Popover>
