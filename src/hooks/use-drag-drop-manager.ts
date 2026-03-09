@@ -188,11 +188,9 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
       const element = e.currentTarget as HTMLElement;
       if (element && targetId) {
         const rect = element.getBoundingClientRect();
-        // Usar eixo horizontal E vertical para funcionar em grid e list
-        const relX = (e.clientX - rect.left) / rect.width; // 0 a 1
         const relY = (e.clientY - rect.top) / rect.height; // 0 a 1
-        // Diagonal: top-left = before, bottom-right = after
-        dragDirection = (relX + relY) < 1 ? "above" : "below";
+        // Direcao vertical deixa o drop mais previsivel em cards/list.
+        dragDirection = relY < 0.5 ? "above" : "below";
       }
 
       // Comparar com os últimos valores - só atualizar se realmente mudou
@@ -291,11 +289,20 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
         };
         newLinks.splice(adjustedTarget, 0, updatedLink);
       } else {
-        // Item sempre toma a posição do alvo
-        // Após remoção, se arrastou para frente, inserir em targetIndex
-        // coloca o item exatamente na posição original do alvo.
-        // Se arrastou para trás, targetIndex não mudou, mesmo efeito.
-        const insertIndex = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        const targetIndexAfterRemoval = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        let insertIndex = direction === "below"
+          ? Math.min(newLinks.length, targetIndexAfterRemoval + 1)
+          : Math.max(0, targetIndexAfterRemoval);
+
+        // Evitar no-op em casos adjacentes (ex.: arrastar de cima para baixo e cair no topo do item alvo).
+        if (insertIndex === dragIndex) {
+          if (dragIndex < targetIndex) {
+            insertIndex = Math.min(newLinks.length, insertIndex + 1);
+          } else if (dragIndex > targetIndex) {
+            insertIndex = Math.max(0, insertIndex - 1);
+          }
+        }
+
         newLinks.splice(insertIndex, 0, draggedItem);
       }
 

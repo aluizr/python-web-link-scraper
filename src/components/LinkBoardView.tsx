@@ -596,7 +596,9 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     }));
   }, [baseLinks, columnFilters, sortBy]);
 
-  const hasActiveFilters = selectedCategory !== "all" || selectedTags.length > 0 || statusFilter !== "all" || priorityFilter !== "all" || dueFilter !== "all" || curationFilter !== "all" || sortBy !== "newest";
+  const hasColumnFilters = Object.values(columnFilters).some((filter) => filter !== "all");
+  const hasActiveFilters = selectedCategory !== "all" || selectedTags.length > 0 || statusFilter !== "all" || priorityFilter !== "all" || dueFilter !== "all" || curationFilter !== "all" || sortBy !== "newest" || hasColumnFilters;
+  const canBoardDrag = !hasActiveFilters;
 
   return (
     <div className="space-y-4">
@@ -653,6 +655,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                 setDueFilter("all");
                 setCurationFilter("all");
                 setSortBy("newest");
+                setColumnFilters(DEFAULT_COLUMN_FILTERS);
               }}
             >
               Limpar filtros
@@ -958,6 +961,12 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
         )}
       </div>
 
+      {!canBoardDrag && (
+        <div className="rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Drag no board pausado enquanto filtros estiverem ativos. Use "Limpar filtros" para reordenar por arrastar.
+        </div>
+      )}
+
       <div className="flex gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:-mx-6 md:px-6 snap-x">
       {columns.map((column) => {
         const allLinks = column.links;
@@ -968,6 +977,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
             dropStatus === column.key ? "bg-primary/5" : ""
           }`}
           onDragOver={(e) => {
+            if (!canBoardDrag) return;
             e.preventDefault();
             setDropStatus(column.key);
           }}
@@ -978,6 +988,10 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
             }
           }}
           onDrop={(e) => {
+            if (!canBoardDrag) {
+              setDropStatus(null);
+              return;
+            }
             e.preventDefault();
             const droppedId = e.dataTransfer.getData("text/plain") || draggedLinkId;
             if (!droppedId) {
@@ -1032,17 +1046,24 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
               return (
               <Card
                 key={link.id}
-                draggable
+                draggable={canBoardDrag}
                 onDragStart={(e) => {
+                  if (!canBoardDrag) return;
                   e.dataTransfer.setData("text/plain", link.id);
                   setDraggedLinkId(link.id);
                 }}
                 onDragOver={(e) => {
+                  if (!canBoardDrag) return;
                   e.preventDefault();
                   e.stopPropagation();
                   setDropStatus(column.key);
                 }}
                 onDrop={(e) => {
+                  if (!canBoardDrag) {
+                    setDraggedLinkId(null);
+                    setDropStatus(null);
+                    return;
+                  }
                   e.preventDefault();
                   e.stopPropagation();
                   const droppedId = e.dataTransfer.getData("text/plain") || draggedLinkId;
@@ -1072,7 +1093,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                   setDraggedLinkId(null);
                   setDropStatus(null);
                 }}
-                className={`group relative overflow-hidden border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${
+                className={`group relative overflow-hidden border hover:shadow-md transition-shadow ${canBoardDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default"} ${
                 selectedIds?.has(link.id) ? "ring-2 ring-primary border-primary" : ""
               }`}
               >

@@ -106,12 +106,20 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredLinks = getFilteredLinks();
-  const showManualReorderHint = searchFilters.sort === "manual" && (viewMode === "grid" || viewMode === "list" || viewMode === "cards") && filteredLinks.length < 2;
+  const isDragView = viewMode === "grid" || viewMode === "list" || viewMode === "cards";
+  const canManualDrag = searchFilters.sort === "manual" && isDragView;
+  const showManualReorderHint = searchFilters.sort === "manual" && isDragView && filteredLinks.length < 2;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("view-mode", viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode !== "cards") return;
+    if (searchFilters.sort === "manual") return;
+    setSearchFilters((prev) => ({ ...prev, sort: "manual" }));
+  }, [viewMode, searchFilters.sort, setSearchFilters]);
 
   // ✅ Atalhos de teclado globais
   useKeyboardShortcuts({
@@ -360,7 +368,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
 
   // ✅ Handlers para Drag & Drop com validação
   const handleDragStart = (e: React.DragEvent, link: LinkItem) => {
-    if (searchFilters.sort !== "manual") {
+    if (!canManualDrag) {
       toast.error("Ative 'Manual' para reordenar links");
       e.preventDefault();
       return;
@@ -374,29 +382,36 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   };
 
   const handleDragOver = (e: React.DragEvent, linkId: string) => {
-    if (searchFilters.sort !== "manual") return;
+    if (!canManualDrag) return;
     dragOver(e, linkId);
   };
 
   const handleDrop = (e: React.DragEvent, targetLink: LinkItem) => {
-    if (searchFilters.sort !== "manual") {
+    if (!canManualDrag) {
       toast.error("Ative 'Manual' para reordenar links");
       return;
     }
 
     const dragId = dragState.draggedLink?.id || e.dataTransfer.getData("text/plain");
-    if (!dragId || dragId === targetLink.id) {
+    const eventTargetId = (e.currentTarget as HTMLElement | null)?.dataset?.cardId;
+    const trackedTargetId = lastKnownDrop.current.targetId;
+    const resolvedTargetId =
+      (eventTargetId && eventTargetId !== dragId ? eventTargetId : null) ||
+      (trackedTargetId && trackedTargetId !== dragId ? trackedTargetId : null) ||
+      targetLink.id;
+
+    if (!dragId || dragId === resolvedTargetId) {
       dragEnd();
       return;
     }
 
     // Reordenar com base na lista completa (não apenas links filtrados)
     // para manter a ordenação global consistente.
-    const fallbackDirection = lastKnownDrop.current.targetId === targetLink.id
+    const fallbackDirection = lastKnownDrop.current.targetId === resolvedTargetId
       ? lastKnownDrop.current.direction
       : undefined;
     const direction = dragState.dragDirection ?? fallbackDirection;
-    const reordered = dragReorderLinks(dragId, targetLink.id, direction, false);
+    const reordered = dragReorderLinks(dragId, resolvedTargetId, direction, false);
 
     if (!reordered) {
       toast.info("Nao foi possivel reordenar com o filtro atual");
@@ -605,11 +620,11 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onDragStart={searchFilters.sort === "manual" ? handleDragStart : undefined}
-              onDragOver={searchFilters.sort === "manual" ? handleDragOver : undefined}
-              onDragLeave={searchFilters.sort === "manual" ? dragLeave : undefined}
-              onDragEnd={searchFilters.sort === "manual" ? dragEnd : undefined}
-              onDrop={searchFilters.sort === "manual" ? handleDrop : undefined}
+              onDragStart={canManualDrag ? handleDragStart : undefined}
+              onDragOver={canManualDrag ? handleDragOver : undefined}
+              onDragLeave={canManualDrag ? dragLeave : undefined}
+              onDragEnd={canManualDrag ? dragEnd : undefined}
+              onDrop={canManualDrag ? handleDrop : undefined}
               draggedLinkId={dragState.draggedLink?.id ?? null}
               dropZoneId={dragState.dropZoneId}
               dragDirection={dragState.dragDirection}
@@ -633,11 +648,11 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onDragStart={searchFilters.sort === "manual" ? handleDragStart : undefined}
-              onDragOver={searchFilters.sort === "manual" ? handleDragOver : undefined}
-              onDragLeave={searchFilters.sort === "manual" ? dragLeave : undefined}
-              onDragEnd={searchFilters.sort === "manual" ? dragEnd : undefined}
-              onDrop={searchFilters.sort === "manual" ? handleDrop : undefined}
+              onDragStart={canManualDrag ? handleDragStart : undefined}
+              onDragOver={canManualDrag ? handleDragOver : undefined}
+              onDragLeave={canManualDrag ? dragLeave : undefined}
+              onDragEnd={canManualDrag ? dragEnd : undefined}
+              onDrop={canManualDrag ? handleDrop : undefined}
               draggedLinkId={dragState.draggedLink?.id ?? null}
               dropZoneId={dragState.dropZoneId}
               dragDirection={dragState.dragDirection}
@@ -688,11 +703,11 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                   onToggleFavorite={handleToggleFavorite}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
-                  onDragStart={searchFilters.sort === "manual" ? handleDragStart : undefined}
-                  onDragOver={searchFilters.sort === "manual" ? handleDragOver : undefined}
-                  onDragLeave={searchFilters.sort === "manual" ? dragLeave : undefined}
-                  onDragEnd={searchFilters.sort === "manual" ? dragEnd : undefined}
-                  onDrop={searchFilters.sort === "manual" ? handleDrop : undefined}
+                  onDragStart={canManualDrag ? handleDragStart : undefined}
+                  onDragOver={canManualDrag ? handleDragOver : undefined}
+                  onDragLeave={canManualDrag ? dragLeave : undefined}
+                  onDragEnd={canManualDrag ? dragEnd : undefined}
+                  onDrop={canManualDrag ? handleDrop : undefined}
                   isDragging={dragState.draggedLink?.id === link.id}
                   isDropZone={dragState.dropZoneId === link.id && dragState.draggedLink !== null}
                   dragDirection={dragState.dragDirection}
