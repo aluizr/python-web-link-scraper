@@ -106,6 +106,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredLinks = getFilteredLinks();
+  const showManualReorderHint = searchFilters.sort === "manual" && (viewMode === "grid" || viewMode === "list" || viewMode === "cards") && filteredLinks.length < 2;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -364,6 +365,11 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       e.preventDefault();
       return;
     }
+    if (filteredLinks.length < 2) {
+      toast.info("Mostre pelo menos 2 links para reordenar");
+      e.preventDefault();
+      return;
+    }
     dragStart(e, link);
   };
 
@@ -384,29 +390,19 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    // Usar filteredLinks (ordem visual) como fonte de verdade
-    const dragIndex = filteredLinks.findIndex((l) => l.id === dragId);
-    const targetIndex = filteredLinks.findIndex((l) => l.id === targetLink.id);
+    // Reordenar com base na lista completa (não apenas links filtrados)
+    // para manter a ordenação global consistente.
+    const fallbackDirection = lastKnownDrop.current.targetId === targetLink.id
+      ? lastKnownDrop.current.direction
+      : undefined;
+    const direction = dragState.dragDirection ?? fallbackDirection;
+    const reordered = dragReorderLinks(dragId, targetLink.id, direction, false);
 
-    if (dragIndex === -1 || targetIndex === -1) {
+    if (!reordered) {
+      toast.info("Nao foi possivel reordenar com o filtro atual");
       dragEnd();
       return;
     }
-
-    // Criar nova ordem: remover item arrastado e inserir na posição do alvo
-    const newOrder = filteredLinks.filter((_, i) => i !== dragIndex);
-    const draggedItem = filteredLinks[dragIndex];
-
-    // O item arrastado toma a posição original do alvo
-    // Funciona corretamente para ambas as direções (L→R e R→L)
-    const insertIndex = targetIndex;
-    newOrder.splice(insertIndex, 0, draggedItem);
-
-    // Atualizar positions
-    const reordered = newOrder.map((link, index) => ({
-      ...link,
-      position: index,
-    }));
 
     reorderLinks(reordered);
     logActivity("link:reordered", "Links reordenados", `${reordered.length} links`);
@@ -578,6 +574,12 @@ const Index = ({ user, onSignOut }: IndexProps) => {
             categories={categories}
             onNavigate={(cat) => handleSidebarFilter({ type: cat ? "category" : "all", value: cat ?? undefined })}
           />
+
+          {showManualReorderHint && (
+            <div className="mt-3 rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              Reordenacao manual ativa. Mostre pelo menos 2 links para arrastar e reordenar.
+            </div>
+          )}
 
           {/* Links Grid/List */}
           <div className={viewMode === "list" ? "mt-4" : "mt-6"}>
