@@ -29,3 +29,14 @@ dist-ssr
 .env.*.local
 .env.prod
 .env.production
+
+# Coverage and test artifacts
+coverage/
+.nyc_output/
+
+# Local Supabase artifacts
+supabase/.temp/
+
+# Extra build output folders
+build/
+.supabase/

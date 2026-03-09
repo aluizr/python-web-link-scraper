@@ -1,0 +1,8 @@
+# Global ownership
+# Replace @your-github-username with the real maintainer/organization handle.
+* @your-github-username
+
+# Optional path-based ownership examples:
+# /src/components/ @frontend-team
+# /supabase/ @backend-team
+# /SECURITY_* @security-team

@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Clear context helps prioritize.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What pain point are you experiencing?
+      placeholder: As a user, I struggle with ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What do you want to happen?
+      placeholder: I would like ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other options you evaluated
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected impact
+      description: Why is this valuable?
+      placeholder: Improves ..., reduces ..., enables ...
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Out of scope
+      description: What should not be included in the first version?
