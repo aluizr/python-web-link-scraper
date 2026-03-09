@@ -69,18 +69,6 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     lastLinksRef.current = initialLinks;
   }, [initialLinks, historyIndex, history]);
 
-  // Função para adicionar novo estado ao histórico
-  const addToHistory = useCallback((links: LinkItem[]) => {
-    setHistory((prev) => {
-      // Remove estados futuros se voltou no histórico e faz uma ação
-      const currentLength = prev.length;
-      // Não usar historyIndex aqui pois pode estar desatualizado
-      // Em vez disso, sempre adicionar ao final
-      return [...prev, { links, timestamp: Date.now() }];
-    });
-    setHistoryIndex((prev) => prev + 1);
-  }, []);
-
   // Undo
   const undo = useCallback(() => {
     if (historyIndex > 0) {
@@ -104,14 +92,6 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
       }
     }
   }, [historyIndex, history, onReorder]);
-
-  // Obter estado atual do histórico
-  const getCurrentLinks = useCallback((): LinkItem[] => {
-    if (historyIndex >= 0 && historyIndex < history.length && history[historyIndex]) {
-      return history[historyIndex].links;
-    }
-    return initialLinks;
-  }, [history, historyIndex, initialLinks]);
 
   // Auto-scroll ao arrastar perto das bordas
   const handleAutoScroll = useCallback((clientY: number) => {
@@ -264,59 +244,6 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     }
   }, []);
 
-  // Reordenar links usando initialLinks (dados reais do parent)
-  const reorderLinks = useCallback(
-    (dragId: string, targetId: string, direction?: "above" | "below", isCategory?: boolean): LinkItem[] | null => {
-      // Sempre usar initialLinks como fonte de verdade
-      const currentLinks = initialLinks;
-      const dragIndex = currentLinks.findIndex((l) => l.id === dragId);
-      const targetIndex = currentLinks.findIndex((l) => l.id === targetId);
-
-      if (dragIndex === -1 || targetIndex === -1) return null;
-      if (dragIndex === targetIndex) return null;
-
-      const draggedItem = currentLinks[dragIndex];
-
-      // Criar array novo removendo o item arrastado
-      const newLinks = currentLinks.filter((_, idx) => idx !== dragIndex);
-
-      if (isCategory) {
-        // Mover para categoria
-        const adjustedTarget = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
-        const updatedLink = {
-          ...draggedItem,
-          category: targetId,
-        };
-        newLinks.splice(adjustedTarget, 0, updatedLink);
-      } else {
-        const targetIndexAfterRemoval = dragIndex < targetIndex ? targetIndex - 1 : targetIndex;
-        let insertIndex = direction === "below"
-          ? Math.min(newLinks.length, targetIndexAfterRemoval + 1)
-          : Math.max(0, targetIndexAfterRemoval);
-
-        // Evitar no-op em casos adjacentes (ex.: arrastar de cima para baixo e cair no topo do item alvo).
-        if (insertIndex === dragIndex) {
-          if (dragIndex < targetIndex) {
-            insertIndex = Math.min(newLinks.length, insertIndex + 1);
-          } else if (dragIndex > targetIndex) {
-            insertIndex = Math.max(0, insertIndex - 1);
-          }
-        }
-
-        newLinks.splice(insertIndex, 0, draggedItem);
-      }
-
-      // Atualizar posições
-      const reordered = newLinks.map((link, index) => ({
-        ...link,
-        position: index,
-      }));
-
-      return reordered;
-    },
-    [initialLinks]
-  );
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -345,7 +272,6 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     handleDragOver,
     handleDragLeave,
     handleDragEnd,
-    reorderLinks,
     undo,
     redo,
   };

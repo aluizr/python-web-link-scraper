@@ -77,7 +77,6 @@ const Index = ({ user, onSignOut }: IndexProps) => {
     handleDragOver: dragOver,
     handleDragLeave: dragLeave,
     handleDragEnd: dragEnd,
-    reorderLinks: dragReorderLinks,
     undo,
     redo,
   } = useDragDropManager(links, categories);
@@ -405,19 +404,29 @@ const Index = ({ user, onSignOut }: IndexProps) => {
       return;
     }
 
-    // Reordenar com base na lista completa (não apenas links filtrados)
-    // para manter a ordenação global consistente.
-    const fallbackDirection = lastKnownDrop.current.targetId === resolvedTargetId
-      ? lastKnownDrop.current.direction
-      : undefined;
-    const direction = dragState.dragDirection ?? fallbackDirection;
-    const reordered = dragReorderLinks(dragId, resolvedTargetId, direction, false);
+    const ordered = [...links].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    const dragIndex = ordered.findIndex((item) => item.id === dragId);
+    const targetIndex = ordered.findIndex((item) => item.id === resolvedTargetId);
 
-    if (!reordered) {
-      toast.info("Nao foi possivel reordenar com o filtro atual");
+    if (dragIndex === -1 || targetIndex === -1 || dragIndex === targetIndex) {
       dragEnd();
       return;
     }
+
+    const dragged = ordered[dragIndex];
+    const withoutDragged = ordered.filter((item) => item.id !== dragId);
+    const targetIndexAfterRemoval = withoutDragged.findIndex((item) => item.id === resolvedTargetId);
+
+    const insertIndex = dragIndex < targetIndex
+      ? Math.min(withoutDragged.length, targetIndexAfterRemoval + 1)
+      : Math.max(0, targetIndexAfterRemoval);
+
+    withoutDragged.splice(insertIndex, 0, dragged);
+
+    const reordered = withoutDragged.map((item, index) => ({
+      ...item,
+      position: index,
+    }));
 
     reorderLinks(reordered);
     logActivity("link:reordered", "Links reordenados", `${reordered.length} links`);
