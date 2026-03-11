@@ -1,0 +1,91 @@
+name: Sprint Dia 1 - Estabilidade
+description: Execucao do Dia 1 com foco em estabilidade e regressao
+title: "[Sprint D1] Validacao de estabilidade"
+labels: [sprint, qa, p0]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Objetivo: executar smoke completo dos fluxos criticos e registrar bugs por severidade.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - label: Login e logout
+        - label: CRUD de links (criar, editar, excluir, restaurar)
+        - label: Drag and drop (lista/board)
+        - label: Import e export
+        - label: Troca de tema e persistencia
+
+  - type: dropdown
+    id: estado
+    attributes:
+      label: Estado atual
+      options:
+        - todo
+        - doing
+        - blocked
+        - done
+    validations:
+      required: true
+
+  - type: input
+    id: progresso
+    attributes:
+      label: Progresso (%)
+      placeholder: e.g. 0
+    validations:
+      required: true
+
+  - type: input
+    id: ultima_atualizacao
+    attributes:
+      label: Ultima atualizacao
+      placeholder: YYYY-MM-DD
+
+  - type: checkboxes
+    id: blockers
+    attributes:
+      label: Blockers
+      options:
+        - label: Sem blockers
+
+  - type: textarea
+    id: detalhes_blockers
+    attributes:
+      label: Detalhes dos blockers
+
+  - type: textarea
+    id: evidencias
+    attributes:
+      label: Evidencias
+      description: Build/branch testada, screenshots/videos e logs relevantes
+
+  - type: textarea
+    id: bugs
+    attributes:
+      label: Bugs encontrados
+      placeholder: |
+        P0:
+        P1:
+        P2:
+
+  - type: checkboxes
+    id: criterios
+    attributes:
+      label: Criterios de aceite
+      options:
+        - label: Fluxos criticos executados
+        - label: Sem bug P0 aberto
+        - label: Checklist de regressao atualizado
+
+  - type: checkboxes
+    id: pronto
+    attributes:
+      label: Definicao de pronto
+      options:
+        - label: Evidencias anexadas
+        - label: Bugs triados por severidade
+        - label: Resultado comunicado ao time

@@ -1,0 +1,81 @@
+name: Sprint Dia 3 - Inline e Filtros
+description: Execucao do Dia 3 para consistencia de edicao inline, filtros e ordenacao
+title: "[Sprint D3] Ajustar inline, filtros e ordenacao"
+labels: [sprint, frontend, p1]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Objetivo: aumentar confiabilidade da edicao inline e combinacao de filtros/ordenacao.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - label: Revisar teclas Enter/Tab/Escape na edicao inline
+        - label: Validar foco e blur em cenarios de edicao
+        - label: Validar combinacoes de filtros e ordenacao
+        - label: Testar fluxo simultaneo editar + filtrar + ordenar
+
+  - type: dropdown
+    id: estado
+    attributes:
+      label: Estado atual
+      options:
+        - todo
+        - doing
+        - blocked
+        - done
+    validations:
+      required: true
+
+  - type: input
+    id: progresso
+    attributes:
+      label: Progresso (%)
+      placeholder: e.g. 0
+    validations:
+      required: true
+
+  - type: input
+    id: ultima_atualizacao
+    attributes:
+      label: Ultima atualizacao
+      placeholder: YYYY-MM-DD
+
+  - type: checkboxes
+    id: blockers
+    attributes:
+      label: Blockers
+      options:
+        - label: Sem blockers
+
+  - type: textarea
+    id: detalhes_blockers
+    attributes:
+      label: Detalhes dos blockers
+
+  - type: textarea
+    id: evidencias
+    attributes:
+      label: Evidencias
+      description: Casos testados, videos/recordings e commits/PRs
+
+  - type: checkboxes
+    id: criterios
+    attributes:
+      label: Criterios de aceite
+      options:
+        - label: Comportamento consistente de teclas
+        - label: Sem perda de estado inesperada
+        - label: Filtros e ordenacao sem regressao
+
+  - type: checkboxes
+    id: pronto
+    attributes:
+      label: Definicao de pronto
+      options:
+        - label: Casos criticos cobertos
+        - label: Ajustes validados por QA
+        - label: Documentacao de comportamento atualizada

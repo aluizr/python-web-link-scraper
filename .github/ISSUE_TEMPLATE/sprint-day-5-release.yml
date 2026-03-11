@@ -1,0 +1,108 @@
+name: Sprint Dia 5 - Fechamento e Release
+description: Execucao do Dia 5 para validacao final e decisao go/no-go
+title: "[Sprint D5] Fechamento e release"
+labels: [sprint, release, p2]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Objetivo: concluir validacao final e preparar publicacao com risco controlado.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - label: Rodar lint testes e build
+        - label: Executar smoke rapido pre-release
+        - label: Atualizar changelog release notes
+        - label: Registrar decisao Go No-Go
+
+  - type: dropdown
+    id: estado
+    attributes:
+      label: Estado atual
+      options:
+        - todo
+        - doing
+        - blocked
+        - done
+    validations:
+      required: true
+
+  - type: input
+    id: progresso
+    attributes:
+      label: Progresso (%)
+      placeholder: e.g. 0
+    validations:
+      required: true
+
+  - type: input
+    id: ultima_atualizacao
+    attributes:
+      label: Ultima atualizacao
+      placeholder: YYYY-MM-DD
+
+  - type: checkboxes
+    id: blockers
+    attributes:
+      label: Blockers
+      options:
+        - label: Sem blockers
+
+  - type: textarea
+    id: detalhes_blockers
+    attributes:
+      label: Detalhes dos blockers
+
+  - type: textarea
+    id: evidencias
+    attributes:
+      label: Evidencias
+      description: Resultado lint, testes, build e link para release notes
+      render: shell
+
+  - type: dropdown
+    id: decisao
+    attributes:
+      label: Go No-Go
+      options:
+        - GO
+        - NO-GO
+    validations:
+      required: true
+
+  - type: input
+    id: responsavel
+    attributes:
+      label: Responsavel
+
+  - type: input
+    id: data_hora
+    attributes:
+      label: Data/hora da decisao
+      placeholder: YYYY-MM-DD HH:mm:ss zzz
+
+  - type: textarea
+    id: observacoes
+    attributes:
+      label: Observacoes
+
+  - type: checkboxes
+    id: criterios
+    attributes:
+      label: Criterios de aceite
+      options:
+        - label: Pipeline verde
+        - label: Sem P0 P1 aberto
+        - label: Release notes completas
+
+  - type: checkboxes
+    id: pronto
+    attributes:
+      label: Definicao de pronto
+      options:
+        - label: Publicacao aprovada
+        - label: Comunicacao enviada ao time
+        - label: Pos-release checklist preparado

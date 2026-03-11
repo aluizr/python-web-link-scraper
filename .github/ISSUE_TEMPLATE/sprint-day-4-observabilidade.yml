@@ -1,0 +1,92 @@
+name: Sprint Dia 4 - Observabilidade
+description: Execucao do Dia 4 com foco em eventos de diagnostico e runbook
+title: "[Sprint D4] Observabilidade e diagnostico"
+labels: [sprint, p1, observability]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Objetivo: padronizar eventos e facilitar troubleshooting em fluxos criticos.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - label: Definir eventos minimos erro warning operacionais
+        - label: Instrumentar fluxos criticos links categorias auth
+        - label: Validar visibilidade dos eventos
+        - label: Criar runbook de diagnostico
+
+  - type: dropdown
+    id: estado
+    attributes:
+      label: Estado atual
+      options:
+        - todo
+        - doing
+        - blocked
+        - done
+    validations:
+      required: true
+
+  - type: input
+    id: progresso
+    attributes:
+      label: Progresso (%)
+      placeholder: e.g. 0
+    validations:
+      required: true
+
+  - type: input
+    id: ultima_atualizacao
+    attributes:
+      label: Ultima atualizacao
+      placeholder: YYYY-MM-DD
+
+  - type: checkboxes
+    id: blockers
+    attributes:
+      label: Blockers
+      options:
+        - label: Sem blockers
+
+  - type: textarea
+    id: detalhes_blockers
+    attributes:
+      label: Detalhes dos blockers
+
+  - type: textarea
+    id: eventos
+    attributes:
+      label: Lista de eventos implementados
+
+  - type: textarea
+    id: exemplos_logs
+    attributes:
+      label: Exemplo de logs
+      render: shell
+
+  - type: input
+    id: runbook
+    attributes:
+      label: Link para runbook
+      placeholder: docs/OBSERVABILITY_RUNBOOK.md
+
+  - type: checkboxes
+    id: criterios
+    attributes:
+      label: Criterios de aceite
+      options:
+        - label: Eventos criticos rastreaveis
+        - label: Runbook utilizavel por outro dev
+        - label: Sem impacto negativo perceptivel na UX
+
+  - type: checkboxes
+    id: pronto
+    attributes:
+      label: Definicao de pronto
+      options:
+        - label: Documentacao publicada
+        - label: Equipe revisou e aprovou
+        - label: Checklist de incidentes atualizado
