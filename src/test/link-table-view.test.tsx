@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LinkTableView } from "@/components/LinkTableView";
 import type { LinkItem } from "@/types/link";
@@ -45,6 +45,14 @@ function renderTable(links: LinkItem[], onUpdateLink = vi.fn()) {
 }
 
 describe("LinkTableView inline editing", () => {
+  it("starts inline edit from the visible pencil affordance", () => {
+    renderTable([makeLink({ id: "a", title: "Quick edit" })]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar titulo" }));
+
+    expect(screen.getByDisplayValue("Quick edit")).toBeInTheDocument();
+  });
+
   it("commits title once on Enter", () => {
     const { onUpdateLink } = renderTable([makeLink({ id: "a", title: "Old title" })]);
 
@@ -125,5 +133,22 @@ describe("LinkTableView filters and sorting", () => {
     const rowsDesc = screen.getAllByRole("row");
     expect(rowsDesc[1]).toHaveTextContent("Zeta");
     expect(rowsDesc[2]).toHaveTextContent("Alpha");
+  });
+
+  it("highlights overdue, today, and upcoming due dates", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-11T12:00:00.000Z"));
+
+    renderTable([
+      makeLink({ id: "1", title: "Late", dueDate: "2026-03-10" }),
+      makeLink({ id: "2", title: "Today", dueDate: "2026-03-11" }),
+      makeLink({ id: "3", title: "Soon", dueDate: "2026-03-14" }),
+    ]);
+
+    expect(within(screen.getByText("Late").closest("tr") as HTMLElement).getByText("Atrasado")).toBeInTheDocument();
+    expect(within(screen.getByText("Today").closest("tr") as HTMLElement).getByText("Hoje")).toBeInTheDocument();
+    expect(within(screen.getByText("Soon").closest("tr") as HTMLElement).getByText("3 dias")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

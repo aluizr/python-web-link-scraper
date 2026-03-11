@@ -123,9 +123,21 @@ const DEFAULT_FILTERS: TableFilters = {
   dueDate: "all",
 };
 
+const INLINE_EDIT_LABELS: Record<InlineEditableColumn, string> = {
+  title: "titulo",
+  description: "descricao",
+  category: "categoria",
+  tags: "tags",
+  dueDate: "prazo",
+};
+
 const COLUMN_MAP: Record<TableColumnId, ColumnConfig> = Object.fromEntries(
   TABLE_COLUMNS.map((column) => [column.id, column])
 ) as Record<TableColumnId, ColumnConfig>;
+
+function isInlineEditableColumn(columnId: TableColumnId): columnId is InlineEditableColumn {
+  return INLINE_EDIT_SEQUENCE.includes(columnId as InlineEditableColumn);
+}
 
 function getHostname(url: string): string {
   try {
@@ -133,6 +145,35 @@ function getHostname(url: string): string {
   } catch {
     return url;
   }
+}
+
+function parseStoredDate(value: string | null): Date | null {
+  if (!value) return null;
+
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatStoredDateForInput(value: string | null): string {
+  const parsed = parseStoredDate(value);
+  if (!parsed) return "";
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatStoredDateForLocale(value: string | null, options?: Intl.DateTimeFormatOptions): string {
+  const parsed = parseStoredDate(value);
+  if (!parsed) return "";
+  return parsed.toLocaleDateString("pt-BR", options);
 }
 
 function getSortableValue(link: LinkItem, column: TableColumnId): string | number {
@@ -150,12 +191,57 @@ function getSortableValue(link: LinkItem, column: TableColumnId): string | numbe
     case "priority":
       return link.priority;
     case "dueDate":
-      return link.dueDate ? new Date(link.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return parseStoredDate(link.dueDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
     case "favicon":
       return getHostname(link.url).toLowerCase();
     default:
       return "";
   }
+}
+
+function getDueDateMeta(dueDate: string | null): {
+  label: string;
+  buttonClassName: string;
+  badgeClassName: string;
+} | null {
+  if (!dueDate) return null;
+
+  const due = parseStoredDate(dueDate);
+  if (!due) return null;
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endToday = new Date(startToday);
+  endToday.setDate(endToday.getDate() + 1);
+
+  if (due < startToday) {
+    return {
+      label: "Atrasado",
+      buttonClassName: "text-destructive",
+      badgeClassName: "border-destructive/20 bg-destructive/10 text-destructive",
+    };
+  }
+
+  if (due < endToday) {
+    return {
+      label: "Hoje",
+      buttonClassName: "text-amber-700 dark:text-amber-300",
+      badgeClassName: "border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+    };
+  }
+
+  const dueStart = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const daysUntilDue = Math.round((dueStart.getTime() - startToday.getTime()) / 86400000);
+
+  if (daysUntilDue <= 7) {
+    return {
+      label: daysUntilDue === 1 ? "1 dia" : `${daysUntilDue} dias`,
+      buttonClassName: "text-primary",
+      badgeClassName: "border-primary/20 bg-primary/10 text-primary",
+    };
+  }
+
+  return null;
 }
 
 function getInitialVisibleColumns(): TableColumnId[] {
@@ -240,11 +326,7 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     if (column === "description") return link.description || "";
     if (column === "category") return link.category || "";
     if (column === "tags") return link.tags.join(", ");
-    if (!link.dueDate) return "";
-
-    const parsed = new Date(link.dueDate);
-    if (Number.isNaN(parsed.getTime())) return "";
-    return parsed.toISOString().slice(0, 10);
+    return formatStoredDateForInput(link.dueDate);
   }, []);
 
   const beginInlineEdit = useCallback((link: LinkItem, column: InlineEditableColumn) => {
@@ -449,8 +531,8 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
       } else {
         next = next.filter((link) => {
           if (!link.dueDate) return false;
-          const due = new Date(link.dueDate);
-          if (Number.isNaN(due.getTime())) return false;
+          const due = parseStoredDate(link.dueDate);
+          if (!due) return false;
 
           if (filters.dueDate === "overdue") {
             return due < startToday;
@@ -664,7 +746,7 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
           value = priorityLabel[link.priority];
           break;
         case "dueDate":
-          value = link.dueDate ? new Date(link.dueDate).toLocaleDateString("pt-BR") : "";
+          value = formatStoredDateForLocale(link.dueDate);
           break;
       }
 
@@ -683,6 +765,29 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
     setFilters(DEFAULT_FILTERS);
     setSortRules([]);
   };
+
+  const renderInlineEditButton = (column: InlineEditableColumn, rowIsActive: boolean, onClick: () => void) => (
+    <button
+      type="button"
+      aria-label={`Editar ${INLINE_EDIT_LABELS[column]}`}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`inline-flex shrink-0 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        density === "compact"
+          ? rowIsActive
+            ? "h-5 w-5 opacity-100"
+            : "h-5 w-5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+          : rowIsActive
+            ? "h-6 w-6 opacity-100"
+            : "h-6 w-6 opacity-60 hover:opacity-100"
+      }`}
+    >
+      <Pencil className="h-3 w-3" />
+    </button>
+  );
 
   const getSortMeta = (column: TableColumnId) => {
     const index = sortRules.findIndex((rule) => rule.column === column);
@@ -857,6 +962,12 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
             </Button>
           </div>
 
+          {visibleColumns.some(isInlineEditableColumn) && (
+            <span className="text-xs text-muted-foreground">
+              Dica: use o lapis ou duplo clique para editar inline.
+            </span>
+          )}
+
           <span className="ml-auto text-xs text-muted-foreground">
             {processedLinks.length} de {links.length} links
           </span>
@@ -946,15 +1057,16 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
             </tr>
           </thead>
           <tbody>
-            {processedLinks.map((link) => (
+            {processedLinks.map((link) => {
+              const rowIsSelected = selectedIds?.has(link.id) ?? false;
+              const rowIsEditing = editingCell?.id === link.id;
+              const rowIsActive = rowIsSelected || rowIsEditing;
+
+              return (
               <tr
                 key={link.id}
                 className={`border-b last:border-b-0 hover:bg-muted/30 transition-colors group ${
-                  selectedIds?.has(link.id)
-                    ? "bg-primary/5"
-                    : editingCell?.id === link.id
-                      ? "bg-primary/5"
-                      : ""
+                  rowIsActive ? "bg-primary/5" : ""
                 }`}
               >
                 {/* Selection checkbox */}
@@ -963,12 +1075,12 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                     <button
                       onClick={(e) => { e.stopPropagation(); onToggleSelect(link.id, e.shiftKey); }}
                       className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-all ${
-                        selectedIds?.has(link.id)
+                        rowIsSelected
                           ? "bg-primary border-primary text-primary-foreground"
                           : "bg-background border-muted-foreground/40 opacity-0 group-hover:opacity-100"
                       }`}
                     >
-                      {selectedIds?.has(link.id) && (
+                      {rowIsSelected && (
                         <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
                           <path d="M2.5 6L5 8.5L9.5 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -1013,20 +1125,23 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                             className={density === "compact" ? "h-7 text-xs" : "h-8"}
                           />
                         ) : (
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 truncate font-medium text-foreground hover:text-primary transition-colors"
-                            onDoubleClick={(e) => {
-                              e.preventDefault();
-                              beginInlineEdit(link, "title");
-                            }}
-                            title="Duplo clique para editar titulo"
-                          >
-                            <span className="truncate">{link.title || link.url}</span>
-                            <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
-                          </a>
+                          <div className="flex items-start gap-1.5">
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-foreground hover:text-primary transition-colors"
+                              onDoubleClick={(e) => {
+                                e.preventDefault();
+                                beginInlineEdit(link, "title");
+                              }}
+                              title="Duplo clique para editar titulo"
+                            >
+                              <span className="truncate">{link.title || link.url}</span>
+                              <ExternalLink className="h-3 w-3 shrink-0 opacity-40" />
+                            </a>
+                            {renderInlineEditButton("title", rowIsActive, () => beginInlineEdit(link, "title"))}
+                          </div>
                         )}
                         <p className={`${TEXT_XS_CLASS} mt-0.5 truncate text-muted-foreground`}>
                           {getHostname(link.url)}
@@ -1053,13 +1168,16 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                             className="w-full resize-y rounded-md border border-input bg-background px-2 py-1.5 text-xs"
                           />
                         ) : (
-                          <p
-                            className={`whitespace-normal break-words text-muted-foreground ${TEXT_XS_CLASS}`}
-                            onDoubleClick={() => beginInlineEdit(link, "description")}
-                            title="Duplo clique para editar descricao"
-                          >
-                            {link.description || "-"}
-                          </p>
+                          <div className="flex items-start gap-1.5">
+                            <p
+                              className={`min-w-0 flex-1 whitespace-normal break-words text-muted-foreground ${TEXT_XS_CLASS}`}
+                              onDoubleClick={() => beginInlineEdit(link, "description")}
+                              title="Duplo clique para editar descricao"
+                            >
+                              {link.description || "-"}
+                            </p>
+                            {renderInlineEditButton("description", rowIsActive, () => beginInlineEdit(link, "description"))}
+                          </div>
                         )}
                         {link.notes && (
                           <span className={`mt-0.5 inline-flex items-center gap-0.5 ${TEXT_XS_CLASS} text-muted-foreground`} title={link.notes}>
@@ -1087,22 +1205,28 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                           className={density === "compact" ? "h-7 text-xs" : "h-8"}
                         />
                       ) : link.category ? (
-                        <Badge
-                          variant="secondary"
-                          className={COMPACT_BADGE_CLASS}
-                          onDoubleClick={() => beginInlineEdit(link, "category")}
-                          title="Duplo clique para editar categoria"
-                        >
-                          {link.category}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant="secondary"
+                            className={COMPACT_BADGE_CLASS}
+                            onDoubleClick={() => beginInlineEdit(link, "category")}
+                            title="Duplo clique para editar categoria"
+                          >
+                            {link.category}
+                          </Badge>
+                          {renderInlineEditButton("category", rowIsActive, () => beginInlineEdit(link, "category"))}
+                        </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => beginInlineEdit(link, "category")}
-                          className={`${TEXT_XS_CLASS} text-muted-foreground hover:text-foreground`}
-                        >
-                          -
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => beginInlineEdit(link, "category")}
+                            className={`${TEXT_XS_CLASS} text-muted-foreground hover:text-foreground`}
+                          >
+                            -
+                          </button>
+                          {renderInlineEditButton("category", rowIsActive, () => beginInlineEdit(link, "category"))}
+                        </div>
                       )
                     )}
 
@@ -1124,21 +1248,24 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                           placeholder="tag1, tag2"
                         />
                       ) : (
-                        <div
-                          className="flex max-w-full cursor-text flex-wrap gap-1"
-                          onDoubleClick={() => beginInlineEdit(link, "tags")}
-                          title="Duplo clique para editar tags"
-                        >
-                          {link.tags.length > 0 ? (
-                            link.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>{tag}</Badge>
-                            ))
-                          ) : (
-                            <span className={`${TEXT_XS_CLASS} text-muted-foreground`}>-</span>
-                          )}
-                          {link.tags.length > 3 && (
-                            <span className={`${TEXT_XS_CLASS} text-muted-foreground`}>+{link.tags.length - 3}</span>
-                          )}
+                        <div className="flex items-start gap-1.5">
+                          <div
+                            className="flex max-w-full flex-1 cursor-text flex-wrap gap-1"
+                            onDoubleClick={() => beginInlineEdit(link, "tags")}
+                            title="Duplo clique para editar tags"
+                          >
+                            {link.tags.length > 0 ? (
+                              link.tags.slice(0, 3).map((tag) => (
+                                <Badge key={tag} variant="outline" className={COMPACT_BADGE_CLASS}>{tag}</Badge>
+                              ))
+                            ) : (
+                              <span className={`${TEXT_XS_CLASS} text-muted-foreground`}>-</span>
+                            )}
+                            {link.tags.length > 3 && (
+                              <span className={`${TEXT_XS_CLASS} text-muted-foreground`}>+{link.tags.length - 3}</span>
+                            )}
+                          </div>
+                          {renderInlineEditButton("tags", rowIsActive, () => beginInlineEdit(link, "tags"))}
                         </div>
                       )
                     )}
@@ -1196,44 +1323,71 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                           onKeyDown={(e) => handleInlineInputKeyDown(e, processedLinks)}
                           className={density === "compact" ? "h-7 text-xs" : "h-8"}
                         />
-                      ) : (
-                        <button
-                          type="button"
-                          className={`${TEXT_XS_CLASS} whitespace-nowrap text-muted-foreground hover:text-foreground`}
-                          onClick={() => beginInlineEdit(link, "dueDate")}
-                          title="Clique para editar prazo"
-                        >
-                          {link.dueDate
-                            ? new Date(link.dueDate).toLocaleDateString("pt-BR", {
-                                day: "2-digit",
-                                month: "short",
-                              })
-                            : "-"}
-                        </button>
-                      )
+                      ) : (() => {
+                        const dueDateMeta = getDueDateMeta(link.dueDate);
+
+                        return (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            className={`${TEXT_XS_CLASS} whitespace-nowrap hover:text-foreground ${dueDateMeta?.buttonClassName ?? "text-muted-foreground"}`}
+                            onClick={() => beginInlineEdit(link, "dueDate")}
+                            title="Clique para editar prazo"
+                          >
+                            {link.dueDate
+                              ? formatStoredDateForLocale(link.dueDate, {
+                                  day: "2-digit",
+                                  month: "short",
+                                })
+                              : "-"}
+                          </button>
+                          {dueDateMeta && (
+                            <Badge variant="outline" className={`${COMPACT_BADGE_CLASS} ${dueDateMeta.badgeClassName}`}>
+                              {dueDateMeta.label}
+                            </Badge>
+                          )}
+                          {renderInlineEditButton("dueDate", rowIsActive, () => beginInlineEdit(link, "dueDate"))}
+                        </div>
+                        );
+                      })()
                     )}
                   </td>
                 ))}
 
                 {/* Actions */}
                 <td className={`sticky right-0 z-10 bg-background/95 text-right shadow-[-6px_0_10px_-8px_hsl(var(--border))] backdrop-blur supports-[backdrop-filter]:bg-background/85 ${density === "compact" ? "px-3 py-2" : "px-4 py-3"}`}>
-                  <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className={`flex items-center justify-end gap-0.5 transition-opacity ${
+                    density === "compact"
+                      ? rowIsActive
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                      : rowIsActive
+                        ? "opacity-100"
+                        : "opacity-70 group-hover:opacity-100"
+                  }`}>
                     <Button
                       variant="ghost"
                       size="icon"
                       className={ICON_BTN_MD_CLASS}
+                      aria-label={link.isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
                       onClick={() => onToggleFavorite(link.id)}
                     >
                       <Star
                         className={`h-3.5 w-3.5 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
                       />
                     </Button>
-                    <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={() => onEdit(link)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={ICON_BTN_MD_CLASS}
+                      onClick={() => onEdit(link)}
+                      aria-label="Abrir edicao completa"
+                    >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} text-destructive`}>
+                        <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} text-destructive`} aria-label="Excluir link">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </AlertDialogTrigger>
@@ -1258,7 +1412,8 @@ export function LinkTableView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         </div>
