@@ -69,6 +69,7 @@ function withRateLimit(operation: string, fn: () => Promise<void>): Promise<void
     enforceRateLimit(operation);
   } catch (e) {
     if (e instanceof RateLimitError) {
+      logger.warn("ops.rate_limited", e, { operation });
       toast.error(e.message);
       return Promise.resolve();
     }
@@ -186,6 +187,12 @@ export function useLinks(userId: string | undefined) {
         setCategories(mappedCats);
         cacheCategories(mappedCats); // ✅ Salvar no cache offline
       }
+      logger.info("links.bootstrap.loaded", {
+        linksCount: linksRes.data?.length ?? 0,
+        categoriesCount: catsRes.data?.length ?? 0,
+        phase1SchemaAvailable: phase1SchemaAvailableRef.current,
+        statusOrderSchemaAvailable: statusOrderSchemaAvailableRef.current,
+      });
       setLoading(false);
     };
     fetchData();
@@ -279,14 +286,6 @@ export function useLinks(userId: string | undefined) {
     }
     if (error) {
       logger.error("Erro ao adicionar link", error, { url: v.url });
-    }
-    if (error) {
-      logger.error("Erro ao adicionar link", error, { url: v.url });
-      toast.error(error.message || "Erro ao adicionar link");
-      return;
-    }
-    if (error) {
-      logger.error("Erro ao adicionar link", error, { url: v.url });
       toast.error(error.message || "Erro ao adicionar link");
       return;
     }
@@ -311,6 +310,11 @@ export function useLinks(userId: string | undefined) {
         position: data.position || 0, // ✅ Adicionar position
       };
       setLinks((prev) => [newLink, ...prev]);
+      logger.info("link.created", {
+        linkId: newLink.id,
+        status: newLink.status,
+        category: newLink.category || "",
+      });
     }
     }); // withRateLimit
   }, [userId, links]);
@@ -382,6 +386,10 @@ export function useLinks(userId: string | undefined) {
       logger.error("Erro ao atualizar link", error, { linkId: id });
     } else {
       setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, ...data } : l)));
+      logger.info("link.updated", {
+        linkId: id,
+        changedFields: Object.keys(data),
+      });
     }
     }); // withRateLimit
   }, []);
@@ -395,6 +403,7 @@ export function useLinks(userId: string | undefined) {
       logger.error("Erro ao mover link para lixeira", error, { linkId: id });
     } else {
       setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, deletedAt: now } : l)));
+      logger.info("link.trashed", { linkId: id });
     }
     }); // withRateLimit
   }, []);
@@ -407,6 +416,7 @@ export function useLinks(userId: string | undefined) {
         logger.error("Erro ao restaurar link", error, { linkId: id });
       } else {
         setLinks((prev) => prev.map((l) => (l.id === id ? { ...l, deletedAt: null } : l)));
+        logger.info("link.restored", { linkId: id });
       }
     });
   }, []);
@@ -419,6 +429,7 @@ export function useLinks(userId: string | undefined) {
         logger.error("Erro ao deletar link permanentemente", error, { linkId: id });
       } else {
         setLinks((prev) => prev.filter((l) => l.id !== id));
+        logger.info("link.deleted_permanently", { linkId: id });
       }
     });
   }, []);
@@ -433,6 +444,7 @@ export function useLinks(userId: string | undefined) {
         logger.error("Erro ao esvaziar lixeira", error);
       } else {
         setLinks((prev) => prev.filter((l) => !l.deletedAt));
+        logger.info("trash.emptied", { deletedCount: trashIds.length });
       }
     });
   }, [links]);
@@ -447,6 +459,9 @@ export function useLinks(userId: string | undefined) {
       setLinks((prev) =>
         prev.map((l) => (l.id === id ? { ...l, isFavorite: newVal } : l))
       );
+      logger.info("link.favorite_toggled", { linkId: id, isFavorite: newVal });
+    } else {
+      logger.error("Erro ao favoritar/desfavoritar link", error, { linkId: id, isFavorite: newVal });
     }
     }); // withRateLimit
   }, [links]);
@@ -503,8 +518,16 @@ export function useLinks(userId: string | undefined) {
     if (data) {
       setCategories((prev) => [
         ...prev,
-        
+        {
+          id: data.id,
+          name: data.name,
+          icon: data.icon || "Folder",
+          parentId: data.parent_id ?? null,
+          position: data.position ?? 0,
+          color: data.color ?? null,
+        },
       ]);
+      logger.info("category.created", { categoryId: data.id, name: data.name, parentId: data.parent_id ?? null });
     }
     }); // withRateLimit
   }, [userId, categories]);
@@ -558,6 +581,12 @@ export function useLinks(userId: string | undefined) {
       prev.map((l) => (namesToClear.includes(l.category) ? { ...l, category: "" } : l))
     );
     setCategories((prev) => prev.filter((c) => !idsToDelete.includes(c.id)));
+    logger.info("category.deleted", {
+      rootCategoryId: id,
+      cascade,
+      deletedCategoriesCount: idsToDelete.length,
+      clearedLinksByCategoryCount: namesToClear.length,
+    });
     }); // withRateLimit
   }, [categories, getCategoryFullName]);
 
@@ -605,6 +634,14 @@ export function useLinks(userId: string | undefined) {
       setCategories((prev) =>
         prev.map((c) => (c.id === id ? { ...c, name: parsed.data.name } : c))
       );
+      logger.info("category.renamed", {
+        categoryId: id,
+        previousName: oldName,
+        nextName: parsed.data.name,
+        propagatedUpdates: updates.length,
+      });
+    } else {
+      logger.error("Erro ao renomear categoria", error, { categoryId: id, name: parsed.data.name });
     }
     }); // withRateLimit
   }, [categories, getCategoryFullName]);
@@ -628,6 +665,7 @@ export function useLinks(userId: string | undefined) {
           supabase.from("links").update({ position }).eq("id", id)
         )
       );
+      logger.info("link.reordered", { totalLinks: reorderedLinks.length });
     } catch (error) {
       logger.error("Erro ao reordenar links", error instanceof Error ? error : new Error(String(error)));
       toast.error("Erro ao reordenar links");
@@ -659,6 +697,10 @@ export function useLinks(userId: string | undefined) {
             return supabase.from("links").update(payload).eq("id", id);
           })
         );
+        logger.info("link.reordered_by_status", {
+          updatedLinks: updates.length,
+          statusOrderSchemaAvailable: statusOrderSchemaAvailableRef.current,
+        });
       } catch (error) {
         logger.error("Erro ao reordenar links por status", error instanceof Error ? error : new Error(String(error)));
         toast.error("Erro ao reordenar links no board");
@@ -680,6 +722,7 @@ export function useLinks(userId: string | undefined) {
           supabase.from("categories").update({ position }).eq("id", id)
         )
       );
+      logger.info("category.reordered", { totalCategories: reorderedCategories.length });
     } catch (error) {
       logger.error("Erro ao reordenar categorias", error instanceof Error ? error : new Error(String(error)));
       toast.error("Erro ao reordenar categorias");
@@ -695,6 +738,7 @@ export function useLinks(userId: string | undefined) {
         logger.error("Erro ao atualizar cor da categoria", error, { categoryId: id });
       } else {
         setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, color } : c)));
+        logger.info("category.color_updated", { categoryId: id, hasColor: Boolean(color) });
       }
     });
   }, []);
@@ -707,6 +751,7 @@ export function useLinks(userId: string | undefined) {
         logger.error("Erro ao atualizar ícone da categoria", error, { categoryId: id });
       } else {
         setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, icon } : c)));
+        logger.info("category.icon_updated", { categoryId: id, icon });
       }
     });
   }, []);

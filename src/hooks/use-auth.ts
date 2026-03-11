@@ -15,6 +15,7 @@ export function useAuth() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      logger.info("auth.session.bootstrap", { hasSession: Boolean(session?.user) });
       setLoading(false);
     });
 
@@ -22,6 +23,10 @@ export function useAuth() {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      logger.info("auth.state.changed", {
+        event: _event,
+        hasSession: Boolean(session?.user),
+      });
 
       // Identificar/limpar usuário no logger
       if (session?.user) {
@@ -35,41 +40,54 @@ export function useAuth() {
   }, []);
 
   const signUp = async (email: string, password: string) => {
+    const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
     // ✅ Rate limiting: 3 tentativas por 10 min
     try {
       enforceRateLimit("auth:signup");
     } catch (e) {
       if (e instanceof RateLimitError) {
+        logger.warn("auth.signup.rate_limited", e, { emailDomain });
         return { error: { message: e.message } as AuthErrorLike };
       }
       throw e;
     }
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) {
-      logger.warn(`Falha no cadastro para o email ${email}: ${error.message}`);
+      logger.warn("auth.signup.failed", null, { emailDomain, reason: error.message });
+    } else {
+      logger.info("auth.signup.succeeded", { emailDomain });
     }
     return { error };
   };
 
   const signIn = async (email: string, password: string) => {
+    const emailDomain = email.includes("@") ? email.split("@")[1] : "unknown";
     // ✅ Rate limiting: 5 tentativas por 5 min
     try {
       enforceRateLimit("auth:signin");
     } catch (e) {
       if (e instanceof RateLimitError) {
+        logger.warn("auth.signin.rate_limited", e, { emailDomain });
         return { error: { message: e.message } as AuthErrorLike };
       }
       throw e;
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      logger.warn(`Falha no login para o email ${email}: ${error.message}`);
+      logger.warn("auth.signin.failed", null, { emailDomain, reason: error.message });
+    } else {
+      logger.info("auth.signin.succeeded", { emailDomain });
     }
     return { error };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      logger.warn("auth.signout.failed", null, { reason: error.message });
+      return;
+    }
+    logger.info("auth.signout.succeeded");
   };
 
   return { user, session, loading, signUp, signIn, signOut };

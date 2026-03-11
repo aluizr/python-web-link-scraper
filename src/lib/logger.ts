@@ -41,11 +41,13 @@ type SentryLike = {
   init: (config: Record<string, unknown>) => void;
   captureException: (error: Error, context?: Record<string, unknown>) => void;
   captureMessage: (message: string, context?: Record<string, unknown>) => void;
+  setUser?: (user: { id: string; email?: string } | null) => void;
 };
 
 type LogRocketLike = {
   init: (appId: string) => void;
   captureException: (error: Error, context?: Record<string, unknown>) => void;
+  identify?: (userId: string, traits?: Record<string, unknown>) => void;
 };
 
 // ─── Sentry integration (lazy) ───
@@ -239,10 +241,10 @@ export function exportLogs(): string {
  * Chamado após login.
  */
 export function identifyUser(userId: string, email?: string): void {
-  if (sentryModule) {
+  if (sentryModule?.setUser) {
     sentryModule.setUser({ id: userId, email });
   }
-  if (logRocketModule) {
+  if (logRocketModule?.identify) {
     logRocketModule.identify(userId, { email });
   }
   logger.info("Usuário identificado", { userId });
@@ -253,7 +255,7 @@ export function identifyUser(userId: string, email?: string): void {
  * Chamado após logout.
  */
 export function clearUserIdentity(): void {
-  if (sentryModule) {
+  if (sentryModule?.setUser) {
     sentryModule.setUser(null);
   }
   logger.info("Identidade do usuário limpa");
