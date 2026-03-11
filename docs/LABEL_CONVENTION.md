@@ -65,3 +65,4 @@ If needed, keep this set minimal and explicit:
 - Label catalog source of truth: .github/labels.yml
 - Sync workflow: .github/workflows/label-sync.yml
 - Trigger manually in GitHub Actions: Label Sync -> Run workflow
+- Unmanaged labels are removed during sync to keep the catalog strict and consistent.
