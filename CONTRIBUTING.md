@@ -33,6 +33,12 @@ npm run build
 - Open PRs with a concise summary and context.
 - Link related issues when applicable.
 
+## Labels and Triage
+
+- Follow the label convention in [docs/LABEL_CONVENTION.md](docs/LABEL_CONVENTION.md).
+- Add at least one type label and one priority label when known.
+- Keep labels focused, usually 2 to 4 per issue.
+
 ## Security and Secrets
 
 - Never commit `.env` files or credentials.
