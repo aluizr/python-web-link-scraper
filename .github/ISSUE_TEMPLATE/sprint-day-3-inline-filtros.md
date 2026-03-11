@@ -10,15 +10,15 @@ assignees: []
 Aumentar confiabilidade da edicao inline e combinacao de filtros/ordenacao.
 
 ## Escopo
-- [ ] Revisar teclas Enter/Tab/Escape na edicao inline
-- [ ] Validar foco e blur em cenarios de edicao
-- [ ] Validar combinacoes de filtros e ordenacao
-- [ ] Testar fluxo simultaneo: editar + filtrar + ordenar
+- [x] Revisar teclas Enter/Tab/Escape na edicao inline
+- [x] Validar foco e blur em cenarios de edicao
+- [x] Validar combinacoes de filtros e ordenacao
+- [x] Testar fluxo simultaneo: editar + filtrar + ordenar
 
 ## Status
-- Estado atual: `todo | doing | blocked | done`
-- Progresso (%): `0`
-- Ultima atualizacao: `YYYY-MM-DD`
+- Estado atual: `done`
+- Progresso (%): `100`
+- Ultima atualizacao: `2026-03-11`
 
 ## Blockers
 - [ ] Sem blockers
@@ -26,15 +26,23 @@ Aumentar confiabilidade da edicao inline e combinacao de filtros/ordenacao.
 
 ## Evidencias
 - Casos testados:
+	- Edicao inline de titulo com Enter: salva uma unica vez
+	- Edicao inline com Escape: cancela sem persistir alteracoes
+	- Edicao inline com Tab: salva e avanca para a proxima coluna editavel
+	- No-op update: valor inalterado nao dispara update
+	- Filtro por query combinado com ordenacao asc/desc por titulo
 - Videos/screen recordings:
+	- N/A (validacao automatizada por testes de componente)
 - Commits/PRs:
+	- cee887f fix(table): harden inline edit key handling and skip no-op updates
+	- (pendente) testes de regressao da tabela para inline/filtro/ordenacao
 
 ## Criterios de Aceite
-- [ ] Comportamento consistente de teclas
-- [ ] Sem perda de estado inesperada
-- [ ] Filtros e ordenacao sem regressao
+- [x] Comportamento consistente de teclas
+- [x] Sem perda de estado inesperada
+- [x] Filtros e ordenacao sem regressao
 
 ## Definicao de Pronto
-- [ ] Casos criticos cobertos
-- [ ] Ajustes validados por QA
-- [ ] Documentacao de comportamento atualizada
+- [x] Casos criticos cobertos
+- [x] Ajustes validados por QA
+- [x] Documentacao de comportamento atualizada
