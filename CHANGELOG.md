@@ -2,13 +2,44 @@
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
-Versão mais recente: [0.14.1 — 2026-03-06](CHANGELOG.md#0141--2026-03-06)
+Versão mais recente: [0.14.2 — 2026-03-11](CHANGELOG.md#0142--2026-03-11)
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.14.2 | 2026-03-11 | [Ver mudanças](CHANGELOG.md#0142--2026-03-11) |
 | 0.14.1 | 2026-03-06 | [Ver mudanças](CHANGELOG.md#0141--2026-03-06) |
 | 0.14.0 | 2026-02-22 | [Ver mudanças](CHANGELOG.md#0140--2026-02-22) |
 | 0.13.0 | 2026-02-21 | [Ver mudanças](CHANGELOG.md#0130--2026-02-21) |
+
+---
+
+## [0.14.2] — 2026-03-11
+
+### Sprint de Estabilidade e Release (Dias 2-5)
+
+`UX Drag and Drop`
+
+- **Melhoria de alvo de drop no Board**: feedback visual de coluna reforçado com helper textual de destino.
+- **Direção de drop nos Cartões**: dica central `Solte acima/abaixo` durante reorder.
+- **Sidebar mais clara para DnD**: reforço visual de drop/reordenação e badge de ação para soltar link.
+
+`Tabela e Edição Inline`
+
+- **Comportamento de teclado mais consistente**: fluxo Enter/Tab/Escape estabilizado para evitar commits duplicados por blur.
+- **Atualização no-op evitada**: edição inline não dispara persistência nem toast quando o valor não muda.
+- **Cobertura de regressão adicionada**: novos testes de componente para edição inline e combinações de filtro/ordenação.
+
+`Observabilidade`
+
+- **Eventos padronizados por domínio**: instrumentação de `auth.*`, `link.*`, `category.*`, `trash.*` e `ops.*`.
+- **Contexto operacional ampliado**: logs com metadados úteis para troubleshooting (IDs, campos alterados, contagens e flags de fallback).
+- **Runbook de diagnóstico publicado**: guia de inspeção, triagem e playbooks em [docs/OBSERVABILITY_RUNBOOK.md](docs/OBSERVABILITY_RUNBOOK.md).
+
+`Release`
+
+- **Validação final aprovada**: `lint`, `test` (96/96), `build` e smoke pre-release (`/`, `/auth`, `/robots.txt` com HTTP 200).
+- **Decisão Go registrada**: release considerada apta para publicação sem bloqueadores P0/P1.
+- **Release notes dedicadas**: [docs/RELEASE_NOTES_0.14.2.md](docs/RELEASE_NOTES_0.14.2.md).
 
 ---
 
