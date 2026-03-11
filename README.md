@@ -6,20 +6,20 @@ Organize seus links favoritos com estilo e segurança.
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.14.2 | 2026-03-11 | [Ver changelog](CHANGELOG.md#0142--2026-03-11) |
 | 0.14.1 | 2026-03-06 | [Ver changelog](CHANGELOG.md#0141--2026-03-06) |
 | 0.14.0 | 2026-02-22 | [Ver changelog](CHANGELOG.md#0140--2026-02-22) |
-| 0.13.0 | 2026-02-21 | [Ver changelog](CHANGELOG.md#0130--2026-02-21) |
 
-## What's new — 0.14.1 (2026-03-06)
+## What's new — 0.14.2 (2026-03-11)
 
-Detalhes completos da release: [CHANGELOG 0.14.1](CHANGELOG.md#0141--2026-03-06)
+Detalhes completos da release: [CHANGELOG 0.14.2](CHANGELOG.md#0142--2026-03-11)
 
-- **Metadados mais confiáveis** no cadastro de links com fallback em camadas (Microlink → OtherMeta → noembed → local)
-- **Fallback local automático** para preencher título/favicon quando APIs externas falham
-- **Submit mais robusto**: busca metadados faltantes no envio e normaliza URL com `https://` quando necessário
-- **Preview melhorado** com indicador de origem dos metadados (Web vs Local)
-- **Padronização global de tokens de UI** para reduzir duplicação de classes e melhorar manutenção
-- **Validação concluída** com build de produção sem erros
+- **Drag and drop mais legível** no board, cards e sidebar com pistas visuais de drop e reorder mais claras
+- **Edição inline estabilizada** na tabela com fluxo consistente de Enter/Tab/Escape e prevenção de commits duplicados por blur
+- **Atualizações no-op ignoradas** para evitar persistência e toast quando o valor não muda
+- **Observabilidade ampliada** com eventos padronizados em auth, links, categorias, lixeira e contexto estruturado para troubleshooting
+- **Runbook operacional publicado** em [docs/OBSERVABILITY_RUNBOOK.md](docs/OBSERVABILITY_RUNBOOK.md)
+- **Release validada** com `lint`, `test` (96/96), `build` e smoke checks de `/`, `/auth` e `/robots.txt`
 
 ## Funcionalidades
 
