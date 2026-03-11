@@ -1,7 +1,7 @@
 name: Sprint Dia 2 - UX Drag and Drop
 description: Execucao do Dia 2 com foco em previsibilidade e feedback visual do drag and drop
 title: "[Sprint D2] Refinar UX de drag and drop"
-labels: [sprint, frontend, p1, ux]
+labels: [sprint, frontend, p1]
 body:
   - type: markdown
     attributes:
