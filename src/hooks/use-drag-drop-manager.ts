@@ -93,6 +93,26 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     }
   }, [historyIndex, history, onReorder]);
 
+  // Compat helper for tests and callers that need deterministic in-memory reorder.
+  const reorderLinks = useCallback((draggedId: string, targetId: string): LinkItem[] | null => {
+    if (draggedId === targetId) return null;
+
+    const sourceIndex = initialLinks.findIndex((link) => link.id === draggedId);
+    const targetIndex = initialLinks.findIndex((link) => link.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return null;
+
+    const reordered = [...initialLinks];
+    const [movedLink] = reordered.splice(sourceIndex, 1);
+    const insertionIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    reordered.splice(insertionIndex, 0, movedLink);
+
+    return reordered.map((link, position) => ({
+      ...link,
+      position,
+    }));
+  }, [initialLinks]);
+
   // Auto-scroll ao arrastar perto das bordas
   const handleAutoScroll = useCallback((clientY: number) => {
     const scrollContainer = document.querySelector("main") || window;
@@ -268,6 +288,7 @@ export function useDragDropManager(initialLinks: LinkItem[], categories: Categor
     canUndo: historyIndex > 0,
     canRedo: historyIndex < history.length - 1,
     lastKnownDrop: lastKnownDropRef,
+    reorderLinks,
     handleDragStart,
     handleDragOver,
     handleDragLeave,

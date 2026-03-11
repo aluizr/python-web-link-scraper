@@ -37,8 +37,19 @@ export interface LogEntry {
 const STORAGE_KEY = "webnest-error-log";
 const MAX_STORED_ENTRIES = 100;
 
+type SentryLike = {
+  init: (config: Record<string, unknown>) => void;
+  captureException: (error: Error, context?: Record<string, unknown>) => void;
+  captureMessage: (message: string, context?: Record<string, unknown>) => void;
+};
+
+type LogRocketLike = {
+  init: (appId: string) => void;
+  captureException: (error: Error, context?: Record<string, unknown>) => void;
+};
+
 // ─── Sentry integration (lazy) ───
-let sentryModule: any = null;
+let sentryModule: SentryLike | null = null;
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 
 async function initSentry() {
@@ -46,7 +57,7 @@ async function initSentry() {
   try {
     // Dynamic import com variável para evitar que Vite/Rollup resolva no build
     const pkg = "@sentry/react";
-    sentryModule = await import(/* @vite-ignore */ pkg);
+    sentryModule = await import(/* @vite-ignore */ pkg) as unknown as SentryLike;
     sentryModule.init({
       dsn: SENTRY_DSN,
       environment: import.meta.env.MODE,
@@ -61,7 +72,7 @@ async function initSentry() {
 }
 
 // ─── LogRocket integration (lazy) ───
-let logRocketModule: any = null;
+let logRocketModule: LogRocketLike | null = null;
 const LOGROCKET_APP_ID = import.meta.env.VITE_LOGROCKET_APP_ID;
 
 async function initLogRocket() {
@@ -69,7 +80,7 @@ async function initLogRocket() {
   try {
     // Dynamic import com variável para evitar que Vite/Rollup resolva no build
     const pkg = "logrocket";
-    const mod = await import(/* @vite-ignore */ pkg);
+    const mod = await import(/* @vite-ignore */ pkg) as unknown as { default?: LogRocketLike } & LogRocketLike;
     logRocketModule = mod.default || mod;
     logRocketModule.init(LOGROCKET_APP_ID);
   } catch {

@@ -5,9 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
+type AuthErrorLike = { message: string } | null;
+
 interface AuthProps {
-  onSignIn: (email: string, password: string) => Promise<{ error: any }>;
-  onSignUp: (email: string, password: string) => Promise<{ error: any }>;
+  onSignIn: (email: string, password: string) => Promise<{ error: AuthErrorLike }>;
+  onSignUp: (email: string, password: string) => Promise<{ error: AuthErrorLike }>;
 }
 
 export default function Auth({ onSignIn, onSignUp }: AuthProps) {

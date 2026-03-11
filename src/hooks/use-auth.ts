@@ -4,6 +4,8 @@ import { enforceRateLimit, RateLimitError } from "@/lib/rate-limiter";
 import { logger, identifyUser, clearUserIdentity } from "@/lib/logger";
 import type { User, Session } from "@supabase/supabase-js";
 
+type AuthErrorLike = { message: string } | null;
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -38,7 +40,7 @@ export function useAuth() {
       enforceRateLimit("auth:signup");
     } catch (e) {
       if (e instanceof RateLimitError) {
-        return { error: { message: e.message } as any };
+        return { error: { message: e.message } as AuthErrorLike };
       }
       throw e;
     }
@@ -55,7 +57,7 @@ export function useAuth() {
       enforceRateLimit("auth:signin");
     } catch (e) {
       if (e instanceof RateLimitError) {
-        return { error: { message: e.message } as any };
+        return { error: { message: e.message } as AuthErrorLike };
       }
       throw e;
     }

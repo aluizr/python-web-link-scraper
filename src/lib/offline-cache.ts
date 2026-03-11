@@ -11,7 +11,7 @@ export interface PendingAction {
   id: string;
   type: "add" | "update" | "delete" | "toggleFavorite" | "reorder";
   timestamp: number;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 /**

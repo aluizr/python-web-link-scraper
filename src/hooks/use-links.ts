@@ -13,12 +13,44 @@ import {
   addPendingAction,
 } from "@/lib/offline-cache";
 import type { LinkItem, Category, SearchFilters } from "@/types/link";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 const LINKS_SELECT_PHASE1 = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, position_in_status, created_at, position, deleted_at, user_id";
 const LINKS_SELECT_PHASE1_NO_STATUS_ORDER = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, status, priority, due_date, created_at, position, deleted_at, user_id";
 const LINKS_SELECT_LEGACY = "id, url, title, description, category, tags, is_favorite, favicon, og_image, notes, created_at, position, deleted_at, user_id";
 
-function isPhase1SchemaError(error: any): boolean {
+type SupabaseError = Pick<PostgrestError, "message" | "details"> | null | undefined;
+
+type LinkRow = {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  category: string;
+  tags: string[] | null;
+  is_favorite: boolean;
+  favicon: string;
+  og_image: string | null;
+  notes: string | null;
+  status?: LinkItem["status"] | null;
+  priority?: LinkItem["priority"] | null;
+  due_date?: string | null;
+  position_in_status?: number | null;
+  created_at: string;
+  position: number | null;
+  deleted_at?: string | null;
+};
+
+type CategoryRow = {
+  id: string;
+  name: string;
+  icon: string | null;
+  parent_id: string | null;
+  position: number | null;
+  color: string | null;
+};
+
+function isPhase1SchemaError(error: SupabaseError): boolean {
   const message = String(error?.message || "").toLowerCase();
   const details = String(error?.details || "").toLowerCase();
   const text = `${message} ${details}`;
@@ -118,7 +150,8 @@ export function useLinks(userId: string | undefined) {
       }
 
       if (linksRes.data) {
-        const mappedLinks = linksRes.data.map((r: any) => ({
+        const linkRows = linksRes.data as unknown as LinkRow[];
+        const mappedLinks = linkRows.map((r) => ({
           id: r.id,
           url: r.url,
           title: r.title,
@@ -141,7 +174,8 @@ export function useLinks(userId: string | undefined) {
         cacheLinks(mappedLinks); // ✅ Salvar no cache offline
       }
       if (catsRes.data) {
-        const mappedCats = catsRes.data.map((r: any) => ({
+        const categoryRows = catsRes.data as unknown as CategoryRow[];
+        const mappedCats = categoryRows.map((r) => ({
           id: r.id,
           name: r.name,
           icon: r.icon || "Folder",
@@ -177,7 +211,7 @@ export function useLinks(userId: string | undefined) {
     const v = parsed.data;
     // ✅ Calcular position (novo link vai para o topo)
     const maxPosition = Math.max(...links.map(l => l.position || 0), -1);
-    const basePayload: Record<string, any> = {
+    const basePayload: Record<string, unknown> = {
         url: v.url,
         title: v.title,
         description: v.description,
@@ -211,7 +245,7 @@ export function useLinks(userId: string | undefined) {
         }
       : basePayload;
 
-    let { data, error }: { data: any; error: any } = await supabase
+    let { data, error }: { data: LinkRow | null; error: PostgrestError | null } = await supabase
       .from("links")
       .insert(payload)
       .select(
@@ -284,7 +318,7 @@ export function useLinks(userId: string | undefined) {
   const updateLink = useCallback(async (id: string, data: Partial<LinkItem>) => {
     return withRateLimit("link:update", async () => {
     // Validate fields that are being updated
-    const partial: any = {};
+    const partial: Record<string, unknown> = {};
     if (data.url !== undefined) {
       const r = linkSchema.shape.url.safeParse(data.url);
       if (!r.success) { toast.error(r.error.errors[0]?.message); return; }
@@ -356,7 +390,7 @@ export function useLinks(userId: string | undefined) {
   const deleteLink = useCallback(async (id: string) => {
     return withRateLimit("link:delete", async () => {
     const now = new Date().toISOString();
-    const { error } = await (supabase.from("links") as any).update({ deleted_at: now }).eq("id", id);
+    const { error } = await supabase.from("links").update({ deleted_at: now }).eq("id", id);
     if (error) {
       logger.error("Erro ao mover link para lixeira", error, { linkId: id });
     } else {
@@ -368,7 +402,7 @@ export function useLinks(userId: string | undefined) {
   // ✅ Restaurar link da lixeira
   const restoreLink = useCallback(async (id: string) => {
     return withRateLimit("link:update", async () => {
-      const { error } = await (supabase.from("links") as any).update({ deleted_at: null }).eq("id", id);
+      const { error } = await supabase.from("links").update({ deleted_at: null }).eq("id", id);
       if (error) {
         logger.error("Erro ao restaurar link", error, { linkId: id });
       } else {
@@ -591,7 +625,7 @@ export function useLinks(userId: string | undefined) {
       // Executar updates em paralelo
       await Promise.all(
         updates.map(({ id, position }) =>
-          (supabase.from("links") as any).update({ position }).eq("id", id)
+          supabase.from("links").update({ position }).eq("id", id)
         )
       );
     } catch (error) {
@@ -620,9 +654,9 @@ export function useLinks(userId: string | undefined) {
 
         await Promise.all(
           updates.map(({ id, status, positionInStatus }) => {
-            const payload: Record<string, any> = { status };
+            const payload: Record<string, unknown> = { status };
             if (statusOrderSchemaAvailableRef.current) payload.position_in_status = positionInStatus;
-            return (supabase.from("links") as any).update(payload).eq("id", id);
+            return supabase.from("links").update(payload).eq("id", id);
           })
         );
       } catch (error) {
@@ -643,7 +677,7 @@ export function useLinks(userId: string | undefined) {
       }));
       await Promise.all(
         updates.map(({ id, position }) =>
-          (supabase.from("categories") as any).update({ position }).eq("id", id)
+          supabase.from("categories").update({ position }).eq("id", id)
         )
       );
     } catch (error) {
@@ -656,7 +690,7 @@ export function useLinks(userId: string | undefined) {
   // ✅ Função para atualizar a cor de uma categoria
   const updateCategoryColor = useCallback(async (id: string, color: string | null) => {
     return withRateLimit("category:update", async () => {
-      const { error } = await (supabase.from("categories") as any).update({ color }).eq("id", id);
+      const { error } = await supabase.from("categories").update({ color }).eq("id", id);
       if (error) {
         logger.error("Erro ao atualizar cor da categoria", error, { categoryId: id });
       } else {
@@ -693,7 +727,11 @@ export function useLinks(userId: string | undefined) {
 
     setSearching(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("search_links", {
+      const searchRpc = supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: PostgrestError | null }>;
+      const { data, error } = await searchRpc("search_links", {
         search_query: query.trim(),
         user_id_param: userId,
       });
@@ -707,7 +745,8 @@ export function useLinks(userId: string | undefined) {
       }
 
       if (data) {
-        const mapped = (data as any[]).map((r: any) => ({
+        const rows = data as LinkRow[];
+        const mapped = rows.map((r) => ({
           id: r.id,
           url: r.url,
           title: r.title,
