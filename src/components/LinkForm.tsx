@@ -156,8 +156,8 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     if (!url) return;
     try {
       const hostname = new URL(url).hostname;
-      // ✅ Usar icon.horse (mais privado que Google)
-      setFavicon(`https://icon.horse/icon/${hostname}?size=32`);
+      // Use Google Favicon Service (consistent with FaviconWithFallback)
+      setFavicon(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`);
     } catch {
       // invalid URL, ignore
     }
