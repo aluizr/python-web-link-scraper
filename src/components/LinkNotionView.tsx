@@ -548,7 +548,7 @@ export function LinkNotionView({
               >
                 {link.ogImage ? (
                   <img
-                    src={link.ogImage}
+                    src={`/og-proxy?url=${encodeURIComponent(link.ogImage)}`}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover"

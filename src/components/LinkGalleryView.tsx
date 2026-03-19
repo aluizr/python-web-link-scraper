@@ -909,7 +909,7 @@ export function LinkGalleryView({
             {link.ogImage ? (
               <div className="w-full overflow-hidden bg-muted">
                 <img
-                  src={link.ogImage}
+                  src={`/og-proxy?url=${encodeURIComponent(link.ogImage)}`}
                   alt=""
                   loading="lazy"
                   className="w-full object-cover transition-transform duration-300 group-hover:scale-105"

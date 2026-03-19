@@ -63,7 +63,7 @@ export function DragDropOverlay({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {draggedLink.ogImage ? (
-              <img src={draggedLink.ogImage} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", background: "#f3f4f6" }} />
+              <img src={`/og-proxy?url=${encodeURIComponent(draggedLink.ogImage!)}`} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", background: "#f3f4f6" }} />
             ) : (
               <span style={{ fontSize: 22, marginRight: 2 }}>🔗</span>
             )}
