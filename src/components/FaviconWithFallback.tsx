@@ -87,7 +87,8 @@ export function FaviconWithFallback({
     try {
       const hostname = new URL(url).hostname;
       if (!hostname) return null;
-      return `https://icon.horse/icon/${hostname}?size=32`;
+      // Google favicon service is more permissive with CORP headers
+      return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
     } catch {
       return null;
     }
