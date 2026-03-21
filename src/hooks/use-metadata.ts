@@ -227,14 +227,6 @@ export function useMetadata() {
       };
     }
 
-    // Check cache first
-    const cacheKey = normalizeUrl(url);
-    const cached = metadataCache.get(cacheKey);
-    if (cached) {
-      setMetadata(cached);
-      return cached;
-    }
-
     setMetadata((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -245,16 +237,22 @@ export function useMetadata() {
       try {
         new URL(normalizedUrl);
       } catch {
-        // If invalid, try adding https://
         if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
           normalizedUrl = "https://" + normalizedUrl;
         }
       }
 
-      // Validate one more time
+      // Strip hash and normalize — use this as both cache key and fetch URL
       const parsedUrl = new URL(normalizedUrl);
-      // Strip hash — never sent to server, causes cache misses
       normalizedUrl = parsedUrl.origin + parsedUrl.pathname + parsedUrl.search;
+
+      // Check cache with the clean URL
+      const cleanCacheKey = normalizedUrl;
+      const cached = metadataCache.get(cleanCacheKey);
+      if (cached) {
+        setMetadata(cached);
+        return cached;
+      }
 
       // Try primary API - Microlink
       let result = await fetchFromMicrolink(normalizedUrl);
@@ -270,7 +268,7 @@ export function useMetadata() {
       }
 
       // Update cache
-      metadataCache.set(cacheKey, result);
+      metadataCache.set(cleanCacheKey, result);
 
       setMetadata(result);
       return result;
