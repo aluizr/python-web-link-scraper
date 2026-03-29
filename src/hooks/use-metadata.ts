@@ -117,11 +117,15 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     const data = await response.json();
     if (!data.data) return null;
 
-    const title = data.data.title || null;
-    if (title && /^error:/i.test(title.trim())) return null;
+    const rawTitle = data.data.title || null;
+    const isErrorTitle = rawTitle && /^error:/i.test(rawTitle.trim());
+    const title = isErrorTitle ? null : rawTitle;
 
-    // Use OG image first, fall back to screenshot
-    const image = data.data.image?.url || data.data.screenshot?.url || null;
+    // Don't use screenshot if the page returned an error status (e.g. 403 CloudFront block)
+    const isErrorStatus = data.statusCode >= 400;
+    const image = data.data.image?.url || (!isErrorStatus ? data.data.screenshot?.url : null) || null;
+
+    if (!title && !image && !data.data.description) return null;
 
     return {
       title,
@@ -279,8 +283,8 @@ export function useMetadata() {
         source: null,
       };
       
-      // Still cache the result
-      metadataCache.set(cacheKey, result);
+      // Still cache the result — use normalized URL if available, else raw
+      metadataCache.set(url.trim(), result);
       
       setMetadata(result);
       return result;
