@@ -127,8 +127,15 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
       return null;
     }
 
+    const title = data.data.title || null;
+
+    // Microlink sometimes returns error pages as valid responses
+    if (title && /^error:/i.test(title.trim())) {
+      return null;
+    }
+
     return {
-      title: data.data.title || null,
+      title,
       description: data.data.description || null,
       image: data.data.image?.url || null,
       favicon: data.data.logo?.url || null,
