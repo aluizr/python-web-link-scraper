@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback, useMemo, useEffect, lazy, Suspense } from "react";
-import { Plus, Download, Upload, LogOut, BarChart3, Clock, Command, Trash2, ShieldCheck, Settings } from "lucide-react";
+import { Plus, Download, Upload, LogOut, BarChart3, Clock, Command, Trash2, ShieldCheck, Settings, Stethoscope } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotionSettingsDialog } from "@/components/NotionSettingsDialog";
+import { LinkDiagnostics } from "@/components/LinkDiagnostics";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { LinkCard } from "@/components/LinkCard";
@@ -103,6 +104,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
   const [trashOpen, setTrashOpen] = useState(false);
   const [linkCheckerOpen, setLinkCheckerOpen] = useState(false);
   const [notionSettingsOpen, setNotionSettingsOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -564,6 +566,9 @@ const Index = ({ user, onSignOut }: IndexProps) => {
               <Button variant="outline" size="icon" onClick={() => setLinkCheckerOpen(true)} title="Verificar links">
                 <ShieldCheck className="h-4 w-4" />
               </Button>
+              <Button variant="outline" size="icon" onClick={() => setDiagnosticsOpen(true)} title="Diagnóstico de Thumbnails">
+                <Stethoscope className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="icon" onClick={() => setNotionSettingsOpen(true)} title="Configurações do Notion">
                 <Settings className="h-4 w-4" />
               </Button>
@@ -831,6 +836,22 @@ const Index = ({ user, onSignOut }: IndexProps) => {
         />
 
         <NotionSettingsDialog open={notionSettingsOpen} onOpenChange={setNotionSettingsOpen} />
+
+        {diagnosticsOpen && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+            <div className="fixed inset-4 z-50 overflow-auto">
+              <div className="container max-w-4xl mx-auto py-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold">Diagnóstico de Links</h2>
+                  <Button variant="outline" onClick={() => setDiagnosticsOpen(false)}>
+                    Fechar
+                  </Button>
+                </div>
+                <LinkDiagnostics links={links} />
+              </div>
+            </div>
+          </div>
+        )}
       </Suspense>
     </SidebarProvider>
   );
