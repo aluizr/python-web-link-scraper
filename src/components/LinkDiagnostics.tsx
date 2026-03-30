@@ -44,11 +44,19 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
         resolve({ status: "success" });
       };
 
-      img.onerror = () => {
+      img.onerror = (e) => {
         clearTimeout(timeout);
-        resolve({ status: "error", error: "Falha ao carregar" });
+        // Try to detect CORS/CORP errors
+        const errorMsg = e.toString();
+        if (errorMsg.includes("CORS") || errorMsg.includes("cross-origin")) {
+          resolve({ status: "error", error: "CORS/CORP bloqueado" });
+        } else {
+          resolve({ status: "error", error: "Falha ao carregar" });
+        }
       };
 
+      // Set crossOrigin to detect CORS issues
+      img.crossOrigin = "anonymous";
       img.src = url;
     });
   };
@@ -161,6 +169,28 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     }
   };
 
+  const autoFixCORS = async () => {
+    const corsLinks = results.filter(
+      (r) => r.hasOgImage && 
+             r.ogImageStatus === "error" && 
+             !r.link.ogImage.startsWith("/og-proxy") &&
+             (r.ogImageError?.includes("CORS") || r.ogImageError?.includes("bloqueado") || r.ogImageError?.includes("Falha"))
+    );
+    
+    if (corsLinks.length === 0) {
+      toast.info("Nenhuma imagem com erro de CORS encontrada");
+      return;
+    }
+
+    toast.info(`Corrigindo ${corsLinks.length} imagens via proxy...`);
+    
+    for (const result of corsLinks) {
+      await forceProxy(result.link.id, result.link.ogImage);
+    }
+    
+    toast.success("Correção de CORS concluída!");
+  };
+
   const fixAllBroken = async () => {
     const brokenLinks = results.filter(
       (r) => (!r.hasOgImage || r.ogImageStatus === "error") && r.link.url
@@ -190,6 +220,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     total: results.length,
     missingThumb: results.filter((r) => !r.hasOgImage || r.ogImageStatus === "error").length,
     missingFavicon: results.filter((r) => !r.hasFavicon || r.faviconStatus === "error").length,
+    corsErrors: results.filter((r) => r.hasOgImage && r.ogImageStatus === "error" && !r.link.ogImage.startsWith("/og-proxy")).length,
     allGood: results.filter((r) => r.hasOgImage && r.ogImageStatus === "success" && r.hasFavicon && r.faviconStatus === "success").length,
   };
 
@@ -208,21 +239,32 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
               {checking ? "Verificando..." : "Iniciar Diagnóstico"}
             </Button>
             
+            {results.length > 0 && stats.corsErrors > 0 && (
+              <Button 
+                onClick={autoFixCORS} 
+                disabled={fixing.size > 0}
+                variant="default"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Corrigir CORS ({stats.corsErrors})
+              </Button>
+            )}
+            
             {results.length > 0 && stats.missingThumb > 0 && (
               <Button 
                 onClick={fixAllBroken} 
                 disabled={fixing.size > 0}
                 variant="secondary"
               >
-                <Wand2 className="h-4 w-4 mr-2" />
-                Corrigir Todos ({stats.missingThumb})
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-buscar Todos ({stats.missingThumb})
               </Button>
             )}
           </div>
 
           {results.length > 0 && (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{stats.total}</div>
@@ -243,7 +285,13 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                 </Card>
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold text-red-600">{stats.missingFavicon}</div>
+                    <div className="text-2xl font-bold text-red-600">{stats.corsErrors}</div>
+                    <div className="text-xs text-muted-foreground">Erros CORS</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold text-orange-600">{stats.missingFavicon}</div>
                     <div className="text-xs text-muted-foreground">Sem favicon</div>
                   </CardContent>
                 </Card>
@@ -301,7 +349,11 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                             <div className="flex gap-2 flex-wrap mb-2">
                               <Badge variant={result.ogImageStatus === "success" ? "default" : result.ogImageStatus === "error" ? "destructive" : "secondary"}>
                                 <Image className="h-3 w-3 mr-1" />
-                                Thumb: {result.hasOgImage ? (result.ogImageStatus === "success" ? "OK" : result.ogImageError || "Erro") : "Vazio"}
+                                Thumb: {result.hasOgImage ? (
+                                  result.ogImageStatus === "success" ? "OK" : 
+                                  (result.ogImageError?.includes("CORS") || result.ogImageError?.includes("bloqueado")) ? "CORS ⚠️" :
+                                  result.ogImageError || "Erro"
+                                ) : "Vazio"}
                               </Badge>
                               <Badge variant={result.faviconStatus === "success" ? "default" : result.faviconStatus === "error" ? "destructive" : "secondary"}>
                                 {result.faviconStatus === "success" ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
