@@ -388,7 +388,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                           </div>
                           {result.hasOgImage && result.ogImageStatus === "success" && (
                             <img
-                              src={result.link.ogImage}
+                              src={result.link.ogImage.startsWith("/og-proxy") ? result.link.ogImage : `/og-proxy?url=${encodeURIComponent(result.link.ogImage)}`}
                               alt=""
                               className="w-20 h-20 object-cover rounded flex-shrink-0"
                             />
