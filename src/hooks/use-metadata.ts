@@ -73,6 +73,55 @@ function normalizeUrl(url: string): string {
   }
 }
 
+/**
+ * Extract original image URL from proxy services (Next.js, Vercel, etc)
+ * These proxies often have CORS restrictions, so we extract the original URL
+ */
+function extractOriginalImageUrl(imageUrl: string): string {
+  if (!imageUrl) return imageUrl;
+  
+  try {
+    const url = new URL(imageUrl);
+    
+    // Next.js Image Optimization: /_next/image?url=...
+    if (url.pathname.includes('/_next/image')) {
+      const originalUrl = url.searchParams.get('url');
+      if (originalUrl) {
+        // If it's a relative URL, make it absolute
+        if (originalUrl.startsWith('http')) {
+          return originalUrl;
+        } else if (originalUrl.startsWith('/')) {
+          return `${url.origin}${originalUrl}`;
+        }
+      }
+    }
+    
+    // Vercel Image Optimization: similar pattern
+    if (url.pathname.includes('/_vercel/image')) {
+      const originalUrl = url.searchParams.get('url');
+      if (originalUrl) {
+        return originalUrl.startsWith('http') ? originalUrl : imageUrl;
+      }
+    }
+    
+    // Cloudflare Image Resizing: /cdn-cgi/image/...
+    if (url.pathname.includes('/cdn-cgi/image/')) {
+      const parts = url.pathname.split('/cdn-cgi/image/');
+      if (parts[1]) {
+        // Extract URL after parameters
+        const afterParams = parts[1].split('/').slice(1).join('/');
+        if (afterParams.startsWith('http')) {
+          return afterParams;
+        }
+      }
+    }
+    
+    return imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
+
 function buildLocalFallback(url: string): LinkMetadata {
   try {
     const parsed = new URL(url);
@@ -122,11 +171,18 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
       return null;
     }
 
+    // Extract original URLs from proxy services
+    let image = notionMetadata.image;
+    if (image) {
+      image = extractOriginalImageUrl(image);
+    }
+
     // If no custom favicon, use Notion's default favicon
     const favicon = notionMetadata.favicon || "https://www.notion.so/images/favicon.ico";
 
     return {
       ...notionMetadata,
+      image,
       favicon,
       loading: false,
       error: null,
@@ -164,7 +220,12 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
 
     // Don't use screenshot if the page returned an error status (e.g. 403 CloudFront block)
     const isErrorStatus = data.statusCode >= 400;
-    const image = data.data.image?.url || (!isErrorStatus ? data.data.screenshot?.url : null) || null;
+    let image = data.data.image?.url || (!isErrorStatus ? data.data.screenshot?.url : null) || null;
+    
+    // Extract original URL from proxy services to avoid CORS issues
+    if (image) {
+      image = extractOriginalImageUrl(image);
+    }
 
     if (!title && !image && !data.data.description) return null;
 
@@ -210,7 +271,12 @@ async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
 
     const title = data.title || data.author_name || data.provider_name || null;
     const description = data.provider_name || null;
-    const image = data.thumbnail_url || null;
+    let image = data.thumbnail_url || null;
+    
+    // Extract original URL from proxy services
+    if (image) {
+      image = extractOriginalImageUrl(image);
+    }
 
     if (!title && !description && !image) {
       return null;
