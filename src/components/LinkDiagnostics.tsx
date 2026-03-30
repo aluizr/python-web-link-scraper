@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Image, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { ExternalLink, Image, AlertCircle, CheckCircle, XCircle, RefreshCw, Wand2 } from "lucide-react";
+import { useMetadata } from "@/hooks/use-metadata";
+import { toast } from "sonner";
 import type { LinkItem } from "@/types/link";
 
 interface LinkDiagnosticsProps {
   links: LinkItem[];
+  onUpdateLink: (id: string, data: Partial<LinkItem>) => void;
 }
 
 interface DiagnosticResult {
@@ -19,10 +22,12 @@ interface DiagnosticResult {
   faviconError?: string;
 }
 
-export function LinkDiagnostics({ links }: LinkDiagnosticsProps) {
+export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
   const [results, setResults] = useState<DiagnosticResult[]>([]);
   const [checking, setChecking] = useState(false);
   const [filter, setFilter] = useState<"all" | "missing-thumb" | "missing-favicon">("all");
+  const [fixing, setFixing] = useState<Set<string>>(new Set());
+  const { fetchMetadata } = useMetadata();
 
   const checkImage = async (url: string): Promise<{ status: "success" | "error"; error?: string }> => {
     if (!url) return { status: "error", error: "URL vazia" };
@@ -90,6 +95,91 @@ export function LinkDiagnostics({ links }: LinkDiagnosticsProps) {
     setChecking(false);
   };
 
+  const fixLink = async (linkId: string, url: string) => {
+    setFixing((prev) => new Set(prev).add(linkId));
+    
+    try {
+      toast.info("Buscando metadados novamente...");
+      
+      // Fetch fresh metadata
+      const metadata = await fetchMetadata(url);
+      
+      if (metadata.title || metadata.image || metadata.favicon) {
+        // Update the link with new metadata
+        onUpdateLink(linkId, {
+          title: metadata.title || undefined,
+          ogImage: metadata.image || "",
+          favicon: metadata.favicon || "",
+          description: metadata.description || "",
+        });
+        
+        toast.success("Metadados atualizados!");
+        
+        // Re-run diagnostics for this link
+        await runDiagnostics();
+      } else {
+        toast.warning("Não foi possível obter metadados");
+      }
+    } catch (err) {
+      console.error("Error fixing link:", err);
+      toast.error("Erro ao buscar metadados");
+    } finally {
+      setFixing((prev) => {
+        const next = new Set(prev);
+        next.delete(linkId);
+        return next;
+      });
+    }
+  };
+
+  const forceProxy = async (linkId: string, ogImageUrl: string) => {
+    setFixing((prev) => new Set(prev).add(linkId));
+    
+    try {
+      // Route through proxy
+      const proxiedUrl = `/og-proxy?url=${encodeURIComponent(ogImageUrl)}`;
+      
+      // Test if proxy works
+      const result = await checkImage(proxiedUrl);
+      
+      if (result.status === "success") {
+        onUpdateLink(linkId, { ogImage: proxiedUrl });
+        toast.success("Imagem roteada pelo proxy!");
+        await runDiagnostics();
+      } else {
+        toast.error("Proxy também falhou: " + result.error);
+      }
+    } catch (err) {
+      console.error("Error proxying image:", err);
+      toast.error("Erro ao rotear pelo proxy");
+    } finally {
+      setFixing((prev) => {
+        const next = new Set(prev);
+        next.delete(linkId);
+        return next;
+      });
+    }
+  };
+
+  const fixAllBroken = async () => {
+    const brokenLinks = results.filter(
+      (r) => (!r.hasOgImage || r.ogImageStatus === "error") && r.link.url
+    );
+    
+    if (brokenLinks.length === 0) {
+      toast.info("Nenhum link quebrado encontrado");
+      return;
+    }
+
+    toast.info(`Corrigindo ${brokenLinks.length} links...`);
+    
+    for (const result of brokenLinks) {
+      await fixLink(result.link.id, result.link.url);
+    }
+    
+    toast.success("Correção em lote concluída!");
+  };
+
   const filteredResults = results.filter((r) => {
     if (filter === "missing-thumb") return !r.hasOgImage || r.ogImageStatus === "error";
     if (filter === "missing-favicon") return !r.hasFavicon || r.faviconStatus === "error";
@@ -113,9 +203,22 @@ export function LinkDiagnostics({ links }: LinkDiagnosticsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={runDiagnostics} disabled={checking || links.length === 0}>
-            {checking ? "Verificando..." : "Iniciar Diagnóstico"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={runDiagnostics} disabled={checking || links.length === 0}>
+              {checking ? "Verificando..." : "Iniciar Diagnóstico"}
+            </Button>
+            
+            {results.length > 0 && stats.missingThumb > 0 && (
+              <Button 
+                onClick={fixAllBroken} 
+                disabled={fixing.size > 0}
+                variant="secondary"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Corrigir Todos ({stats.missingThumb})
+              </Button>
+            )}
+          </div>
 
           {results.length > 0 && (
             <>
@@ -171,52 +274,85 @@ export function LinkDiagnostics({ links }: LinkDiagnosticsProps) {
               </div>
 
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                {filteredResults.map((result) => (
-                  <Card key={result.link.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <a
-                              href={result.link.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium hover:underline truncate"
-                            >
-                              {result.link.title || result.link.url}
-                            </a>
-                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate mb-2">
-                            {result.link.url}
-                          </div>
-                          <div className="flex gap-2 flex-wrap">
-                            <Badge variant={result.ogImageStatus === "success" ? "default" : result.ogImageStatus === "error" ? "destructive" : "secondary"}>
-                              <Image className="h-3 w-3 mr-1" />
-                              Thumb: {result.hasOgImage ? (result.ogImageStatus === "success" ? "OK" : result.ogImageError || "Erro") : "Vazio"}
-                            </Badge>
-                            <Badge variant={result.faviconStatus === "success" ? "default" : result.faviconStatus === "error" ? "destructive" : "secondary"}>
-                              {result.faviconStatus === "success" ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
-                              Favicon: {result.hasFavicon ? (result.faviconStatus === "success" ? "OK" : result.faviconError || "Erro") : "Vazio"}
-                            </Badge>
-                          </div>
-                          {result.hasOgImage && (
-                            <div className="text-xs text-muted-foreground mt-2 truncate">
-                              OG Image: {result.link.ogImage}
+                {filteredResults.map((result) => {
+                  const isFixing = fixing.has(result.link.id);
+                  const canFix = !result.hasOgImage || result.ogImageStatus === "error";
+                  const canProxy = result.hasOgImage && result.ogImageStatus === "error" && !result.link.ogImage.startsWith("/og-proxy");
+                  
+                  return (
+                    <Card key={result.link.id}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <a
+                                href={result.link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium hover:underline truncate"
+                              >
+                                {result.link.title || result.link.url}
+                              </a>
+                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
                             </div>
+                            <div className="text-xs text-muted-foreground truncate mb-2">
+                              {result.link.url}
+                            </div>
+                            <div className="flex gap-2 flex-wrap mb-2">
+                              <Badge variant={result.ogImageStatus === "success" ? "default" : result.ogImageStatus === "error" ? "destructive" : "secondary"}>
+                                <Image className="h-3 w-3 mr-1" />
+                                Thumb: {result.hasOgImage ? (result.ogImageStatus === "success" ? "OK" : result.ogImageError || "Erro") : "Vazio"}
+                              </Badge>
+                              <Badge variant={result.faviconStatus === "success" ? "default" : result.faviconStatus === "error" ? "destructive" : "secondary"}>
+                                {result.faviconStatus === "success" ? <CheckCircle className="h-3 w-3 mr-1" /> : <XCircle className="h-3 w-3 mr-1" />}
+                                Favicon: {result.hasFavicon ? (result.faviconStatus === "success" ? "OK" : result.faviconError || "Erro") : "Vazio"}
+                              </Badge>
+                            </div>
+                            
+                            {canFix && (
+                              <div className="flex gap-2 mb-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => fixLink(result.link.id, result.link.url)}
+                                  disabled={isFixing}
+                                >
+                                  <RefreshCw className={`h-3 w-3 mr-1 ${isFixing ? "animate-spin" : ""}`} />
+                                  {isFixing ? "Corrigindo..." : "Re-buscar Metadados"}
+                                </Button>
+                                
+                                {canProxy && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => forceProxy(result.link.id, result.link.ogImage)}
+                                    disabled={isFixing}
+                                  >
+                                    <Wand2 className="h-3 w-3 mr-1" />
+                                    Forçar Proxy
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                            
+                            {result.hasOgImage && (
+                              <div className="text-xs text-muted-foreground mt-2 truncate">
+                                OG Image: {result.link.ogImage}
+                              </div>
+                            )}
+                          </div>
+                          {result.hasOgImage && result.ogImageStatus === "success" && (
+                            <img
+                              src={result.link.ogImage}
+                              alt=""
+                              className="w-20 h-20 object-cover rounded flex-shrink-0"
+                            />
                           )}
                         </div>
-                        {result.hasOgImage && result.ogImageStatus === "success" && (
-                          <img
-                            src={result.link.ogImage}
-                            alt=""
-                            className="w-20 h-20 object-cover rounded flex-shrink-0"
-                          />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </>
           )}

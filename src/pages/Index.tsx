@@ -847,7 +847,7 @@ const Index = ({ user, onSignOut }: IndexProps) => {
                     Fechar
                   </Button>
                 </div>
-                <LinkDiagnostics links={links} />
+                <LinkDiagnostics links={links} onUpdateLink={updateLink} />
               </div>
             </div>
           </div>
