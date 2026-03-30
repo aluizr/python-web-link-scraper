@@ -1,3 +1,5 @@
+2026-03-30 - fix: trata erro de refresh token expirado no Supabase
+2026-03-30 - chore: atualiza commits-by-date.txt
 2026-03-30 - feat: implementa integração completa com Notion API
 2026-03-29 - fix(metadata): skip screenshot when page returns 4xx error status
 2026-03-29 - fix(csp): allow *.microlink.io subdomains for screenshot images
