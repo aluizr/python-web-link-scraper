@@ -40,9 +40,9 @@ When you add a Notion page, the app will fetch:
 | Field | Source |
 |-------|--------|
 | **Title** | Page's `Name` or `Title` property |
-| **Description** | Page's `Description` field (first 200 chars) |
+| **Description** | Page's `Description` property or first paragraph/heading (first 200 chars) |
 | **Image** | Page cover image URL |
-| **Icon** | Notion favicon |
+| **Icon** | Page icon (external/file) or Notion default favicon |
 
 ## 🔒 Security & Privacy
 

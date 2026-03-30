@@ -122,8 +122,12 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
       return null;
     }
 
+    // If no custom favicon, use Notion's default favicon
+    const favicon = notionMetadata.favicon || "https://www.notion.so/images/favicon.ico";
+
     return {
       ...notionMetadata,
+      favicon,
       loading: false,
       error: null,
       source: "notion",

@@ -56,6 +56,65 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
       }
     }
 
+    // Extract description from properties (if exists as a property)
+    let description: string | null = null;
+    if (data.properties) {
+      // Try to find a "Description" property (rich_text type)
+      const descProp = Object.values(data.properties).find(
+        (prop: any) => prop.type === "rich_text" && (prop.name === "Description" || prop.name === "description")
+      ) as any;
+      
+      if (descProp?.rich_text?.[0]?.plain_text) {
+        description = descProp.rich_text[0].plain_text;
+        // Limit to 200 chars as promised in the guide
+        if (description.length > 200) {
+          description = description.substring(0, 200) + "...";
+        }
+      }
+    }
+
+    // If no description property, try to fetch first block content
+    if (!description) {
+      try {
+        const blocksResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=3`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiToken}`,
+            "Notion-Version": NOTION_API_VERSION,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (blocksResponse.ok) {
+          const blocksData = await blocksResponse.json();
+          // Extract text from first paragraph or text block
+          for (const block of blocksData.results || []) {
+            if (block.type === "paragraph" && block.paragraph?.rich_text?.[0]?.plain_text) {
+              description = block.paragraph.rich_text.map((t: any) => t.plain_text).join("");
+              if (description.length > 200) {
+                description = description.substring(0, 200) + "...";
+              }
+              break;
+            } else if (block.type === "heading_1" && block.heading_1?.rich_text?.[0]?.plain_text) {
+              description = block.heading_1.rich_text.map((t: any) => t.plain_text).join("");
+              if (description.length > 200) {
+                description = description.substring(0, 200) + "...";
+              }
+              break;
+            } else if (block.type === "heading_2" && block.heading_2?.rich_text?.[0]?.plain_text) {
+              description = block.heading_2.rich_text.map((t: any) => t.plain_text).join("");
+              if (description.length > 200) {
+                description = description.substring(0, 200) + "...";
+              }
+              break;
+            }
+          }
+        }
+      } catch (blockErr) {
+        console.debug("Failed to fetch blocks for description:", blockErr);
+      }
+    }
+
     // Extract cover image
     let image: string | null = null;
     if (data.cover) {
@@ -73,10 +132,14 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
         favicon = data.icon.external?.url || null;
       } else if (data.icon.type === "file") {
         favicon = data.icon.file?.url || null;
+      } else if (data.icon.type === "emoji") {
+        // For emoji icons, we could use them directly or convert to image
+        // For now, we'll skip emoji and use default Notion favicon
+        favicon = null;
       }
     }
 
-    return { title, description: null, image, favicon };
+    return { title, description, image, favicon };
   } catch (err) {
     console.debug("Notion API fetch error:", err);
     return null;
