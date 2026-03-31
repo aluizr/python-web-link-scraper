@@ -89,7 +89,19 @@ export default defineConfig(({ mode }) => ({
                 upstream.on("end", () => {
                   // Extract og:image from HTML
                   const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
-                  const ogImage = ogImageMatch ? ogImageMatch[1] : null;
+                  let ogImage = ogImageMatch ? ogImageMatch[1] : null;
+
+                  // Make relative URLs absolute
+                  if (ogImage && !ogImage.startsWith('http')) {
+                    try {
+                      const baseUrl = new URL(rawUrl);
+                      ogImage = new URL(ogImage, baseUrl.origin).href;
+                      console.log("[html-proxy] Converted relative URL to absolute:", ogImage);
+                    } catch (e) {
+                      console.log("[html-proxy] Failed to convert relative URL:", e.message);
+                      ogImage = null;
+                    }
+                  }
 
                   // Extract og:title
                   const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
@@ -225,6 +237,16 @@ export default defineConfig(({ mode }) => ({
                       upstream.resume();
                       return fetchUrl("https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg", redirectCount);
                     }
+                    
+                    // NanoBanana fallback - try favicon instead
+                    if (hostname.includes('nanobananaimg.com')) {
+                      console.log("[og-proxy] Trying NanoBanana favicon fallback");
+                      upstream.resume();
+                      return fetchUrl("https://nanobananaimg.com/favicon.ico", redirectCount);
+                    }
+                    
+                    // Generic fallback - try to get favicon from Google
+                    console.log("[og-proxy] Image not found, no specific fallback available");
                   }
                   
                   res.statusCode = upstream.statusCode;

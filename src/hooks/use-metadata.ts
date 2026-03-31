@@ -195,6 +195,41 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
 }
 
 /**
+ * Known fallback images for sites that block scraping or have broken OG images
+ */
+const KNOWN_FALLBACKS: Record<string, string> = {
+  'claude.ai': 'https://claude.ai/images/claude_ogimage.png',
+  'kaggle.com': 'https://www.kaggle.com/static/images/site-logo.svg',
+  'joblib.readthedocs.io': 'https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg',
+  'nanobananaimg.com': 'https://nanobananaimg.com/favicon.ico', // Fallback to favicon if OG image doesn't exist
+};
+
+/**
+ * Get fallback image for known problematic domains
+ */
+function getKnownFallback(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname;
+    
+    // Check exact matches first
+    if (KNOWN_FALLBACKS[hostname]) {
+      return KNOWN_FALLBACKS[hostname];
+    }
+    
+    // Check partial matches
+    for (const [domain, fallback] of Object.entries(KNOWN_FALLBACKS)) {
+      if (hostname.includes(domain)) {
+        return fallback;
+      }
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Try to extract OG image directly from HTML when APIs fail
  * Uses server-side proxy to avoid CSP restrictions
  */
@@ -216,7 +251,23 @@ async function fetchOgImageFromHtml(url: string): Promise<string | null> {
     
     if (data.ogImage) {
       console.log("[fetchOgImageFromHtml] Found OG image:", data.ogImage);
-      return data.ogImage;
+      
+      // Validate that the image URL is absolute
+      try {
+        new URL(data.ogImage);
+        return data.ogImage;
+      } catch {
+        // If relative URL, make it absolute
+        try {
+          const baseUrl = new URL(url);
+          const absoluteUrl = new URL(data.ogImage, baseUrl.origin).href;
+          console.log("[fetchOgImageFromHtml] Converted relative to absolute:", absoluteUrl);
+          return absoluteUrl;
+        } catch {
+          console.log("[fetchOgImageFromHtml] Failed to convert relative URL");
+          return null;
+        }
+      }
     }
 
     console.log("[fetchOgImageFromHtml] No OG image found in HTML");
@@ -267,28 +318,22 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     console.log("[fetchFromMicrolink] Microlink image:", image);
     console.log("[fetchFromMicrolink] Microlink statusCode:", data.statusCode);
     
-    // If no OG image, try fetching directly from HTML
-    // This works even when Microlink succeeds but can't extract the image
+    // If no OG image, try known fallbacks for specific domains FIRST
+    // This avoids unnecessary HTML fetches for sites we know are blocked
+    if (!image) {
+      const fallback = getKnownFallback(url);
+      if (fallback) {
+        console.log("[fetchFromMicrolink] Using known fallback:", fallback);
+        image = fallback;
+      }
+    }
+    
+    // If still no image, try fetching directly from HTML
+    // This works for sites that Microlink can't access but we can
     if (!image) {
       console.log("[fetchFromMicrolink] No OG image from Microlink, trying direct HTML fetch");
       image = await fetchOgImageFromHtml(url);
       console.log("[fetchFromMicrolink] HTML fetch result:", image);
-    }
-    
-    // If still no image, try known fallbacks for specific domains
-    if (!image) {
-      try {
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname;
-        
-        // Claude.ai has a known OG image that Cloudflare blocks from being fetched
-        if (hostname.includes('claude.ai')) {
-          console.log("[fetchFromMicrolink] Using Claude fallback OG image");
-          image = "https://claude.ai/images/claude_ogimage.png";
-        }
-      } catch (err) {
-        console.debug("Error checking domain for fallback:", err);
-      }
     }
     
     // If still no image, use screenshot as last resort
