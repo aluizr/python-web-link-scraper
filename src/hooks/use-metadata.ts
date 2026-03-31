@@ -267,9 +267,10 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     console.log("[fetchFromMicrolink] Microlink image:", image);
     console.log("[fetchFromMicrolink] Microlink statusCode:", data.statusCode);
     
-    // If no OG image and we got an error, try fetching directly from HTML
-    if (!image && data.statusCode >= 400) {
-      console.log("[fetchFromMicrolink] Microlink failed, trying direct HTML fetch for OG image");
+    // If no OG image, try fetching directly from HTML
+    // This works even when Microlink succeeds but can't extract the image
+    if (!image) {
+      console.log("[fetchFromMicrolink] No OG image from Microlink, trying direct HTML fetch");
       image = await fetchOgImageFromHtml(url);
       console.log("[fetchFromMicrolink] HTML fetch result:", image);
     }
