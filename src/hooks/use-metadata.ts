@@ -205,6 +205,13 @@ const KNOWN_FALLBACKS: Record<string, string> = {
 };
 
 /**
+ * Known fallback favicons for sites with CORS-blocked favicons
+ */
+const KNOWN_FAVICON_FALLBACKS: Record<string, string> = {
+  'claude.ai': 'https://claude.ai/images/claude_app_icon.png',
+};
+
+/**
  * Get fallback image for known problematic domains
  */
 function getKnownFallback(url: string): string | null {
@@ -218,6 +225,31 @@ function getKnownFallback(url: string): string | null {
     
     // Check partial matches
     for (const [domain, fallback] of Object.entries(KNOWN_FALLBACKS)) {
+      if (hostname.includes(domain)) {
+        return fallback;
+      }
+    }
+    
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get fallback favicon for known problematic domains
+ */
+function getKnownFaviconFallback(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname;
+    
+    // Check exact matches first
+    if (KNOWN_FAVICON_FALLBACKS[hostname]) {
+      return KNOWN_FAVICON_FALLBACKS[hostname];
+    }
+    
+    // Check partial matches
+    for (const [domain, fallback] of Object.entries(KNOWN_FAVICON_FALLBACKS)) {
       if (hostname.includes(domain)) {
         return fallback;
       }
@@ -353,13 +385,23 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
 
     console.log("[fetchFromMicrolink] Final image:", image);
 
+    // Get favicon with fallback for known problematic sites
+    let favicon = data.data.logo?.url || null;
+    if (!favicon) {
+      const faviconFallback = getKnownFaviconFallback(url);
+      if (faviconFallback) {
+        console.log("[fetchFromMicrolink] Using known favicon fallback:", faviconFallback);
+        favicon = faviconFallback;
+      }
+    }
+
     if (!title && !image && !data.data.description) return null;
 
     return {
       title,
       description: data.data.description || null,
       image,
-      favicon: data.data.logo?.url || null,
+      favicon,
       loading: false,
       error: null,
       source: "microlink",
