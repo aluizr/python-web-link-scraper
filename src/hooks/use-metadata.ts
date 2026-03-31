@@ -196,38 +196,27 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
 
 /**
  * Try to extract OG image directly from HTML when APIs fail
+ * Uses server-side proxy to avoid CSP restrictions
  */
 async function fetchOgImageFromHtml(url: string): Promise<string | null> {
   try {
-    console.log("[fetchOgImageFromHtml] Fetching HTML from:", url);
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      },
-    });
+    console.log("[fetchOgImageFromHtml] Fetching HTML via proxy from:", url);
+    
+    // Use server-side proxy to avoid CSP restrictions
+    const proxyUrl = `/html-proxy?url=${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl);
 
     if (!response.ok) {
-      console.log("[fetchOgImageFromHtml] Response not OK:", response.status);
+      console.log("[fetchOgImageFromHtml] Proxy response not OK:", response.status);
       return null;
     }
 
-    const html = await response.text();
-    console.log("[fetchOgImageFromHtml] HTML length:", html.length);
+    const data = await response.json();
+    console.log("[fetchOgImageFromHtml] Proxy returned:", data);
     
-    // Try to extract og:image
-    const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
-    if (ogImageMatch && ogImageMatch[1]) {
-      console.log("[fetchOgImageFromHtml] Found OG image:", ogImageMatch[1]);
-      return ogImageMatch[1];
-    }
-
-    // Try alternative format
-    const ogImageMatch2 = html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i);
-    if (ogImageMatch2 && ogImageMatch2[1]) {
-      console.log("[fetchOgImageFromHtml] Found OG image (alt format):", ogImageMatch2[1]);
-      return ogImageMatch2[1];
+    if (data.ogImage) {
+      console.log("[fetchOgImageFromHtml] Found OG image:", data.ogImage);
+      return data.ogImage;
     }
 
     console.log("[fetchOgImageFromHtml] No OG image found in HTML");

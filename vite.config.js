@@ -32,6 +32,95 @@ export default defineConfig(({ mode }) => ({
       {
         name: "og-image-proxy",
         configureServer(server) {
+          // Proxy para buscar HTML e extrair metadados
+          server.middlewares.use("/html-proxy", async (req, res) => {
+            const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
+            
+            console.log("[html-proxy] Request for:", rawUrl);
+            
+            if (!rawUrl) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: "Missing url parameter" }));
+              return;
+            }
+
+            try {
+              new URL(rawUrl);
+            } catch (e) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: "Invalid URL format" }));
+              return;
+            }
+
+            const fetchUrl = (urlStr) => {
+              let target;
+              try {
+                target = new URL(urlStr);
+              } catch (e) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: "Invalid url" }));
+                return;
+              }
+
+              const client = target.protocol === "https:" ? https : http;
+              const options = {
+                hostname: target.hostname,
+                path: target.pathname + target.search,
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                },
+              };
+
+              client.get(options, (upstream) => {
+                console.log("[html-proxy] Response status:", upstream.statusCode);
+
+                if (upstream.statusCode >= 400) {
+                  res.statusCode = upstream.statusCode;
+                  res.end(JSON.stringify({ error: `Upstream error: ${upstream.statusCode}` }));
+                  return;
+                }
+
+                let html = "";
+                upstream.on("data", (chunk) => {
+                  html += chunk.toString();
+                });
+
+                upstream.on("end", () => {
+                  // Extract og:image from HTML
+                  const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+                  const ogImage = ogImageMatch ? ogImageMatch[1] : null;
+
+                  // Extract og:title
+                  const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
+                  const ogTitle = ogTitleMatch ? ogTitleMatch[1] : null;
+
+                  // Extract og:description
+                  const ogDescMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
+                  const ogDescription = ogDescMatch ? ogDescMatch[1] : null;
+
+                  console.log("[html-proxy] Extracted metadata:", { ogImage, ogTitle, ogDescription });
+
+                  res.setHeader("Content-Type", "application/json");
+                  res.setHeader("Access-Control-Allow-Origin", "*");
+                  res.statusCode = 200;
+                  res.end(JSON.stringify({
+                    ogImage,
+                    ogTitle,
+                    ogDescription,
+                  }));
+                });
+              }).on("error", (err) => {
+                console.error("[html-proxy] Error:", err.message);
+                res.statusCode = 502;
+                res.end(JSON.stringify({ error: err.message }));
+              });
+            };
+
+            fetchUrl(rawUrl);
+          });
+
+          // Proxy para imagens
           server.middlewares.use("/og-proxy", (req, res) => {
             const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
             
