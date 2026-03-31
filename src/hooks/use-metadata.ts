@@ -195,6 +195,42 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
 }
 
 /**
+ * Try to extract OG image directly from HTML when APIs fail
+ */
+async function fetchOgImageFromHtml(url: string): Promise<string | null> {
+  try {
+    const response = await fetchWithTimeout(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const html = await response.text();
+    
+    // Try to extract og:image
+    const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+    if (ogImageMatch && ogImageMatch[1]) {
+      return ogImageMatch[1];
+    }
+
+    // Try alternative format
+    const ogImageMatch2 = html.match(/<meta\s+content=["']([^"']+)["']\s+property=["']og:image["']/i);
+    if (ogImageMatch2 && ogImageMatch2[1]) {
+      return ogImageMatch2[1];
+    }
+
+    return null;
+  } catch (err) {
+    console.debug("Failed to fetch OG image from HTML:", err);
+    return null;
+  }
+}
+
+/**
  * Try to extract metadata using Microlink API with fallback
  */
 async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
@@ -229,9 +265,19 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
       }
     }
 
-    // Use screenshot as fallback when no OG image is available
-    // Screenshot is useful for JS-rendered sites even if they return error status
-    let image = data.data.image?.url || data.data.screenshot?.url || null;
+    // Try to get OG image from original source
+    let image = data.data.image?.url || null;
+    
+    // If no OG image and we got an error, try fetching directly from HTML
+    if (!image && data.statusCode >= 400) {
+      console.debug("Microlink failed, trying direct HTML fetch for OG image");
+      image = await fetchOgImageFromHtml(url);
+    }
+    
+    // If still no image, use screenshot as last resort
+    if (!image) {
+      image = data.data.screenshot?.url || null;
+    }
     
     // Extract original URL from proxy services to avoid CORS issues
     if (image) {
