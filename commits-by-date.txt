@@ -1,3 +1,5 @@
+2026-03-30 - fix: adiciona fallback para logo do Kaggle quando OG image retorna 404
+2026-03-30 - chore: atualiza commits-by-date.txt
 2026-03-30 - feat: melhora logs e tratamento de erros no og-proxy
 2026-03-30 - chore: atualiza commits-by-date.txt
 2026-03-30 - feat: adiciona limpeza automática de URLs de proxy em links existentes
