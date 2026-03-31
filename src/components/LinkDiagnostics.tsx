@@ -280,34 +280,32 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
   };
 
   const ensureAllImagesUseProxy = async () => {
-    // Find all links with external images not using proxy
-    const linksNeedingProxy = results.filter(
-      (r) => r.hasOgImage && 
-             r.link.ogImage.startsWith('http') && 
-             !r.link.ogImage.startsWith('/og-proxy')
-    );
+    // Find all links with images (external or already proxied)
+    const allImageLinks = results.filter((r) => r.hasOgImage);
     
-    if (linksNeedingProxy.length === 0) {
-      toast.info("Todas as imagens já usam proxy!");
+    if (allImageLinks.length === 0) {
+      toast.info("Nenhum link com imagem encontrado!");
       return;
     }
 
-    toast.info(`Atualizando ${linksNeedingProxy.length} imagens para usar proxy...`);
+    toast.info(`Verificando ${allImageLinks.length} imagens...`);
     
     let updated = 0;
-    for (const result of linksNeedingProxy) {
+    for (const result of allImageLinks) {
       setFixing((prev) => new Set(prev).add(result.link.id));
       
       try {
-        // Don't double-encode if already has /og-proxy
+        // Clean any proxy wrappers (removes /og-proxy, _next/image, etc)
         const cleanUrl = cleanProxyUrl(result.link.ogImage);
         
-        // Update to use proxy
-        onUpdateLink(result.link.id, { 
-          ogImage: cleanUrl 
-        });
-        
-        updated++;
+        // Only update if URL changed
+        if (cleanUrl !== result.link.ogImage) {
+          console.log(`[ensureAllImagesUseProxy] Cleaning: ${result.link.ogImage} -> ${cleanUrl}`);
+          onUpdateLink(result.link.id, { 
+            ogImage: cleanUrl 
+          });
+          updated++;
+        }
       } catch (err) {
         console.error("Error updating link:", result.link.id, err);
       } finally {
@@ -319,8 +317,12 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
       }
     }
     
-    await runDiagnostics();
-    toast.success(`${updated} imagens atualizadas para usar proxy!`);
+    if (updated > 0) {
+      await runDiagnostics();
+      toast.success(`${updated} URLs limpas! As imagens agora usarão o proxy automaticamente.`);
+    } else {
+      toast.info("Todas as URLs já estão limpas!");
+    }
   };
 
   const filteredResults = results.filter((r) => {
