@@ -1026,7 +1026,7 @@ export function LinkCardsView({
               )}
               {link.ogImage ? (
                 <img
-                  src={ensureProxied(link.ogImage)}
+                  src={link.ogImage}
                   alt=""
                   loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

@@ -1109,7 +1109,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                 {link.ogImage && (
                   <div className="w-full h-24 overflow-hidden bg-muted">
                     <img
-                      src={ensureProxied(link.ogImage)}
+                      src={link.ogImage}
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover"
