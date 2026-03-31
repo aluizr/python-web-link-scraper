@@ -86,6 +86,10 @@ export function FaviconWithFallback({
   const faviconUrl = (() => {
     // If custom favicon provided, use proxy for external URLs
     if (favicon && favicon.startsWith("http")) {
+      // Don't proxy Google Favicon Service - it already has permissive CORS
+      if (favicon.includes('google.com/s2/favicons')) {
+        return favicon;
+      }
       return ensureProxied(favicon);
     }
     
