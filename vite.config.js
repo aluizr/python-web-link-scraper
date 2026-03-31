@@ -82,10 +82,15 @@ export default defineConfig(({ mode }) => ({
                   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                   "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
                   "Accept-Language": "en-US,en;q=0.9",
-                  "Referer": target.origin,
+                  "Accept-Encoding": "gzip, deflate, br",
+                  "Referer": target.origin + "/",
+                  "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                  "sec-ch-ua-mobile": "?0",
+                  "sec-ch-ua-platform": '"Windows"',
                   "sec-fetch-dest": "image",
                   "sec-fetch-mode": "no-cors",
-                  "sec-fetch-site": "cross-site",
+                  "sec-fetch-site": "same-origin",
+                  "DNT": "1",
                 },
               };
               
@@ -105,6 +110,14 @@ export default defineConfig(({ mode }) => ({
                 // Handle error status codes
                 if (upstream.statusCode >= 400) {
                   console.error("[og-proxy] Upstream error:", upstream.statusCode, urlStr);
+                  
+                  // Try fallback for known sites with broken OG images
+                  if (upstream.statusCode === 404 && target.hostname.includes('kaggle.com')) {
+                    console.log("[og-proxy] Trying Kaggle fallback logo");
+                    upstream.resume();
+                    return fetchUrl("https://www.kaggle.com/static/images/site-logo.svg", redirectCount);
+                  }
+                  
                   res.statusCode = upstream.statusCode;
                   res.end(`Upstream error: ${upstream.statusCode}`);
                   return;
