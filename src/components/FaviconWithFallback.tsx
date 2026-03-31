@@ -133,6 +133,7 @@ export function FaviconWithFallback({
       style={{ width: size, height: size }}
       onError={() => setFailed(true)}
       loading="lazy"
+      referrerPolicy="no-referrer"
     />
   );
 }
