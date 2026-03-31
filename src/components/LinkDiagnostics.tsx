@@ -279,6 +279,33 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     toast.success("Correção em lote concluída!");
   };
 
+  const refetchAllMetadata = async () => {
+    if (results.length === 0) {
+      toast.info("Nenhum link encontrado");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Isso vai re-buscar metadados de ${results.length} links. Pode demorar alguns minutos. Continuar?`
+    );
+    
+    if (!confirmed) return;
+
+    toast.info(`Re-buscando metadados de ${results.length} links...`);
+    
+    let updated = 0;
+    for (const result of results) {
+      try {
+        await fixLink(result.link.id, result.link.url);
+        updated++;
+      } catch (err) {
+        console.error("Error refetching metadata:", result.link.id, err);
+      }
+    }
+    
+    toast.success(`${updated} links atualizados!`);
+  };
+
   const ensureAllImagesUseProxy = async () => {
     // Find all links with images (external or already proxied)
     const allImageLinks = results.filter((r) => r.hasOgImage);
@@ -455,7 +482,18 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                 variant="secondary"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Re-buscar Todos ({stats.missingThumb})
+                Re-buscar Quebrados ({stats.missingThumb})
+              </Button>
+            )}
+            
+            {results.length > 0 && (
+              <Button 
+                onClick={refetchAllMetadata} 
+                disabled={fixing.size > 0}
+                variant="outline"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-buscar Todos ({results.length})
               </Button>
             )}
           </div>

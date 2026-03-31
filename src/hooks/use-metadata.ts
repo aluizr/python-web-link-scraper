@@ -275,6 +275,22 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
       console.log("[fetchFromMicrolink] HTML fetch result:", image);
     }
     
+    // If still no image, try known fallbacks for specific domains
+    if (!image) {
+      try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+        
+        // Claude.ai has a known OG image that Cloudflare blocks from being fetched
+        if (hostname.includes('claude.ai')) {
+          console.log("[fetchFromMicrolink] Using Claude fallback OG image");
+          image = "https://claude.ai/images/claude_ogimage.png";
+        }
+      } catch (err) {
+        console.debug("Error checking domain for fallback:", err);
+      }
+    }
+    
     // If still no image, use screenshot as last resort
     if (!image) {
       image = data.data.screenshot?.url || null;
