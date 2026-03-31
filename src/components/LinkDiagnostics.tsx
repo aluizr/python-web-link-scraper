@@ -139,6 +139,19 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
   const cleanProxyUrl = (imageUrl: string): string => {
     if (!imageUrl) return imageUrl;
     
+    // Remove /og-proxy wrapper if present
+    if (imageUrl.startsWith('/og-proxy?url=')) {
+      try {
+        const url = new URL(imageUrl, 'http://localhost');
+        const originalUrl = url.searchParams.get('url');
+        if (originalUrl) {
+          return decodeURIComponent(originalUrl);
+        }
+      } catch {
+        return imageUrl;
+      }
+    }
+    
     try {
       const url = new URL(imageUrl);
       
@@ -167,7 +180,8 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
   const fixProxyUrls = async () => {
     const proxyLinks = results.filter(
       (r) => r.hasOgImage && 
-             (r.link.ogImage.includes('/_next/image') || 
+             (r.link.ogImage.startsWith('/og-proxy') ||
+              r.link.ogImage.includes('/_next/image') || 
               r.link.ogImage.includes('/_vercel/image') ||
               r.link.ogImage.includes('/cdn-cgi/image'))
     );
@@ -276,7 +290,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     missingThumb: results.filter((r) => !r.hasOgImage || r.ogImageStatus === "error").length,
     missingFavicon: results.filter((r) => !r.hasFavicon || r.faviconStatus === "error").length,
     corsErrors: results.filter((r) => r.hasOgImage && r.ogImageStatus === "error" && !r.link.ogImage.startsWith("/og-proxy")).length,
-    proxyUrls: results.filter((r) => r.hasOgImage && (r.link.ogImage.includes('/_next/image') || r.link.ogImage.includes('/_vercel/image') || r.link.ogImage.includes('/cdn-cgi/image'))).length,
+    proxyUrls: results.filter((r) => r.hasOgImage && (r.link.ogImage.startsWith('/og-proxy') || r.link.ogImage.includes('/_next/image') || r.link.ogImage.includes('/_vercel/image') || r.link.ogImage.includes('/cdn-cgi/image'))).length,
     allGood: results.filter((r) => r.hasOgImage && r.ogImageStatus === "success" && r.hasFavicon && r.faviconStatus === "success").length,
   };
 
