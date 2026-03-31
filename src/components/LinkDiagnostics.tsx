@@ -325,6 +325,55 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     }
   };
 
+  const cleanAllFavicons = async () => {
+    // Find all links with custom favicons (not Google service)
+    const linksWithCustomFavicons = results.filter(
+      (r) => r.hasFavicon && 
+             r.link.favicon && 
+             !r.link.favicon.includes('google.com/s2/favicons')
+    );
+    
+    if (linksWithCustomFavicons.length === 0) {
+      toast.info("Nenhum favicon customizado encontrado!");
+      return;
+    }
+
+    toast.info(`Limpando ${linksWithCustomFavicons.length} favicons...`);
+    
+    let updated = 0;
+    for (const result of linksWithCustomFavicons) {
+      setFixing((prev) => new Set(prev).add(result.link.id));
+      
+      try {
+        // Clean proxy wrappers from favicon
+        const cleanUrl = cleanProxyUrl(result.link.favicon);
+        
+        if (cleanUrl !== result.link.favicon) {
+          console.log(`[cleanAllFavicons] Cleaning: ${result.link.favicon} -> ${cleanUrl}`);
+          onUpdateLink(result.link.id, { 
+            favicon: cleanUrl 
+          });
+          updated++;
+        }
+      } catch (err) {
+        console.error("Error updating favicon:", result.link.id, err);
+      } finally {
+        setFixing((prev) => {
+          const next = new Set(prev);
+          next.delete(result.link.id);
+          return next;
+        });
+      }
+    }
+    
+    if (updated > 0) {
+      await runDiagnostics();
+      toast.success(`${updated} favicons limpos! Agora usarão o proxy automaticamente.`);
+    } else {
+      toast.info("Todos os favicons já estão limpos!");
+    }
+  };
+
   const filteredResults = results.filter((r) => {
     if (filter === "missing-thumb") return !r.hasOgImage || r.ogImageStatus === "error";
     if (filter === "missing-favicon") return !r.hasFavicon || r.faviconStatus === "error";
@@ -356,14 +405,25 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
             </Button>
             
             {results.length > 0 && (
-              <Button 
-                onClick={ensureAllImagesUseProxy} 
-                disabled={fixing.size > 0}
-                variant="default"
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                Garantir Proxy em Todas
-              </Button>
+              <>
+                <Button 
+                  onClick={ensureAllImagesUseProxy} 
+                  disabled={fixing.size > 0}
+                  variant="default"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Limpar Imagens
+                </Button>
+                
+                <Button 
+                  onClick={cleanAllFavicons} 
+                  disabled={fixing.size > 0}
+                  variant="default"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Limpar Favicons
+                </Button>
+              </>
             )}
             
             {results.length > 0 && stats.proxyUrls > 0 && (
