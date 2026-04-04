@@ -132,13 +132,20 @@ export default defineConfig(({ mode }) => ({
             fetchUrl(rawUrl);
           });
 
+          // Cache do proxy para evitar bloqueios de taxa (429) e economizar banda no Dev Server
+          const ogProxyCache = new Map();
+          const inFlightOgRequests = new Map();
+          const OG_CACHE_TTL = 1000 * 60 * 60; // 1 hora
+          
+          const domainLastFetch = new Map();
+          const DOMAIN_MIN_INTERVAL = 500; // ms entre requests pro mesmo domínio
+
           // Proxy para imagens
-          server.middlewares.use("/og-proxy", (req, res) => {
+          server.middlewares.use("/og-proxy", async (req, res) => {
             const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
             
             console.log("[og-proxy] ========================================");
             console.log("[og-proxy] Request received:", rawUrl);
-            console.log("[og-proxy] Full request URL:", req.url);
             
             if (!rawUrl) { 
               console.error("[og-proxy] ERROR: Missing url parameter");
@@ -150,7 +157,6 @@ export default defineConfig(({ mode }) => ({
             // Validate URL format
             try {
               new URL(rawUrl);
-              console.log("[og-proxy] URL validation: PASSED");
             } catch (e) {
               console.error("[og-proxy] ERROR: Invalid URL format:", rawUrl, e.message);
               res.statusCode = 400;
@@ -158,130 +164,142 @@ export default defineConfig(({ mode }) => ({
               return;
             }
 
-            const fetchUrl = (urlStr, redirectCount = 0) => {
-              if (redirectCount > 5) { 
-                console.error("[og-proxy] Too many redirects for:", urlStr);
-                res.statusCode = 502; 
-                res.end("Too many redirects"); 
-                return; 
-              }
-              
-              let target;
-              try { 
-                target = new URL(urlStr); 
-              } catch (e) { 
-                console.error("[og-proxy] Invalid URL:", urlStr, e.message);
-                res.statusCode = 400; 
-                res.end("Invalid url"); 
-                return; 
-              }
-              
-              console.log("[og-proxy] Fetching:", target.href);
-              console.log("[og-proxy] Hostname:", target.hostname);
-              console.log("[og-proxy] Protocol:", target.protocol);
-              
-              const client = target.protocol === "https:" ? https : http;
-              const options = {
-                hostname: target.hostname,
-                path: target.pathname + target.search,
-                headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                  "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-                  "Accept-Language": "en-US,en;q=0.9",
-                  "Accept-Encoding": "gzip, deflate, br",
-                  "Referer": target.origin + "/",
-                  "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                  "sec-ch-ua-mobile": "?0",
-                  "sec-ch-ua-platform": '"Windows"',
-                  "sec-fetch-dest": "image",
-                  "sec-fetch-mode": "no-cors",
-                  "sec-fetch-site": "same-origin",
-                  "DNT": "1",
-                },
-              };
-              
-              client.get(options, (upstream) => {
-                console.log("[og-proxy] Response received");
-                console.log("[og-proxy] Status code:", upstream.statusCode);
-                console.log("[og-proxy] Content-Type:", upstream.headers["content-type"]);
-                console.log("[og-proxy] Content-Length:", upstream.headers["content-length"]);
-                
-                // Follow redirects
-                if ([301, 302, 303, 307, 308].includes(upstream.statusCode) && upstream.headers.location) {
-                  upstream.resume();
-                  const next = upstream.headers.location.startsWith("http")
-                    ? upstream.headers.location
-                    : `${target.origin}${upstream.headers.location}`;
-                  console.log("[og-proxy] Redirecting to:", next);
-                  return fetchUrl(next, redirectCount + 1);
-                }
-                
-                // Handle error status codes
-                if (upstream.statusCode >= 400) {
-                  console.error("[og-proxy] Upstream error:", upstream.statusCode, urlStr);
-                  
-                  // Try fallback for known sites with broken OG images
-                  if (upstream.statusCode === 404) {
-                    const hostname = target.hostname;
-                    
-                    // Kaggle fallback
-                    if (hostname.includes('kaggle.com')) {
-                      console.log("[og-proxy] Trying Kaggle fallback logo");
-                      upstream.resume();
-                      return fetchUrl("https://www.kaggle.com/static/images/site-logo.svg", redirectCount);
-                    }
-                    
-                    // Joblib fallback
-                    if (hostname.includes('joblib.readthedocs.io')) {
-                      console.log("[og-proxy] Trying Joblib fallback logo");
-                      upstream.resume();
-                      return fetchUrl("https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg", redirectCount);
-                    }
-                    
-                    // NanoBanana fallback - try favicon instead
-                    if (hostname.includes('nanobananaimg.com')) {
-                      console.log("[og-proxy] Trying NanoBanana favicon fallback");
-                      upstream.resume();
-                      return fetchUrl("https://nanobananaimg.com/favicon.ico", redirectCount);
-                    }
-                    
-                    // Generic fallback - try to get favicon from Google
-                    console.log("[og-proxy] Image not found, no specific fallback available");
+            // Verifica cache antes de buscar
+            const cached = ogProxyCache.get(rawUrl);
+            if (cached && Date.now() - cached.timestamp < OG_CACHE_TTL) {
+               console.log("[og-proxy] SUCCESS: Serving from CACHE:", rawUrl);
+               res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+               res.setHeader("Access-Control-Allow-Origin", "*");
+               res.setHeader("Content-Type", cached.contentType);
+               res.setHeader("Cache-Control", "public, max-age=86400");
+               res.statusCode = 200;
+               res.end(cached.buffer);
+               return;
+            }
+
+            // Deduplica chamadas simultâneas (In-Flight limit)
+            if (!inFlightOgRequests.has(rawUrl)) {
+              console.log("[og-proxy] Fetching upstream (first request):", rawUrl);
+              const fetchPromise = new Promise((resolve, reject) => {
+                const fetchUrl = async (urlStr, redirectCount = 0) => {
+                  if (redirectCount > 5) { 
+                    reject({ statusCode: 502, message: "Too many redirects" });
+                    return; 
                   }
                   
-                  res.statusCode = upstream.statusCode;
-                  res.end(`Upstream error: ${upstream.statusCode}`);
-                  return;
-                }
-                
-                res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-                res.setHeader("Access-Control-Allow-Origin", "*");
-                const contentType = upstream.headers["content-type"] || "image/jpeg";
-                res.setHeader("Content-Type", contentType);
-                res.setHeader("Cache-Control", "public, max-age=86400");
-                
-                // Log SVG specifically for debugging
-                if (contentType.includes("svg")) {
-                  console.log("[og-proxy] SUCCESS: Serving SVG:", urlStr);
-                } else {
-                  console.log("[og-proxy] SUCCESS: Serving image:", contentType);
-                }
-                
-                res.statusCode = 200;
-                upstream.pipe(res);
-                
-                res.on('finish', () => {
-                  console.log("[og-proxy] Response sent successfully");
-                  console.log("[og-proxy] ========================================");
-                });
-              }).on("error", (err) => {
-                console.error("[og-proxy] Network error:", err.message, "for URL:", urlStr);
-                res.statusCode = 502; 
-                res.end("Proxy error: " + err.message);
-              });
-            };
+                  let target;
+                  try { 
+                    target = new URL(urlStr); 
+                  } catch (e) { 
+                    reject({ statusCode: 400, message: "Invalid url" });
+                    return; 
+                  }
+                  
+                  // Rate limit seguro por domínio (enfileiramento / throttling linear)
+                  const hostname = target.hostname;
+                  const now = Date.now();
+                  const lastFetch = domainLastFetch.get(hostname) ?? 0;
+                  const plannedExecution = Math.max(now, lastFetch + DOMAIN_MIN_INTERVAL);
+                  domainLastFetch.set(hostname, plannedExecution);
+                  
+                  const waitTime = plannedExecution - now;
+                  if (waitTime > 0) {
+                    await new Promise(r => setTimeout(r, waitTime));
+                  }
+                  
+                  const client = target.protocol === "https:" ? https : http;
+                  const options = {
+                    hostname: target.hostname,
+                    path: target.pathname + target.search,
+                    headers: {
+                      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                      "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                      "Accept-Language": "en-US,en;q=0.9",
+                      "Accept-Encoding": "gzip, deflate, br",
+                      "Referer": target.origin + "/",
+                      "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                      "sec-ch-ua-mobile": "?0",
+                      "sec-ch-ua-platform": '"Windows"',
+                      "sec-fetch-dest": "image",
+                      "sec-fetch-mode": "no-cors",
+                      "sec-fetch-site": "same-origin",
+                      "DNT": "1",
+                    },
+                  };
+                  
+                  client.get(options, (upstream) => {
+                    // Follow redirects
+                    if ([301, 302, 303, 307, 308].includes(upstream.statusCode) && upstream.headers.location) {
+                      upstream.resume();
+                      const next = upstream.headers.location.startsWith("http")
+                        ? upstream.headers.location
+                        : `${target.origin}${upstream.headers.location}`;
+                      return fetchUrl(next, redirectCount + 1);
+                    }
+                    
+                    // Handle error status codes
+                    if (upstream.statusCode >= 400) {
+                      // Try fallback for known sites with broken OG images
+                      if (upstream.statusCode === 404) {
+                        const hostname = target.hostname;
+                        if (hostname.includes('kaggle.com')) {
+                          upstream.resume();
+                          return fetchUrl("https://www.kaggle.com/static/images/site-logo.svg", redirectCount);
+                        }
+                        if (hostname.includes('joblib.readthedocs.io')) {
+                          upstream.resume();
+                          return fetchUrl("https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg", redirectCount);
+                        }
+                        if (hostname.includes('nanobananaimg.com')) {
+                          upstream.resume();
+                          return fetchUrl("https://nanobananaimg.com/favicon.ico", redirectCount);
+                        }
+                      }
+                      
+                      reject({ statusCode: upstream.statusCode, message: `Upstream error: ${upstream.statusCode}` });
+                      return;
+                    }
+                    
+                    const contentType = upstream.headers["content-type"] || "image/jpeg";
+                    
+                    // Coletar dados da imagem para montar o buffer
+                    const chunks = [];
+                    upstream.on("data", (chunk) => chunks.push(chunk));
+                    
+                    upstream.on("end", () => {
+                      const buffer = Buffer.concat(chunks);
+                      const cachedData = { buffer, contentType, timestamp: Date.now() };
+                      ogProxyCache.set(rawUrl, cachedData);
+                      resolve(cachedData);
+                    });
+                  }).on("error", (err) => {
+                    reject({ statusCode: 502, message: err.message });
+                  });
+                };
 
-            fetchUrl(rawUrl);
+                fetchUrl(rawUrl);
+              });
+
+              inFlightOgRequests.set(rawUrl, fetchPromise.finally(() => inFlightOgRequests.delete(rawUrl)));
+            } else {
+              console.log("[og-proxy] Deduplicating identical request (awaiting existing IN-FLIGHT):", rawUrl);
+            }
+
+            try {
+              const result = await inFlightOgRequests.get(rawUrl);
+              res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+              res.setHeader("Access-Control-Allow-Origin", "*");
+              res.setHeader("Content-Type", result.contentType);
+              res.setHeader("Cache-Control", "public, max-age=86400");
+              res.statusCode = 200;
+              res.end(result.buffer);
+              console.log("[og-proxy] SUCCESS: Served:", rawUrl);
+              console.log("[og-proxy] ========================================");
+            } catch (err) {
+              console.error("[og-proxy] ERROR:", err.message, "for URL:", rawUrl);
+              res.statusCode = err.statusCode || 502;
+              res.end(`Proxy error: ${err.message}`);
+            }
           });
         },
       },

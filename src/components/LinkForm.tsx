@@ -252,6 +252,21 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       fetchedFavicon = fetched.favicon;
     }
 
+    const cleanProxyUrl = (urlStr: string | null | undefined): string => {
+      if (!urlStr) return "";
+      let finalUrl = urlStr.trim();
+      if (finalUrl.includes("/og-proxy?url=")) {
+        try {
+          const extracted = new URL(finalUrl, "http://localhost").searchParams.get("url");
+          if (extracted) finalUrl = extracted;
+        } catch {}
+      }
+      return finalUrl;
+    };
+
+    const finalImage = cleanProxyUrl(ogImage || fetchedImage);
+    const finalFavicon = cleanProxyUrl(favicon || fetchedFavicon);
+
     await onSubmit({
       url: finalUrl,
       title: title.trim() || fetchedTitle || finalUrl,
@@ -260,8 +275,8 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       tags,
       notes: notes.trim(),
       isFavorite: editingLink?.isFavorite ?? false,
-      favicon: favicon || fetchedFavicon || "",
-      ogImage: ogImage || fetchedImage || "",
+      favicon: finalFavicon,
+      ogImage: finalImage,
       status,
       priority,
       dueDate: dueDate || null,

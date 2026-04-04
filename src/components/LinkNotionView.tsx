@@ -3,6 +3,7 @@ import { ExternalLink, GripVertical, MoreHorizontal, Pencil, ShieldAlert, Star, 
 import { Button } from "@/components/ui/button";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
 import { ensureProxied, ensureProxiedIfCorp } from "@/lib/image-utils";
+import { getCachedThumbSrc } from "@/lib/image-cache";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +43,8 @@ function safeDomain(url: string): string {
     return url;
   }
 }
+
+
 
 const THUMB_MIN_WIDTH = 112;
 const THUMB_MAX_WIDTH = 220;
@@ -309,6 +312,7 @@ export function LinkNotionView({
         const domain = safeDomain(link.url);
         const health = linkStatusById?.[link.id];
         const hasDescription = Boolean(link.description?.trim());
+        const thumbSrc = getCachedThumbSrc(link.id, link.ogImage, proxyFailedImages.has(link.id));
 
         return (
           <div key={link.id} className="group flex items-stretch gap-2">
@@ -551,27 +555,18 @@ export function LinkNotionView({
               >
                 {link.ogImage && !failedImages.has(link.id) ? (
                   <img
-                    src={(() => {
-                      const initialSrc = ensureProxiedIfCorp(link.ogImage) ?? link.ogImage;
-                      if (proxyFailedImages.has(link.id) && initialSrc.startsWith('/og-proxy')) {
-                        try {
-                          return new URL(initialSrc, 'http://localhost').searchParams.get('url') || initialSrc;
-                        } catch {
-                          return initialSrc;
-                        }
-                      }
-                      return initialSrc;
-                    })()}
+                    src={thumbSrc || ""}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover relative z-10"
                     onLoad={() => console.log('[LinkNotionView] Image loaded:', link.ogImage)}
                     onError={() => {
                       console.error('[LinkNotionView] Image failed:', link.ogImage);
-                      const currentSrc = ensureProxiedIfCorp(link.ogImage) ?? link.ogImage;
-                      if (!proxyFailedImages.has(link.id) && currentSrc.startsWith('/og-proxy')) {
+                      if (!proxyFailedImages.has(link.id)) {
+                        // Primeira falha: ativa o fallback pattern (inverte de Proxy para Direct ou Direct para Proxy)
                         setProxyFailedImages(prev => new Set(prev).add(link.id));
                       } else {
+                        // Segunda falha: desiste e usa o avatar de texto final
                         setFailedImages(prev => new Set(prev).add(link.id));
                       }
                     }}

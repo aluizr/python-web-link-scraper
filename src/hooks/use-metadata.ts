@@ -118,6 +118,18 @@ function normalizeUrl(url: string): string {
   }
 }
 
+const VALID_IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif|svg)(\?.*)?$/i;
+
+function isValidImageUrl(url: string): boolean {
+  try {
+    const { pathname } = new URL(url);
+    return VALID_IMAGE_EXTENSIONS.test(pathname) || !pathname.includes('.');
+    // Se não tem extensão, deixa tentar (pode ser URL dinâmica)
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Extract original image URL from proxy services (Next.js, Vercel, etc)
  * These proxies often have CORS restrictions, so we extract the original URL
@@ -264,7 +276,6 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
  * Known fallback images for sites that block scraping or have broken OG images
  */
 const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
-  'claude.ai': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Anthropic_logo.svg/1024px-Anthropic_logo.svg.png',
   'kaggle.com': 'https://www.kaggle.com/static/images/site-logo.svg',
   'joblib.readthedocs.io': 'https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg',
   'nanobananaimg.com': 'https://nanobananaimg.com/favicon.ico',
@@ -289,8 +300,8 @@ export const KNOWN_FALLBACKS: Record<string, string> = (() => {
       }
       
       // Self-heal known broken cached domains
-      if (dict['claude.ai'] && dict['claude.ai'].includes('claude.ai/images')) {
-        dict['claude.ai'] = DEFAULT_KNOWN_FALLBACKS['claude.ai'];
+      if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
+        delete dict['claude.ai'];
         localStorage.setItem("webnest:known_fallbacks", JSON.stringify(dict));
       }
     }
@@ -302,7 +313,6 @@ export const KNOWN_FALLBACKS: Record<string, string> = (() => {
  * Known fallback favicons for sites with CORS-blocked favicons
  */
 const DEFAULT_FAVICON_FALLBACKS: Record<string, string> = {
-  'claude.ai': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Anthropic_logo.svg/32px-Anthropic_logo.svg.png',
 };
 
 export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
@@ -315,8 +325,8 @@ export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
         dict[k] = v as string;
       }
       
-      if (dict['claude.ai'] && dict['claude.ai'].includes('claude.ai/images')) {
-        dict['claude.ai'] = DEFAULT_FAVICON_FALLBACKS['claude.ai'];
+      if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
+        delete dict['claude.ai'];
         localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(dict));
       }
     }
@@ -733,6 +743,12 @@ export function useMetadata() {
       // If still no result, derive a basic local fallback from URL
       if (!result) {
         result = buildLocalFallback(normalizedUrl);
+      }
+
+      // Validar a extensão da imagem salva (impedir arquivos .web maliciosos/inválidos que quebram o html)
+      if (result.image && !isValidImageUrl(result.image)) {
+        console.warn("[useMetadata] Image dropped due to invalid extension:", result.image);
+        result.image = null;
       }
 
       // Update cache

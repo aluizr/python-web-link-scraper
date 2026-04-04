@@ -25,10 +25,16 @@ function getHostname(rawUrl: string): string {
 export function LinkPreview({ metadata, url }: LinkPreviewProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const [proxyFailed, setProxyFailed] = useState(false);
+  const [debouncedImage, setDebouncedImage] = useState(metadata?.image);
 
+  // Debounce para evitar spam de proxy a cada letra digitada no input
   useEffect(() => {
-    setImageFailed(false);
-    setProxyFailed(false);
+    const timer = setTimeout(() => {
+      setDebouncedImage(metadata?.image);
+      setImageFailed(false);
+      setProxyFailed(false);
+    }, 800);
+    return () => clearTimeout(timer);
   }, [metadata?.image]);
   if (!url) {
     return null;
@@ -61,13 +67,13 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
   return (
     <div className="mt-4 p-4 border rounded-lg bg-muted/50 space-y-3">
       <div className="flex items-start gap-3">
-        {metadata.image && !imageFailed ? (
+        {debouncedImage && !imageFailed ? (
           <img
-            src={metadata.image.startsWith('data:') || proxyFailed ? metadata.image : `/og-proxy?url=${encodeURIComponent(metadata.image)}`}
+            src={debouncedImage.startsWith('data:') || proxyFailed ? debouncedImage : `/og-proxy?url=${encodeURIComponent(debouncedImage)}`}
             alt="Preview"
             className="h-20 w-20 object-cover rounded border flex-shrink-0"
             onError={() => {
-              if (!proxyFailed && metadata.image && !metadata.image.startsWith('data:')) {
+              if (!proxyFailed && debouncedImage && !debouncedImage.startsWith('data:')) {
                 setProxyFailed(true);
               } else {
                 setImageFailed(true);

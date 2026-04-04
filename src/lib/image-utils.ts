@@ -1,6 +1,8 @@
 /**
- * Utility functions for handling image URLs with proxy
+ * Domains that should NEVER be proxied.
+ * These usually serve public images without CORP restrictions, and may block/rate-limit proxy requests.
  */
+const SKIP_PROXY_DOMAINS = new Set<string>([]);
 
 /**
  * Ensures an image URL goes through the /og-proxy to bypass CORS restrictions
@@ -17,6 +19,18 @@ export function ensureProxied(imageUrl: string | null | undefined): string | nul
   
   // External URL - needs proxy
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    try {
+      const hostname = new URL(imageUrl).hostname.replace(/^www\./, '');
+      const shouldSkip = [...SKIP_PROXY_DOMAINS].some(
+        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+      );
+      if (shouldSkip) {
+        return imageUrl;
+      }
+    } catch {
+      // Ignorar URL mal formatada
+    }
+    
     return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
   }
   
@@ -54,12 +68,14 @@ export function isProxied(url: string | null | undefined): boolean {
 /**
  * Domains known to send `Cross-Origin-Resource-Policy: same-origin`,
  * which blocks browsers from loading their images cross-origin.
- *
- * Only add domains here when confirmed to produce ERR_BLOCKED_BY_RESPONSE.NotSameOrigin.
+ * Also includes domains that block hotlinking (like wikimedia)
+ * Only add domains here when confirmed to produce ERR_BLOCKED_BY_RESPONSE.NotSameOrigin or Hotlink 403s.
  */
 const CORP_BLOCKED_DOMAINS = new Set([
   'claude.ai',
   'anthropic.com',
+  'wikimedia.org',
+  'upload.wikimedia.org'
 ]);
 
 /**

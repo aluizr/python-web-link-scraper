@@ -87,11 +87,27 @@ export function FaviconWithFallback({
   const faviconUrl = (() => {
     // If custom favicon provided, use proxy for external URLs
     if (favicon && favicon.startsWith("http")) {
-      // Don't proxy Google Favicon Service - it already has permissive CORS
+      // Don't proxy Google Favicon Service
       if (favicon.includes('google.com/s2/favicons')) {
         return favicon;
       }
-      return ensureProxied(favicon);
+      
+      // Clean up proxy if it's wikimedia (to avoid 429 rate limits)
+      let finalFavicon = favicon;
+      try {
+        if (finalFavicon.includes('/og-proxy?url=')) {
+          const params = new URL(finalFavicon, "http://localhost").searchParams;
+          const urlParam = params.get('url');
+          if (urlParam) finalFavicon = urlParam;
+        }
+        
+        const hostname = new URL(finalFavicon).hostname;
+        if (hostname.includes('wikimedia.org')) {
+           return finalFavicon; // Nunca proxear wikimedia
+        }
+      } catch {}
+
+      return ensureProxied(finalFavicon);
     }
     
     // Otherwise use Google favicon service (more permissive with CORP)
