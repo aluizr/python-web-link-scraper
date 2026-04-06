@@ -81,14 +81,24 @@ export function FaviconWithFallback({
   className = "",
 }: FaviconWithFallbackProps) {
   const [failed, setFailed] = useState(false);
+  const [useSecondaryFallback, setUseSecondaryFallback] = useState(false);
   const avatarData = getAvatarData(url);
 
   // Determinar URL do favicon
   const faviconUrl = (() => {
+    if (useSecondaryFallback) {
+      try {
+        const hostname = new URL(url).hostname;
+        return `https://icon.horse/icon/${hostname}`;
+      } catch {
+        return null;
+      }
+    }
+
     // If custom favicon provided, use proxy for external URLs
     if (favicon && favicon.startsWith("http")) {
-      // Don't proxy Google Favicon Service
-      if (favicon.includes('google.com/s2/favicons')) {
+      // Don't proxy Google or Icon Horse
+      if (favicon.includes('google.com/s2/favicons') || favicon.includes('icon.horse')) {
         return favicon;
       }
       
@@ -117,17 +127,18 @@ export function FaviconWithFallback({
       
       const knownFallback = getKnownFaviconFallback(url);
       if (knownFallback) {
-        return knownFallback;
+        return ensureProxied(knownFallback) + "&silent=true";
       }
       
-      return `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+      // Proxy Google service to SILENCE 404s
+      return ensureProxied(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`) + "&silent=true";
     } catch {
       return null;
     }
   })();
 
-  // Se não tem URL de favicon válida ou falhou ao carregar, mostrar avatar
-  if (!faviconUrl || failed) {
+  // Se não tem URL de favicon válida ou falhou permanentemente, mostrar avatar
+  if (!faviconUrl || (failed && useSecondaryFallback)) {
     return (
       <div
         className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className}`}
@@ -152,9 +163,16 @@ export function FaviconWithFallback({
     <img
       src={faviconUrl}
       alt=""
+      key={faviconUrl} // Recriar imagem ao mudar para o fallback
       className={`shrink-0 rounded ${className}`}
       style={{ width: size, height: size }}
-      onError={() => setFailed(true)}
+      onError={() => {
+        if (!useSecondaryFallback) {
+          setUseSecondaryFallback(true);
+        } else {
+          setFailed(true);
+        }
+      }}
       loading="lazy"
       referrerPolicy="no-referrer"
     />

@@ -287,6 +287,8 @@ const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
   'youtube.com': 'https://www.youtube.com/img/desktop/yt_1200.png',
   'medium.com': 'https://miro.medium.com/v2/1*m-R_BkNf1Qjr1YbyOIJY2w.png',
   'greenhouse.io': 'https://mma.prnewswire.com/media/1802066/Greenhouse_Logo.jpg',
+  'uol.com.br': 'https://conteudo.imguol.com.br/c/home/interacao/facebook/compartilhe.png',
+  'globo.com': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Globo.com_logo.svg/512px-Globo.com_logo.svg.png',
 };
 
 export const KNOWN_FALLBACKS: Record<string, string> = (() => {
@@ -313,6 +315,8 @@ export const KNOWN_FALLBACKS: Record<string, string> = (() => {
  * Known fallback favicons for sites with CORS-blocked favicons
  */
 const DEFAULT_FAVICON_FALLBACKS: Record<string, string> = {
+  'uol.com.br': 'https://www.uol.com.br/favicon.ico',
+  'globo.com': 'https://www.globo.com/favicon.ico',
 };
 
 export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
@@ -461,11 +465,14 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
       if (response.status === 429) {
         console.warn("[fetchFromMicrolink] Rate limit atingido (429), usando fallbacks");
         localStorage.setItem("webnest:microlink_rate_limit", Date.now().toString());
+      } else if (response.status === 400) {
+        // Log clean message for known limitation (anti-bot / pro plan required)
+        console.info(`[fetchFromMicrolink] Site blocked or Microlink Pro required (${response.status}) for: ${url}. Attempting fallbacks.`);
       } else {
         console.warn(`[fetchFromMicrolink] HTTP Error ${response.status}, checking for known fallbacks`);
       }
       
-      // If we have a known fallback, use it even if Microlink failed completely (like Greenhouse's 400 error)
+      // Even if Microlink fails (400, 403, 429), try our local HTML proxy as it might not be blocked.
       const fallback = getKnownFallback(url);
       if (fallback) {
         let title = null;
@@ -484,6 +491,22 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
           source: "microlink",
         };
       }
+
+      // If no known fallback, try our robust local HTML proxy before giving up on this provider
+      console.log("[fetchFromMicrolink] Microlink failed, trying local HTML proxy fallback for:", url);
+      const htmlMetadata = await fetchOgImageFromHtml(url);
+      if (htmlMetadata) {
+        return {
+          title: null,
+          description: null,
+          image: htmlMetadata,
+          favicon: getKnownFaviconFallback(url),
+          loading: false,
+          error: null,
+          source: "local",
+        };
+      }
+      
       return null;
     }
 

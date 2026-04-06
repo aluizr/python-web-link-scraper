@@ -87,9 +87,12 @@ export default defineConfig(({ mode }) => ({
                 });
 
                 upstream.on("end", () => {
-                  // Extract og:image from HTML
-                  const ogImageMatch = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
-                  let ogImage = ogImageMatch ? ogImageMatch[1] : null;
+                  // Extract og:image, twitter:image, image_src from HTML
+                  const ogImageMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):image["']\s+content=["']([^"']+)["']/i);
+                  const imageSrcMatch = html.match(/<link\s+rel=["']image_src["']\s+href=["']([^"']+)["']/i);
+                  const itemPropMatch = html.match(/<meta\s+itemprop=["']image["']\s+content=["']([^"']+)["']/i);
+                  
+                  let ogImage = ogImageMatch ? ogImageMatch[1] : (imageSrcMatch ? imageSrcMatch[1] : (itemPropMatch ? itemPropMatch[1] : null));
 
                   // Make relative URLs absolute
                   if (ogImage && !ogImage.startsWith('http')) {
@@ -103,13 +106,15 @@ export default defineConfig(({ mode }) => ({
                     }
                   }
 
-                  // Extract og:title
-                  const ogTitleMatch = html.match(/<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i);
-                  const ogTitle = ogTitleMatch ? ogTitleMatch[1] : null;
+                  // Extract title (og:title, twitter:title, or <title>)
+                  const ogTitleMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):title["']\s+content=["']([^"']+)["']/i);
+                  const htmlTitleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+                  const ogTitle = ogTitleMatch ? ogTitleMatch[1] : (htmlTitleMatch ? htmlTitleMatch[1] : null);
 
-                  // Extract og:description
-                  const ogDescMatch = html.match(/<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i);
-                  const ogDescription = ogDescMatch ? ogDescMatch[1] : null;
+                  // Extract description (og:description, twitter:description, or <meta name="description">)
+                  const ogDescMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):description["']\s+content=["']([^"']+)["']/i);
+                  const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
+                  const ogDescription = ogDescMatch ? ogDescMatch[1] : (metaDescMatch ? metaDescMatch[1] : null);
 
                   console.log("[html-proxy] Extracted metadata:", { ogImage, ogTitle, ogDescription });
 
@@ -138,11 +143,13 @@ export default defineConfig(({ mode }) => ({
           const OG_CACHE_TTL = 1000 * 60 * 60; // 1 hora
           
           const domainLastFetch = new Map();
-          const DOMAIN_MIN_INTERVAL = 500; // ms entre requests pro mesmo domínio
+          const DOMAIN_MIN_INTERVAL = 1000; // Aumentado para 1.0s para evitar 429 (Too Many Requests)
 
           // Proxy para imagens
           server.middlewares.use("/og-proxy", async (req, res) => {
-            const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
+            const params = new URL(req.url, "http://localhost:8080").searchParams;
+            const rawUrl = params.get("url");
+            const isSilent = params.get("silent") === "true";
             
             console.log("[og-proxy] ========================================");
             console.log("[og-proxy] Request received:", rawUrl);
@@ -239,6 +246,14 @@ export default defineConfig(({ mode }) => ({
                     
                     // Handle error status codes
                     if (upstream.statusCode >= 400) {
+                      // Exponential backoff retry for 429 (Too Many Requests)
+                      if (upstream.statusCode === 429 && redirectCount < 2) {
+                        upstream.resume();
+                        const delay = 2000 + Math.random() * 2000;
+                        console.log(`[og-proxy] 429 Detected for ${hostname}. Retrying in ${Math.round(delay)}ms...`);
+                        return setTimeout(() => fetchUrl(urlStr, redirectCount + 1), delay);
+                      }
+
                       // Try fallback for known sites with broken OG images
                       if (upstream.statusCode === 404) {
                         const hostname = target.hostname;
@@ -256,7 +271,13 @@ export default defineConfig(({ mode }) => ({
                         }
                       }
                       
-                      reject({ statusCode: upstream.statusCode, message: `Upstream error: ${upstream.statusCode}` });
+                      // Final fallback: return a 1x1 transparent PNG with index 200 OK to SILENCE browser console errors
+                      console.log(`[og-proxy] SILENCING error ${upstream.statusCode} for ${hostname}. Returning transparent pixel.`);
+                      const transparentPixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+                      res.setHeader("Content-Type", "image/png");
+                      res.setHeader("Cache-Control", "public, max-age=86400");
+                      res.statusCode = 200;
+                      res.end(transparentPixel);
                       return;
                     }
                     

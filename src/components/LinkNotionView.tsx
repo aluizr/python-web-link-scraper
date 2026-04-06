@@ -147,6 +147,9 @@ export function LinkNotionView({
 }: LinkNotionViewProps) {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [proxyFailedImages, setProxyFailedImages] = useState<Set<string>>(new Set());
+  const [retryCounts, setRetryCounts] = useState<Record<string, number>>({});
+  const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
+
   const [thumbWidth, setThumbWidth] = useState<number>(() => {
     if (typeof window === "undefined") return THUMB_DEFAULT_WIDTH;
     const saved = Number(window.localStorage.getItem(THUMB_STORAGE_KEY));
@@ -561,15 +564,34 @@ export function LinkNotionView({
                     className="h-full w-full object-cover relative z-10"
                     onLoad={() => console.log('[LinkNotionView] Image loaded:', link.ogImage)}
                     onError={() => {
-                      console.error('[LinkNotionView] Image failed:', link.ogImage);
-                      if (!proxyFailedImages.has(link.id)) {
-                        // Primeira falha: ativa o fallback pattern (inverte de Proxy para Direct ou Direct para Proxy)
+                      // Se já está aguardando retry, ignora
+                      if (retryingImages.has(link.id)) return;
+
+                      const currentRetry = retryCounts[link.id] || 0;
+
+                      if (currentRetry < 1) {
+                        // Marca como "em retry" para bloquear novos disparos
+                        setRetryingImages(prev => new Set(prev).add(link.id));
+                        console.log(`[LinkNotionView] Retrying image in 3s: ${link.id}`);
+
+                        setTimeout(() => {
+                          setRetryCounts(prev => ({ ...prev, [link.id]: currentRetry + 1 }));
+                          // Libera o bloqueio após incrementar
+                          setRetryingImages(prev => {
+                            const next = new Set(prev);
+                            next.delete(link.id);
+                            return next;
+                          });
+                        }, 3000);
+
+                      } else if (!proxyFailedImages.has(link.id)) {
                         setProxyFailedImages(prev => new Set(prev).add(link.id));
+                        setRetryCounts(prev => ({ ...prev, [link.id]: 0 }));
                       } else {
-                        // Segunda falha: desiste e usa o avatar de texto final
                         setFailedImages(prev => new Set(prev).add(link.id));
                       }
                     }}
+                    key={`${link.id}-${retryCounts[link.id] || 0}-${proxyFailedImages.has(link.id)}`}
                   />
                 ) : (
                   <div className="absolute inset-0 z-0 flex h-full w-full items-center justify-center bg-muted/30">
