@@ -107,15 +107,48 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, ti
   }
 }
 
-/** Normalize URL for consistent cache keys */
+/** Normalize URL for consistent cache keys and clean fetch */
 function normalizeUrl(url: string): string {
   try {
-    const u = new URL(url);
-    // Remove trailing slash, lowercase host, strip hash (never sent to server)
+    let cleanUrl = url.trim();
+    
+    // Remove browser text fragments (#:~:text=...)
+    if (cleanUrl.includes("#:~:text=")) {
+      cleanUrl = cleanUrl.split("#:~:text=")[0];
+    }
+    
+    const u = new URL(cleanUrl);
+    // Remove trailing slash, lowercase host, strip hash
     return u.origin.toLowerCase() + u.pathname.replace(/\/+$/, "") + u.search;
   } catch {
     return url.trim().toLowerCase();
   }
+}
+
+/** 
+ * Clean title by removing common site suffixes 
+ * e.g. "Title | Site Name" -> "Title"
+ */
+function cleanMetadataTitle(title: string | null): string | null {
+  if (!title) return null;
+  
+  let cleaned = title.trim();
+  
+  // Common separators: " | ", " - ", " – ", " — "
+  const separators = [" | ", " - ", " – ", " — "];
+  
+  for (const sep of separators) {
+    if (cleaned.includes(sep)) {
+      const parts = cleaned.split(sep);
+      // If the last part looks like a site name (single word or common domain part)
+      const lastPart = parts[parts.length - 1].trim();
+      if (lastPart.length > 0 && lastPart.length < 20) {
+        cleaned = parts.slice(0, -1).join(sep).trim();
+      }
+    }
+  }
+  
+  return cleaned || title;
 }
 
 const VALID_IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif|svg)(\?.*)?$/i;
@@ -772,6 +805,14 @@ export function useMetadata() {
       if (result.image && !isValidImageUrl(result.image)) {
         console.warn("[useMetadata] Image dropped due to invalid extension:", result.image);
         result.image = null;
+      }
+
+      // Clean title and truncate description
+      if (result.title) {
+        result.title = cleanMetadataTitle(result.title);
+      }
+      if (result.description && result.description.length > 160) {
+        result.description = result.description.substring(0, 157) + "...";
       }
 
       // Update cache

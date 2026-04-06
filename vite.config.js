@@ -120,11 +120,31 @@ export default defineConfig(({ mode }) => ({
 
                   res.setHeader("Content-Type", "application/json");
                   res.setHeader("Access-Control-Allow-Origin", "*");
+                  // Normalize and limit metadata length
+                  const cleanOgImage = ogImage ? ogImage.trim() : null;
+                  let title = (ogTitle || "").trim();
+                  
+                  // Clean site branding from title (e.g. "Title | Site" -> "Title")
+                  const separators = [" | ", " - ", " – ", " — "];
+                  for (const sep of separators) {
+                    if (title.includes(sep)) {
+                      const parts = title.split(sep);
+                      const lastPart = parts[parts.length - 1].trim();
+                      // Only strip if the last part is relatively short (branding)
+                      if (lastPart.length > 0 && lastPart.length < 20) {
+                        title = parts.slice(0, -1).join(sep).trim();
+                      }
+                    }
+                  }
+                  
+                  const description = (ogDescription || "").trim().substring(0, 300);
+                  
+                  res.setHeader("Content-Type", "application/json");
                   res.statusCode = 200;
-                  res.end(JSON.stringify({
-                    ogImage,
-                    ogTitle,
-                    ogDescription,
+                  res.end(JSON.stringify({ 
+                    ogImage: cleanOgImage, 
+                    ogTitle: title.substring(0, 70) || null,
+                    ogDescription: description.substring(0, 160) || null
                   }));
                 });
               }).on("error", (err) => {
