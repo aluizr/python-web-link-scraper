@@ -1,4 +1,7 @@
 # Python
+# Node.js leftovers (not used)
+node_modules/
+.vite/
 __pycache__/
 *.py[cod]
 *.pyo
