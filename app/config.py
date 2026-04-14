@@ -7,7 +7,15 @@ class Settings(BaseSettings):
     supabase_key: str
     app_host: str = "0.0.0.0"
     app_port: int = 8000
-    cors_origins: list[str] = ["*"]
+    # String separada por vírgula, ex: "http://localhost:3000,https://meusite.com"
+    # Use "*" para permitir todas as origens
+    cors_origins_str: str = "*"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.cors_origins_str.strip() == "*":
+            return ["*"]
+        return [o.strip() for o in self.cors_origins_str.split(",") if o.strip()]
 
     class Config:
         env_file = ".env"
