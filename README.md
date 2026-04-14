@@ -1,113 +1,126 @@
-# Python Web Link Scraper — Gerenciador de Links
+# Python Web Link Scraper
 
-Organize seus links favoritos com estilo e segurança.
-
-## Últimas versões
-
-| Versão | Data | Link |
-| --- | --- | --- |
-| 0.14.4 | 2026-04-01 | [Ver changelog](CHANGELOG.md#0144--2026-04-01) |
-| 0.14.3 | 2026-03-31 | [Ver changelog](CHANGELOG.md#0143--2026-03-31) |
-| 0.14.2 | 2026-03-11 | [Ver changelog](CHANGELOG.md#0142--2026-03-11) |
-
-## What's new — 0.14.4 (2026-04-01)
-
-Detalhes completos da release: [CHANGELOG 0.14.4](CHANGELOG.md#0144--2026-04-01)
-
-- **Correções Globais na Importação de Metadados** para preservar a imagem original (og:image) durante extração de arquivos CSV, HTML e JSON.
-- **Fetch Automático em Lote (Background)** nativo para buscar thumbnails pendentes ao finalizar fluxos de importações em massa, operando de forma invisível via rate-limits.
-- **Prevenção Anti-Link Rot** incorporando invalidação proativa de cache (`invalidateThumbnailCache()`) no client perante quebras da imagem na CDN de terceiros (404/403).
-- **Aprimoramento do Fallback Dicionário Local**. Fallbacks dinâmicos usando `localStorage` com suporte avançado a blindagem contra hotlinkings e proxies em domínios estritos (Ex: ferramentas como Salesforce, Greenhouse e Claude).
-- **Validação de Screenshot e Expansão Resiliente** contornando páginas bloqueadas por bot para extrair resoluções canônicas de serviços de imagem (Imgix e Unsplash).
+API REST em Python para **captura e gerenciamento de links**.  
+Usa **FastAPI** + **BeautifulSoup4** para extração de metadados e **Supabase** como banco de dados.
 
 ## Funcionalidades
 
-### Core
-
-- **CRUD completo** de links com favicon, preview OG, tags e notas
-- **Categorias hierárquicas** (3 níveis) com cores, ícones personalizados e drag & drop
-- **1541 ícones** do Lucide + upload de ícones customizados (SVG, PNG, JPG)
-- **Busca avançada** com filtros por categoria, tags, período e favoritos
-- **Auto-fetch de metadados** (título, descrição, OG image) ao inserir URL
-- **Detecção de URLs duplicadas** com normalização inteligente
-- **Auto-save de rascunho** no formulário de criação
-
-### Visualização
-
-- **6 modos de visualização**: Grid, Lista, Cartões, Tabela, Board (Kanban), Galeria
-- **Galeria com Covers** — Layout masonry com imagens OG como capas grandes
-- **Tamanho dinâmico** nos cartões (P/M/G)
-- **Colunas ajustáveis** no grid (2-5 colunas)
-- **Breadcrumb Navigation** — Navegação por migalhas na hierarquia de categorias
-
-### Organização
-
-- **Drag & Drop** para reordenar links com Undo/Redo (Ctrl+Z/Y)
-- **Operações em Lote (Batch)** — Seleção com checkboxes em todas as views, Shift+Click para intervalo, ações: favoritar, mover, tag (+/-), excluir
-- **Lixeira / Soft Delete** — Links deletados ficam na lixeira por 30 dias
-- **Notas em Rich Text (Tiptap)** — Editor WYSIWYG com toolbar completa: formatação, listas, task lists, links, blocos de código, citações
-- **8 temas** visuais (Light, Dark, Ocean, Sunset, Forest, Rose, Lavender, Midnight)
-
-### Ferramentas
-
-- **Broken Link Checker** — Verificador de links com status HTTP e cache 24h
-- **Dashboard de estatísticas** com gráficos interativos (Recharts)
-- **Importar/Exportar** em 4 formatos: JSON, CSV, HTML, Bookmarks
-- **Histórico de atividades** com log completo de ações
-- **Command Palette** (Ctrl+K) e 10+ atalhos de teclado
-
-### Infraestrutura
-
-- **PWA + Offline** com cache local e fila de sincronização
-- **Segurança**: RLS, PKCE auth, rate limiting, API key rotation, CSP headers
-- **Error Boundary** + logging centralizado (com Sentry/LogRocket opcionais)
-- **Docker** multi-stage com variantes dev, prod e nginx
+- 🔍 **Scraping de metadados** — título, descrição, og:image e favicon via BeautifulSoup4
+- 🔗 **CRUD completo de links** — criar, listar, atualizar, excluir (soft delete), restaurar
+- ⭐ **Favoritos** — toggle por endpoint
+- 🗑️ **Lixeira** — soft delete com restauração
+- 🏷️ **Tags e categorias** hierárquicas
+- 📊 **Status e prioridade** — backlog / in_progress / done · low / medium / high
+- 🔍 **Busca** por título, URL e descrição
+- ✅ **Verificador de links quebrados**
+- 📤 **Exportação** em JSON, CSV e HTML Bookmarks
+- 📈 **Estatísticas** da coleção
 
 ## Tecnologias
 
-- **Framework:** React 18 + TypeScript 5
-- **Build:** Vite 7 (SWC)
-- **UI:** Shadcn/UI + Radix UI + Tailwind CSS
-- **Rich Text:** Tiptap (ProseMirror)
-- **Banco de Dados:** Supabase (PostgreSQL)
-- **Gráficos:** Recharts
-- **Validação:** Zod
-- **Testes:** Vitest + React Testing Library
+| Camada | Tecnologia |
+|---|---|
+| API | FastAPI + Uvicorn |
+| Scraping | BeautifulSoup4 + lxml + httpx |
+| Banco de dados | Supabase (PostgreSQL) |
+| Validação | Pydantic v2 |
 
-## Como rodar
+## Instalação
 
-```sh
-# Clonar o repositório
-git clone <YOUR_GIT_URL>
+```bash
+# 1. Clone o repositório
+git clone https://github.com/aluizr/python-web-link-scraper.git
 cd python-web-link-scraper
 
-# Instalar dependências
-npm install
+# 2. Crie e ative o ambiente virtual
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/Mac
 
-# Configurar variáveis de ambiente
+# 3. Instale as dependências
+pip install -r requirements.txt
+
+# 4. Configure as variáveis de ambiente
 cp .env.example .env
-# Edite .env com suas credenciais Supabase
-
-# Iniciar servidor de desenvolvimento
-npm run dev
+# Edite .env com suas credenciais do Supabase
 ```
 
-## Scripts disponíveis
+## Configuração do `.env`
 
-| Comando | Descrição |
-| --------- | ---------- |
-| `npm run dev` | Servidor de desenvolvimento (porta 8080) |
-| `npm run build` | Build de produção |
-| `npm run preview` | Preview do build |
-| `npm run lint` | Linting com ESLint |
-| `npm test` | Testes com Vitest |
+```env
+SUPABASE_URL=https://seu_projeto.supabase.co
+SUPABASE_KEY=sua_anon_key_aqui
+APP_HOST=0.0.0.0
+APP_PORT=8000
+CORS_ORIGINS=*
+```
 
-## Deploy
+> Obtenha `SUPABASE_URL` e `SUPABASE_KEY` em:  
+> https://app.supabase.com/project/SEU_PROJETO/settings/api
 
-O projeto suporta deploy via Docker ou qualquer provedor de hospedagem estática (Vercel, Netlify, etc.).
+## Executar
 
-Consulte [DOCKER.md](DOCKER.md) para instruções de deploy com Docker.
+```bash
+uvicorn app.main:app --reload
+# ou
+python -m app.main
+```
 
-## Domínio customizado
+A API estará disponível em: **http://localhost:8000**  
+Documentação interativa: **http://localhost:8000/docs**
 
-Configure o domínio no seu provedor de hospedagem apontando para o build estático gerado em `dist/`.
+## Endpoints principais
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/scrape` | Extrair metadados de uma URL |
+| `GET` | `/api/links` | Listar links (com filtros) |
+| `POST` | `/api/links` | Criar link manualmente |
+| `PUT` | `/api/links/{id}` | Atualizar link |
+| `DELETE` | `/api/links/{id}` | Mover para lixeira |
+| `PATCH` | `/api/links/{id}/favorite` | Toggle favorito |
+| `GET` | `/api/links/broken` | Verificar links quebrados |
+| `GET` | `/api/export/json` | Exportar como JSON |
+| `GET` | `/api/export/csv` | Exportar como CSV |
+| `GET` | `/api/export/html` | Exportar como HTML Bookmarks |
+| `GET` | `/api/stats` | Estatísticas gerais |
+
+### Exemplo — Scrape de metadados
+
+```bash
+curl -X POST http://localhost:8000/api/scrape \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://fastapi.tiangolo.com", "save": true}'
+```
+
+**Resposta:**
+```json
+{
+  "url": "https://fastapi.tiangolo.com",
+  "title": "FastAPI",
+  "description": "FastAPI framework, high performance...",
+  "og_image": "https://fastapi.tiangolo.com/img/og-image.png",
+  "favicon": "https://fastapi.tiangolo.com/img/favicon.png",
+  "saved": true,
+  "link_id": "uuid-gerado"
+}
+```
+
+## Banco de dados (Supabase)
+
+O schema já está definido em `supabase/migrations/`.  
+Aplique as migrations no seu projeto Supabase via **SQL Editor** ou **Supabase CLI**.
+
+Tabelas principais:
+- **`links`** — links com metadados, tags, status, prioridade, soft delete
+- **`categories`** — categorias hierárquicas com cor e ícone
+
+## Docker
+
+```bash
+# Build
+docker build -t python-web-link-scraper:latest .
+
+# Run
+docker run -p 8000:8000 --env-file .env python-web-link-scraper:latest
+```

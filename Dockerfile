@@ -1,37 +1,25 @@
-# Build stage - Compila o app React
-FROM node:20-alpine AS builder
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copiar package files
-COPY package.json bun.lockb ./
+# Dependências de sistema para lxml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2 libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar dependências com npm
-RUN npm ci --no-progress --no-fund
+# Instalar dependências Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código fonte
-COPY . .
-
-# Build da aplicação
-RUN npm run build
-
-# Production stage - Serve a aplicação compilada
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Instalar serve para servir arquivos estáticos
-RUN npm install -g serve
-
-# Copiar arquivo build do stage anterior
-COPY --from=builder /app/dist ./dist
+# Copiar código da aplicação
+COPY app/ ./app/
 
 # Expor porta
-EXPOSE 3000
+EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
-# Comando para iniciar a aplicação
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Iniciar a aplicação
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
