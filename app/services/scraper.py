@@ -78,7 +78,7 @@ async def scrape_metadata(url: str) -> dict:
         except Exception as e:
             raise ValueError(f"Erro ao acessar URL: {e}")
 
-    soup = BeautifulSoup(response.text, "lxml")
+    soup = BeautifulSoup(response.text, "html.parser")
 
     # --- Título ---
     title = _get_meta_content(
