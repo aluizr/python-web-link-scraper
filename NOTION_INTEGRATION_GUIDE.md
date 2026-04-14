@@ -5,7 +5,7 @@
 ### Step 1: Get Your Notion API Key
 1. Visit https://www.notion.com/my-integrations
 2. Click "Create new integration"
-3. Name it (e.g., "WebNest")
+3. Name it (e.g., "Web Link Scraper")
 4. Copy the **Internal Integration Token** (looks like `secret_abc123...`)
 
 ### Step 2: Configure in Web Nest
@@ -17,7 +17,7 @@
 In Notion:
 1. Open any page you want to sync
 2. Click **Share** → **Invite**
-3. Search for your integration name (e.g., "WebNest")
+3. Search for your integration name (e.g., "Web Link Scraper")
 4. Click to add it to your page
 5. Done! The integration can now read that page
 

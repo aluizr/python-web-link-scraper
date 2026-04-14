@@ -20,7 +20,7 @@ class LRUCache<K, V> {
   private expiry: number;
   private storageKey: string;
 
-  constructor(maxSize = 100, expiryMs = 24 * 60 * 60 * 1000, storageKey = "webnest:metadata_cache") {
+  constructor(maxSize = 100, expiryMs = 24 * 60 * 60 * 1000, storageKey = "python-web-link-scraper:metadata_cache") {
     this.maxSize = maxSize;
     this.expiry = expiryMs;
     this.storageKey = storageKey;
@@ -265,7 +265,7 @@ function buildLocalFallback(url: string): LinkMetadata {
  */
 async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
   // Try to get Notion API key from localStorage
-  const notionApiKey = localStorage.getItem("webnest:notion_api_key");
+  const notionApiKey = localStorage.getItem("python-web-link-scraper:notion_api_key");
   if (!notionApiKey) {
     console.debug("No Notion API key configured, skipping Notion fetch");
     return null;
@@ -327,7 +327,7 @@ const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
 export const KNOWN_FALLBACKS: Record<string, string> = (() => {
   const dict = { ...DEFAULT_KNOWN_FALLBACKS };
   try {
-    const stored = localStorage.getItem("webnest:known_fallbacks");
+    const stored = localStorage.getItem("python-web-link-scraper:known_fallbacks");
     if (stored) {
       const parsed = JSON.parse(stored);
       for (const [k, v] of Object.entries(parsed)) {
@@ -337,7 +337,7 @@ export const KNOWN_FALLBACKS: Record<string, string> = (() => {
       // Self-heal known broken cached domains
       if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
         delete dict['claude.ai'];
-        localStorage.setItem("webnest:known_fallbacks", JSON.stringify(dict));
+        localStorage.setItem("python-web-link-scraper:known_fallbacks", JSON.stringify(dict));
       }
     }
   } catch {}
@@ -355,7 +355,7 @@ const DEFAULT_FAVICON_FALLBACKS: Record<string, string> = {
 export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
   const dict = { ...DEFAULT_FAVICON_FALLBACKS };
   try {
-    const stored = localStorage.getItem("webnest:known_favicon_fallbacks");
+    const stored = localStorage.getItem("python-web-link-scraper:known_favicon_fallbacks");
     if (stored) {
       const parsed = JSON.parse(stored);
       for (const [k, v] of Object.entries(parsed)) {
@@ -364,7 +364,7 @@ export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
       
       if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
         delete dict['claude.ai'];
-        localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(dict));
+        localStorage.setItem("python-web-link-scraper:known_favicon_fallbacks", JSON.stringify(dict));
       }
     }
   } catch {}
@@ -373,12 +373,12 @@ export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
 
 export function saveKnownFallbacks(fallbacks: Record<string, string>) {
   Object.assign(KNOWN_FALLBACKS, fallbacks);
-  localStorage.setItem("webnest:known_fallbacks", JSON.stringify(KNOWN_FALLBACKS));
+  localStorage.setItem("python-web-link-scraper:known_fallbacks", JSON.stringify(KNOWN_FALLBACKS));
 }
 
 export function saveKnownFaviconFallbacks(fallbacks: Record<string, string>) {
   Object.assign(KNOWN_FAVICON_FALLBACKS, fallbacks);
-  localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(KNOWN_FAVICON_FALLBACKS));
+  localStorage.setItem("python-web-link-scraper:known_favicon_fallbacks", JSON.stringify(KNOWN_FAVICON_FALLBACKS));
 }
 
 /**
@@ -497,7 +497,7 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     if (!response.ok) {
       if (response.status === 429) {
         console.warn("[fetchFromMicrolink] Rate limit atingido (429), usando fallbacks");
-        localStorage.setItem("webnest:microlink_rate_limit", Date.now().toString());
+        localStorage.setItem("python-web-link-scraper:microlink_rate_limit", Date.now().toString());
       } else if (response.status === 400) {
         // Log clean message for known limitation (anti-bot / pro plan required)
         console.info(`[fetchFromMicrolink] Site blocked or Microlink Pro required (${response.status}) for: ${url}. Attempting fallbacks.`);

@@ -9,7 +9,7 @@ interface LinkCheckResult {
   checkedAt: string;
 }
 
-const CACHE_KEY = "webnest_link_check_cache";
+const CACHE_KEY = "python-web-link-scraper_link_check_cache";
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 function loadCache(): Record<string, LinkCheckResult> {

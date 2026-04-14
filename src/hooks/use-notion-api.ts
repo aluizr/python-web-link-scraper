@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 
-const NOTION_TOKEN_KEY = "webnest_notion_api_token";
+const NOTION_TOKEN_KEY = "python-web-link-scraper_notion_api_token";
 const NOTION_API_VERSION = "2022-06-28";
 
 interface NotionPageMetadata {

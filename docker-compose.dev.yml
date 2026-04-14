@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
-    container_name: webnest-dev
+    container_name: python-web-link-scraper-dev
     volumes:
       - .:/app
       - /app/node_modules

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to WebNest.
+Thanks for contributing to Python Web Link Scraper.
 
 ## Development Setup
 

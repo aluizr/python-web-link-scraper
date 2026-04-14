@@ -275,7 +275,7 @@ export function parseJSON(content: string): ImportResult {
           notes: item.notes || '',
           isFavorite: !!item.isFavorite,
           favicon: item.favicon || '',
-          // Preserve ogImage from exported WebNest backups (camelCase or snake_case)
+          // Preserve ogImage from exported Python Web Link Scraper backups (camelCase or snake_case)
           ogImage: item.ogImage || item.og_image || '',
           status: normalizeStatus(item.status),
           priority: normalizePriority(item.priority),

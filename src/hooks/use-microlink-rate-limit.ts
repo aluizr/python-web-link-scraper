@@ -10,7 +10,7 @@ export function useMicrolinkRateLimit() {
   useEffect(() => {
     // Verificar se há flag de rate limit
     const checkRateLimit = () => {
-      const rateLimitStr = localStorage.getItem("webnest:microlink_rate_limit");
+      const rateLimitStr = localStorage.getItem("python-web-link-scraper:microlink_rate_limit");
       if (rateLimitStr) {
         const timestamp = parseInt(rateLimitStr, 10);
         const now = Date.now();
@@ -22,7 +22,7 @@ export function useMicrolinkRateLimit() {
           setRateLimitTime(timestamp);
         } else {
           // Limpar flag expirada
-          localStorage.removeItem("webnest:microlink_rate_limit");
+          localStorage.removeItem("python-web-link-scraper:microlink_rate_limit");
           setIsRateLimited(false);
           setRateLimitTime(null);
         }

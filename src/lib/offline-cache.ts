@@ -1,10 +1,10 @@
 import type { LinkItem, Category } from "@/types/link";
 
 const CACHE_KEYS = {
-  links: "webnest-offline-links",
-  categories: "webnest-offline-categories",
-  lastSync: "webnest-offline-last-sync",
-  pendingActions: "webnest-offline-pending",
+  links: "python-web-link-scraper-offline-links",
+  categories: "python-web-link-scraper-offline-categories",
+  lastSync: "python-web-link-scraper-offline-last-sync",
+  pendingActions: "python-web-link-scraper-offline-pending",
 } as const;
 
 export interface PendingAction {

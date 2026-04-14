@@ -1,6 +1,6 @@
 import { extractNotionPageId } from "./notion-utils";
 
-const NOTION_TOKEN_KEY = "webnest:notion_api_key";
+const NOTION_TOKEN_KEY = "python-web-link-scraper:notion_api_key";
 const NOTION_API_VERSION = "2022-06-28";
 
 export interface NotionPageMetadata {

@@ -1,4 +1,4 @@
-# Security Audit Report — WebNest (Consolidated)
+# Security Audit Report — Python Web Link Scraper (Consolidated)
 
 **Date:** February 15, 2026
 **Status:** 🟢 GOOD (Critical issues resolved)

@@ -4,7 +4,7 @@
 Operational checklist for the first minutes and hours after a production release.
 
 ## Scope
-Applies to WebNest releases validated through lint, test, build, and smoke checks.
+Applies to Python Web Link Scraper releases validated through lint, test, build, and smoke checks.
 
 ## T+0 to T+15 minutes
 

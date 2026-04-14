@@ -1,5 +1,5 @@
 /**
- * Sistema de logging centralizado para o WebNest.
+ * Sistema de logging centralizado para o Python Web Link Scraper.
  *
  * Registra erros, warnings e eventos em múltiplos destinos:
  * - Console (sempre, em dev)
@@ -34,7 +34,7 @@ export interface LogEntry {
   userAgent: string;
 }
 
-const STORAGE_KEY = "webnest-error-log";
+const STORAGE_KEY = "python-web-link-scraper-error-log";
 const MAX_STORED_ENTRIES = 100;
 
 type SentryLike = {

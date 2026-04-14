@@ -1,5 +1,5 @@
 /**
- * API Key Rotation — WebNest
+ * API Key Rotation — Python Web Link Scraper
  *
  * Suporte a rotação segura de chaves Supabase (anon key).
  *
@@ -19,7 +19,7 @@
 
 import { logger } from "./logger";
 
-const ACTIVE_KEY_STORAGE = "webnest:active-api-key";
+const ACTIVE_KEY_STORAGE = "python-web-link-scraper:active-api-key";
 
 export interface ApiKeyConfig {
   primaryKey: string;

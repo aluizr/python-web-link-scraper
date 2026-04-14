@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExternalLink } from "lucide-react";
 
-const NOTION_TOKEN_KEY = "webnest:notion_api_key";
+const NOTION_TOKEN_KEY = "python-web-link-scraper:notion_api_key";
 
 interface NotionSettingsDialogProps {
   open: boolean;
@@ -94,7 +94,7 @@ export function NotionSettingsDialog({ open, onOpenChange }: NotionSettingsDialo
                 </a>
               </li>
               <li>Clique em "Create new integration"</li>
-              <li>Dê um nome (ex: "WebNest")</li>
+              <li>Dê um nome (ex: "Web Link Scraper")</li>
               <li>Copie o "Internal Integration Token"</li>
               <li>Cole aqui e salve</li>
             </ol>

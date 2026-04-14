@@ -1,4 +1,4 @@
-# Changelog — WebNest
+# Changelog — Python Web Link Scraper
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 

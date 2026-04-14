@@ -80,5 +80,5 @@ Este é um resumo rápido dos problemas encontrados e como corrigi-los.
 ---
 
 **Gerado em:** 24 de Fevereiro de 2026  
-**Plataforma:** WebNest  
+**Plataforma:** Python Web Link Scraper  
 **Tech Stack:** React + TypeScript + Supabase

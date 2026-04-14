@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    container_name: webnest-prod-serve
+    container_name: python-web-link-scraper-prod-serve
     environment:
       - NODE_ENV=production
     restart: unless-stopped
@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile.nginx
     ports:
       - "3001:80"
-    container_name: webnest-prod-nginx
+    container_name: python-web-link-scraper-prod-nginx
     restart: unless-stopped
 
   # Desenvolvimento com hot-reload
@@ -30,7 +30,7 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "5173:5173"
-    container_name: webnest-dev
+    container_name: python-web-link-scraper-dev
     volumes:
       - .:/app
       - /app/node_modules

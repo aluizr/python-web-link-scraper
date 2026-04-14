@@ -69,10 +69,10 @@ docker-compose -f docker-compose.dev.yml up
 
 ```bash
 # Construir imagem
-docker build -t webnest:latest .
+docker build -t python-web-link-scraper:latest .
 
 # Executar container
-docker run -p 3000:3000 webnest:latest
+docker run -p 3000:3000 python-web-link-scraper:latest
 
 # Acessar em http://localhost:3000
 ```
@@ -81,10 +81,10 @@ docker run -p 3000:3000 webnest:latest
 
 ```bash
 # Construir imagem Nginx
-docker build -f Dockerfile.nginx -t webnest:nginx .
+docker build -f Dockerfile.nginx -t python-web-link-scraper:nginx .
 
 # Executar container
-docker run -p 80:80 webnest:nginx
+docker run -p 80:80 python-web-link-scraper:nginx
 
 # Acessar em http://localhost
 ```
@@ -162,22 +162,22 @@ docker-compose -f docker-compose.dev.yml up
 ### Staging/QA
 
 ```bash
-docker build -f Dockerfile.nginx -t registry.example.com/webnest:staging .
-docker push registry.example.com/webnest:staging
+docker build -f Dockerfile.nginx -t registry.example.com/python-web-link-scraper:staging .
+docker push registry.example.com/python-web-link-scraper:staging
 ```
 
 ### Production em Servidor
 
 ```bash
 # Pull imagem
-docker pull registry.example.com/webnest:latest
+docker pull registry.example.com/python-web-link-scraper:latest
 
 # Executar com restart policy
 docker run -d \
   --restart unless-stopped \
   -p 80:80 \
-  --name webnest-prod \
-  registry.example.com/webnest:latest
+  --name python-web-link-scraper-prod \
+  registry.example.com/python-web-link-scraper:latest
 ```
 
 ## 🔍 Verificação e Debug
@@ -191,13 +191,13 @@ docker ps -a
 ### Ver logs
 
 ```bash
-docker logs -f webnest
+docker logs -f python-web-link-scraper
 ```
 
 ### Acessar container
 
 ```bash
-docker exec -it webnest sh
+docker exec -it python-web-link-scraper sh
 ```
 
 ### Verificar health
@@ -213,21 +213,21 @@ curl http://localhost/health
 
 ```bash
 # Tag
-docker tag webnest:latest seu-usuario/webnest:latest
+docker tag python-web-link-scraper:latest seu-usuario/python-web-link-scraper:latest
 
 # Login
 docker login
 
 # Push
-docker push seu-usuario/webnest:latest
+docker push seu-usuario/python-web-link-scraper:latest
 ```
 
 ### Registries Privados
 
 ```bash
-docker tag webnest:latest registry.example.com/webnest:latest
+docker tag python-web-link-scraper:latest registry.example.com/python-web-link-scraper:latest
 docker login registry.example.com
-docker push registry.example.com/webnest:latest
+docker push registry.example.com/python-web-link-scraper:latest
 ```
 
 ## ☁️ Plataformas de Deploy Recomendadas
@@ -318,7 +318,7 @@ docker build --no-cache -f Dockerfile.nginx .
 
 ```bash
 # Mudar port
-docker run -p 8080:80 webnest:nginx
+docker run -p 8080:80 python-web-link-scraper:nginx
 ```
 
 ### Container não inicia

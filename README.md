@@ -1,4 +1,4 @@
-# WebNest — Gerenciador de Links
+# Python Web Link Scraper — Gerenciador de Links
 
 Organize seus links favoritos com estilo e segurança.
 
@@ -79,7 +79,7 @@ Detalhes completos da release: [CHANGELOG 0.14.4](CHANGELOG.md#0144--2026-04-01)
 ```sh
 # Clonar o repositório
 git clone <YOUR_GIT_URL>
-cd webnest
+cd python-web-link-scraper
 
 # Instalar dependências
 npm install

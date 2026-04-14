@@ -1,4 +1,4 @@
-# Análise Geral do Projeto — WebNest
+# Análise Geral do Projeto — Python Web Link Scraper
 
 **Data:** 22 de Fevereiro, 2026  
 **Versão:** 0.14.0  
@@ -13,7 +13,7 @@
 ## 📁 Estrutura de Pastas
 
 ```bash
-webnest/
+python-web-link-scraper/
 ├── src/
 │   ├── components/                  # Componentes React (~33 arquivos)
 │   │   ├── ui/                      # Componentes Shadcn/UI (gerado)

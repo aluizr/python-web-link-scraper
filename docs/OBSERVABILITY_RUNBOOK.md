@@ -1,7 +1,7 @@
 # Observability Runbook
 
 ## Purpose
-This runbook standardizes how to inspect, triage, and troubleshoot critical runtime flows in WebNest.
+This runbook standardizes how to inspect, triage, and troubleshoot critical runtime flows in python-web-link-scraper.
 
 ## Event Naming Convention
 Use dot-separated names by domain and action:
@@ -75,19 +75,19 @@ Examples:
 2. Run in console:
 
 ```js
-localStorage.getItem("webnest-error-log")
+localStorage.getItem("python-web-link-scraper-error-log")
 ```
 
 3. Parse if needed:
 
 ```js
-JSON.parse(localStorage.getItem("webnest-error-log") || "[]")
+JSON.parse(localStorage.getItem("python-web-link-scraper-error-log") || "[]")
 ```
 
 4. Filter by event message:
 
 ```js
-JSON.parse(localStorage.getItem("webnest-error-log") || "[]").filter((e) => e.message.includes("link."))
+JSON.parse(localStorage.getItem("python-web-link-scraper-error-log") || "[]").filter((e) => e.message.includes("link."))
 ```
 
 ## Triage Flow

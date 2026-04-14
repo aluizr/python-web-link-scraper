@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import type { ActivityLogEntry, ActivityAction } from "@/types/link";
 
 const MAX_LOG_ENTRIES = 200;
-const STORAGE_KEY = "webnest:activity-log";
+const STORAGE_KEY = "python-web-link-scraper:activity-log";
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
