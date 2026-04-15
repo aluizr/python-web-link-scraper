@@ -14,10 +14,16 @@ def _db():
     return get_supabase()
 
 
-@router.get("", response_model=list[CategoryResponse], summary="Listar categorias")
+@router.get("", summary="Listar categorias")
 def list_categories():
-    result = _db().table("categories").select("*").order("position", nulls_last=True).execute()
-    return result.data
+    try:
+        result = _db().table("categories").select("*").execute()
+        return result.data
+    except Exception as e:
+        print(f"Erro ao listar categorias: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao listar categorias: {str(e)}")
 
 
 @router.post("", response_model=CategoryResponse, status_code=201, summary="Criar categoria")

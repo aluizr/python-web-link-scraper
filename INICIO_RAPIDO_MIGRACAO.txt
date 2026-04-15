@@ -1,0 +1,106 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║         📦 Migração de Links - Início Rápido                ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+🎯 OBJETIVO: Transferir links do projeto antigo para o novo
+
+═══════════════════════════════════════════════════════════════
+
+📤 PASSO 1: EXPORTAR (Projeto Antigo)
+
+   1. Acesse: https://app.supabase.com
+   2. Selecione o projeto antigo
+   3. Table Editor → links → "..." → Download CSV
+   4. Salve como: links_backup.csv
+
+═══════════════════════════════════════════════════════════════
+
+🔧 PASSO 2: PREPARAR (Projeto Novo)
+
+   1. Acesse: https://app.supabase.com
+   2. Selecione: qanlbsstfxwicultliiq
+   3. SQL Editor → New Query
+   4. Cole o SQL de: PASSO_A_PASSO_COMPLETO.md
+   5. Execute (Run)
+   
+   6. No terminal:
+      python corrigir_banco.py
+      
+   ✅ Deve retornar: BANCO DE DADOS OK!
+
+═══════════════════════════════════════════════════════════════
+
+📥 PASSO 3: IMPORTAR
+
+   1. Coloque links_backup.csv na pasta do projeto
+   
+   2. Execute:
+      python importar_links.py links_backup.csv
+   
+   3. Aguarde a importação
+   
+   ✅ Deve mostrar: Importação concluída!
+
+═══════════════════════════════════════════════════════════════
+
+🌐 PASSO 4: VERIFICAR
+
+   1. Inicie o servidor:
+      python start_server.py
+   
+   2. Abra o navegador:
+      http://localhost:8080
+   
+   3. Verifique seus links!
+
+═══════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO COMPLETA:
+
+   PASSO_A_PASSO_COMPLETO.md    - Guia detalhado
+   GUIA_EXPORTAR_IMPORTAR.md    - Opções de exportação
+   SOLUCAO_LINKS_NAO_APARECEM.md - Troubleshooting
+
+═══════════════════════════════════════════════════════════════
+
+🛠️ SCRIPTS DISPONÍVEIS:
+
+   importar_links.py      - Importa CSV/JSON
+   exportar_links.py      - Exporta para backup
+   diagnostico_links.py   - Verifica status
+   corrigir_banco.py      - Testa banco de dados
+   start_server.py        - Inicia servidor
+
+═══════════════════════════════════════════════════════════════
+
+🆘 PROBLEMAS?
+
+   Erro RLS:
+   → Execute no Supabase SQL Editor:
+     ALTER TABLE public.links DISABLE ROW LEVEL SECURITY;
+   
+   Erro de coluna:
+   → Aplique o SQL completo do Passo 2
+   
+   Links não aparecem:
+   → python diagnostico_links.py
+   → Reinicie o servidor
+
+═══════════════════════════════════════════════════════════════
+
+✅ CHECKLIST RÁPIDO:
+
+   [ ] Exportei CSV do projeto antigo
+   [ ] Apliquei SQL no projeto novo
+   [ ] python corrigir_banco.py → OK
+   [ ] python importar_links.py links_backup.csv
+   [ ] python start_server.py
+   [ ] Abri http://localhost:8080
+   [ ] Links aparecem! 🎉
+
+═══════════════════════════════════════════════════════════════
+
+Versão: 0.14.4
+Data: 15 de Abril de 2026

@@ -25,34 +25,40 @@ async def scrape_url(request: ScrapeRequest):
         metadata = await scrape_metadata(request.url)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao fazer scraping: {str(e)}")
 
     response = ScrapeResponse(
-        url=metadata["url"],
-        title=metadata["title"] or None,
-        description=metadata["description"] or None,
-        og_image=metadata["og_image"] or None,
-        favicon=metadata["favicon"] or None,
+        url=metadata.get("url", request.url),
+        title=metadata.get("title") or None,
+        description=metadata.get("description") or None,
+        og_image=metadata.get("og_image") or None,
+        favicon=metadata.get("favicon") or None,
         saved=False,
     )
 
     if request.save:
-        supabase = get_supabase()
-        link_data = LinkCreate(
-            url=metadata["url"],
-            title=metadata["title"],
-            description=metadata["description"],
-            og_image=metadata["og_image"],
-            favicon=metadata["favicon"],
-            category=request.category,
-            tags=request.tags,
-        )
-        result = (
-            supabase.table("links")
-            .insert(link_data.model_dump(exclude_none=True))
-            .execute()
-        )
-        if result.data:
-            response.saved = True
-            response.link_id = result.data[0]["id"]
+        try:
+            supabase = get_supabase()
+            link_data = LinkCreate(
+                url=metadata.get("url", request.url),
+                title=metadata.get("title", ""),
+                description=metadata.get("description", ""),
+                og_image=metadata.get("og_image", ""),
+                favicon=metadata.get("favicon", ""),
+                category=request.category or "",
+                tags=request.tags or [],
+            )
+            result = (
+                supabase.table("links")
+                .insert(link_data.model_dump(exclude_none=True))
+                .execute()
+            )
+            if result.data:
+                response.saved = True
+                response.link_id = result.data[0]["id"]
+        except Exception as e:
+            # Não falha se não conseguir salvar, apenas retorna os metadados
+            print(f"Erro ao salvar link: {e}")
 
     return response

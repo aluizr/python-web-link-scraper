@@ -2,16 +2,107 @@
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
-Versão mais recente: [0.14.4 — 2026-04-01](CHANGELOG.md#0144--2026-04-01)
+Versão mais recente: [0.14.5 — 2026-04-15](CHANGELOG.md#0145--2026-04-15)
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.14.5 | 2026-04-15 | [Ver mudanças](CHANGELOG.md#0145--2026-04-15) |
 | 0.14.4 | 2026-04-01 | [Ver mudanças](CHANGELOG.md#0144--2026-04-01) |
 | 0.14.3 | 2026-03-31 | [Ver mudanças](CHANGELOG.md#0143--2026-03-31) |
 | 0.14.2 | 2026-03-11 | [Ver mudanças](CHANGELOG.md#0142--2026-03-11) |
 | 0.14.1 | 2026-03-06 | [Ver mudanças](CHANGELOG.md#0141--2026-03-06) |
 | 0.14.0 | 2026-02-22 | [Ver mudanças](CHANGELOG.md#0140--2026-02-22) |
 | 0.13.0 | 2026-02-21 | [Ver mudanças](CHANGELOG.md#0130--2026-02-21) |
+
+---
+
+## [0.14.5] — 2026-04-15
+
+### Correções Críticas e Sistema de Migração (P0)
+
+`Backend`
+
+- **Corrigido `app/database.py`**: Substituído `os.environ` por `get_settings()` para carregar variáveis de ambiente corretamente
+- **Corrigido `app/routers/links.py`**: Removido parâmetro `nulls_last` não suportado no método `order()`
+- **Corrigido `app/routers/categories.py`**: Removido parâmetro `nulls_last` e adicionado tratamento de erros
+- **Corrigido `app/routers/scraper.py`**: Melhorado tratamento de campos vazios e exceções no scraping
+- **Adicionado `app/main.py`**: Rota `/favicon.ico` para servir favicon SVG do site
+- **Atualizado `app/models/category.py`**: Adicionado campo `user_id` opcional no `CategoryResponse`
+
+`Scripts de Utilidade`
+
+- **`start_server.py`**: Script melhorado para iniciar o servidor com informações visuais
+- **`run.bat`**: Arquivo batch para Windows facilitar inicialização
+- **`verificar_servidor.py`**: Script para verificar se o servidor está online
+- **`diagnostico_links.py`**: Diagnóstico completo do banco de dados e links
+- **`corrigir_banco.py`**: Testa leitura e escrita no banco, verifica RLS
+
+`Sistema de Importação/Exportação`
+
+- **`importar_links.py`**: Script completo para importar links de CSV ou JSON
+  - Suporta CSV e JSON
+  - Normalização automática de dados
+  - Validação de campos obrigatórios
+  - Importação em lotes de 50
+  - Detecção e skip de duplicatas
+  - Relatório detalhado de progresso
+- **`exportar_links.py`**: Script para exportar links para backup
+  - Exporta para CSV ou JSON
+  - Inclui metadados completos
+  - Opção de incluir links deletados
+- **`atualizar_metadados.py`**: Script para buscar thumbnails e descrições automaticamente
+  - Scraping automático de metadados
+  - Processamento em lotes com pausa
+  - Atualiza apenas campos vazios
+  - Suporte a limite de links
+  - Relatório de progresso em tempo real
+
+`Sistema de Migração`
+
+- **`verificar_status_migracao.py`**: Verifica progresso da migração em 4 passos
+- **`adicionar_link_teste.py`**: Adiciona link de teste para validação
+- **`migration_completa.sql`**: SQL completo para aplicar todas as migrations
+  - Cria/atualiza estrutura das tabelas
+  - Adiciona colunas faltantes
+  - Desabilita RLS para app pessoal
+  - Cria índices de performance
+  - Insere categorias padrão
+
+`Documentação`
+
+- **`COMO_ACESSAR.md`**: Guia completo de acesso e uso do sistema
+- **`STATUS_PRODUCAO.md`**: Status detalhado do servidor e correções aplicadas
+- **`INICIO_RAPIDO.txt`**: Referência rápida visual
+- **`PASSO_A_PASSO_COMPLETO.md`**: Guia detalhado de migração entre projetos
+- **`GUIA_EXPORTAR_IMPORTAR.md`**: Instruções de exportação e importação
+- **`GUIA_METADADOS.md`**: Como usar o sistema de atualização de metadados
+- **`SOLUCAO_LINKS_NAO_APARECEM.md`**: Troubleshooting para links não aparecendo
+- **`SOLUCAO_ERROS_IMAGENS.md`**: Explicação sobre erros CORS e 404 de imagens
+- **`CHECKLIST_MIGRACAO.md`**: Checklist interativo de migração
+- **`ACOES_NECESSARIAS.md`**: Ações manuais necessárias no Supabase
+- **`INICIO_RAPIDO_MIGRACAO.txt`**: Resumo visual da migração
+
+### Melhorias de UX
+
+- **Servidor iniciando automaticamente**: Scripts facilitam inicialização
+- **Feedback visual**: Todos os scripts mostram progresso e status
+- **Tratamento de erros**: Mensagens claras e acionáveis
+- **Fallbacks visuais**: Avatares coloridos para favicons ausentes
+
+### Correções de Bugs
+
+- **KeyError no database.py**: Variáveis de ambiente não carregavam
+- **TypeError no order()**: Parâmetro `nulls_last` não suportado
+- **422 no scraper**: Campos vazios causavam erro
+- **500 nas categorias**: Campo `user_id` faltando no modelo
+
+### Notas de Migração
+
+Para migrar de outro projeto Supabase:
+1. Exporte links do projeto antigo (CSV)
+2. Execute `migration_completa.sql` no projeto novo
+3. Execute `python importar_links.py links_backup.csv`
+4. Execute `python atualizar_metadados.py` para buscar thumbnails
 
 ---
 

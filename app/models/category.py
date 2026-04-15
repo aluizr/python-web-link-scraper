@@ -24,6 +24,7 @@ class CategoryUpdate(BaseModel):
 
 class CategoryResponse(CategoryBase):
     id: str
+    user_id: Optional[str] = None
 
     class Config:
         from_attributes = True

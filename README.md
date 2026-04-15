@@ -61,13 +61,51 @@ CORS_ORIGINS=*
 ## Executar
 
 ```bash
-uvicorn app.main:app --reload
-# ou
+# Opção 1: Script Python (Recomendado)
+python start_server.py
+
+# Opção 2: Arquivo Batch (Windows)
+run.bat
+
+# Opção 3: Comando direto
 python -m app.main
+
+# Opção 4: Uvicorn direto
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-A API estará disponível em: **http://localhost:8000**  
-Documentação interativa: **http://localhost:8000/docs**
+A API estará disponível em: **http://localhost:8080**  
+Documentação interativa: **http://localhost:8080/docs**
+
+## ✅ Servidor Funcionando
+
+O servidor está configurado e testado! Basta executar um dos comandos acima e acessar:
+
+- 🌐 **Interface**: http://localhost:8080
+- 📚 **API Docs**: http://localhost:8080/docs
+- ❤️ **Health**: http://localhost:8080/health
+
+## 🔧 Scripts Úteis
+
+```bash
+# Verificar se o servidor está rodando
+python verificar_servidor.py
+
+# Diagnosticar problemas com links
+python diagnostico_links.py
+
+# Importar links de CSV/JSON
+python importar_links.py links_backup.csv
+
+# Exportar links para backup
+python exportar_links.py --formato csv
+
+# Atualizar metadados (thumbnails e descrições)
+python atualizar_metadados.py
+
+# Testar banco de dados
+python corrigir_banco.py
+```
 
 ## Endpoints principais
 

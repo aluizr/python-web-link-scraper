@@ -53,6 +53,18 @@ def frontend():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Serve favicon."""
+    # Retorna um SVG simples como favicon
+    svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <rect width="100" height="100" fill="#6366f1"/>
+        <text x="50" y="70" font-size="60" text-anchor="middle" fill="white" font-family="Arial">🔗</text>
+    </svg>'''
+    from fastapi.responses import Response
+    return Response(content=svg, media_type="image/svg+xml")
+
+
 @app.get("/health", tags=["Root"])
 def health():
     return {"status": "ok"}

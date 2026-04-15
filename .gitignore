@@ -51,5 +51,11 @@ htmlcov/
 # Supabase local
 .supabase/
 
+# Backups e dados temporários
+links_backup.csv
+links_backup.json
+*.backup
+*.bak
+
 # Misc
 *.bak

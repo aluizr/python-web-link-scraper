@@ -44,7 +44,7 @@ def list_links(
     if q:
         query = query.or_(f"title.ilike.%{q}%,url.ilike.%{q}%,description.ilike.%{q}%")
 
-    result = query.order("position", desc=False, nulls_last=True).range(offset, offset + limit - 1).execute()
+    result = query.order("position", desc=False).range(offset, offset + limit - 1).execute()
     return result.data
 
 
