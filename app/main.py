@@ -1,32 +1,14 @@
 """
 Python Web Link Scraper — FastAPI Application
-
-Endpoints disponíveis:
-  POST   /api/scrape              Extrair metadados de uma URL
-  GET    /api/links               Listar links
-  POST   /api/links               Criar link
-  GET    /api/links/{id}          Buscar link
-  PUT    /api/links/{id}          Atualizar link
-  DELETE /api/links/{id}          Mover para lixeira
-  DELETE /api/links/{id}/permanent Excluir permanentemente
-  PATCH  /api/links/{id}/favorite Toggle favorito
-  POST   /api/links/{id}/restore  Restaurar da lixeira
-  GET    /api/links/trash         Listar lixeira
-  GET    /api/links/broken        Verificar links quebrados
-  GET    /api/categories          Listar categorias
-  POST   /api/categories          Criar categoria
-  PUT    /api/categories/{id}     Atualizar categoria
-  DELETE /api/categories/{id}     Excluir categoria
-  GET    /api/export/json         Exportar JSON
-  GET    /api/export/csv          Exportar CSV
-  GET    /api/export/html         Exportar HTML Bookmarks
-  GET    /api/stats               Estatísticas
-
-Docs interativos: http://localhost:8000/docs
+Interface visual: http://localhost:8080/
+Swagger UI:       http://localhost:8080/docs
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 from app.config import get_settings
 from app.routers import links, categories, scraper, export, stats
 
@@ -52,22 +34,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
+# ── API Routers ───────────────────────────────────────────────────────────
 app.include_router(scraper.router)
 app.include_router(links.router)
 app.include_router(categories.router)
 app.include_router(export.router)
 app.include_router(stats.router)
 
+# ── Static Files ──────────────────────────────────────────────────────────
+STATIC_DIR = Path(__file__).parent.parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-@app.get("/", tags=["Root"])
-def root():
-    return {
-        "app": "Python Web Link Scraper",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "redoc": "/redoc",
-    }
+
+# ── Frontend (SPA) ────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def frontend():
+    """Serve the web frontend."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health", tags=["Root"])

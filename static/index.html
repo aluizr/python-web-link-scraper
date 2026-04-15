@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Python Web Link Scraper</title>
+  <meta name="description" content="Capture e gerencie seus links favoritos com metadados automáticos via BeautifulSoup.">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🔗</div>
+    <div>
+      <div class="logo-text">Web Link Scraper</div>
+      <div class="logo-sub">Python · FastAPI · BS4</div>
+    </div>
+  </div>
+
+  <span class="nav-label">Principal</span>
+
+  <button class="nav-item active" data-section="links">
+    <span class="nav-icon">🔗</span>
+    Links
+    <span class="nav-badge" id="links-badge">–</span>
+  </button>
+
+  <button class="nav-item" data-section="scraper">
+    <span class="nav-icon">🔍</span>
+    Scraper
+  </button>
+
+  <button class="nav-item" data-section="categories">
+    <span class="nav-icon">📁</span>
+    Categorias
+  </button>
+
+  <button class="nav-item" data-section="stats">
+    <span class="nav-icon">📊</span>
+    Estatísticas
+  </button>
+
+  <button class="nav-item" data-section="trash">
+    <span class="nav-icon">🗑️</span>
+    Lixeira
+  </button>
+
+  <div class="sidebar-footer">
+    <span class="nav-label" style="margin-top:0">Exportar</span>
+    <button class="nav-item" id="btn-export-csv">
+      <span class="nav-icon">📄</span> CSV
+    </button>
+    <button class="nav-item" id="btn-export-json">
+      <span class="nav-icon">📦</span> JSON
+    </button>
+    <button class="nav-item" id="btn-export-html">
+      <span class="nav-icon">🌐</span> Bookmarks
+    </button>
+    <div class="divider"></div>
+    <a class="nav-item" href="/docs" target="_blank">
+      <span class="nav-icon">⚡</span>
+      Swagger API
+    </a>
+  </div>
+</aside>
+
+<!-- ── Main ────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- Header -->
+  <header class="header">
+    <div id="search-area" style="display:flex;align-items:center;gap:14px;flex:1">
+      <div class="search-wrap">
+        <span class="search-icon">🔎</span>
+        <input id="searchInput" type="text" placeholder="Buscar por título, URL ou descrição...">
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btn-add-header" title="Adicionar link manualmente">
+        ＋ Adicionar Link
+      </button>
+    </div>
+  </header>
+
+  <!-- Filter Bar (links only) -->
+  <div class="filter-bar" id="filter-bar">
+    <select id="categoryFilter" class="filter-select"></select>
+    <div class="divider" style="width:1px;height:20px;margin:0 4px"></div>
+    <button class="filter-chip" data-status="backlog"      onclick="applyStatusFilter('backlog')">Backlog</button>
+    <button class="filter-chip" data-status="in_progress"  onclick="applyStatusFilter('in_progress')">Em andamento</button>
+    <button class="filter-chip" data-status="done"         onclick="applyStatusFilter('done')">Concluído</button>
+    <button class="filter-chip" data-fav                   onclick="applyFavFilter()">⭐ Favoritos</button>
+  </div>
+
+  <!-- ── Section: Links ───────────────────────────────────────── -->
+  <section id="section-links">
+    <div class="content">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">Meus Links</div>
+          <div class="section-sub">Gerencie sua coleção de links</div>
+        </div>
+        <button class="btn btn-primary" id="btn-add-link">＋ Novo Link</button>
+      </div>
+      <div id="links-container"></div>
+    </div>
+  </section>
+
+  <!-- ── Section: Scraper ─────────────────────────────────────── -->
+  <section id="section-scraper" style="display:none">
+    <div class="content">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">🔍 Scraper de Metadados</div>
+          <div class="section-sub">Extrai título, descrição, favicon e imagem de qualquer URL via BeautifulSoup4</div>
+        </div>
+      </div>
+      <div class="scraper-box">
+        <div class="scraper-form">
+          <div class="field">
+            <label>URL para analisar</label>
+            <div class="scraper-row">
+              <input class="scraper-input" id="scrapeUrl" type="text" placeholder="https://exemplo.com">
+              <button class="btn btn-primary" id="scrapeBtn">🔍 Extrair Metadados</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-3)">
+            O scraper usa BeautifulSoup para extrair: og:title, og:description, og:image e favicon.
+          </div>
+        </div>
+        <div id="scrape-preview-container"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Section: Categories ──────────────────────────────────── -->
+  <section id="section-categories" style="display:none">
+    <div class="content">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">📁 Categorias</div>
+          <div class="section-sub">Organize seus links em categorias</div>
+        </div>
+      </div>
+      <div id="categories-container"></div>
+    </div>
+  </section>
+
+  <!-- ── Section: Stats ───────────────────────────────────────── -->
+  <section id="section-stats" style="display:none">
+    <div class="content">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">📊 Estatísticas</div>
+          <div class="section-sub">Visão geral da sua coleção</div>
+        </div>
+      </div>
+      <div id="stats-container"></div>
+    </div>
+  </section>
+
+  <!-- ── Section: Trash ───────────────────────────────────────── -->
+  <section id="section-trash" style="display:none">
+    <div class="content">
+      <div class="section-heading">
+        <div>
+          <div class="section-title">🗑️ Lixeira</div>
+          <div class="section-sub">Links excluídos — pode restaurar ou excluir definitivamente</div>
+        </div>
+      </div>
+      <div id="trash-container" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Modal: Add / Edit Link ──────────────────────────────────── -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Adicionar Link</span>
+      <button class="modal-close" onclick="closeLinkModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="modal-url">URL *</label>
+        <input type="text" id="modal-url" placeholder="https://exemplo.com">
+      </div>
+      <div class="field">
+        <label for="modal-title-input">Título</label>
+        <input type="text" id="modal-title-input" placeholder="Nome do link">
+      </div>
+      <div class="field">
+        <label for="modal-desc">Descrição</label>
+        <textarea id="modal-desc" placeholder="Descrição opcional..."></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="modal-category">Categoria</label>
+          <select id="modal-category" class="cat-select">
+            <option value="">Sem categoria</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="modal-priority">Prioridade</label>
+          <select id="modal-priority">
+            <option value="low">↓ Baixa</option>
+            <option value="medium" selected>→ Média</option>
+            <option value="high">↑ Alta</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="modal-status">Status</label>
+          <select id="modal-status">
+            <option value="backlog">Backlog</option>
+            <option value="in_progress">Em andamento</option>
+            <option value="done">Concluído</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="modal-due">Prazo</label>
+          <input type="date" id="modal-due">
+        </div>
+      </div>
+      <div class="field">
+        <label for="modal-tags">Tags (separadas por vírgula)</label>
+        <input type="text" id="modal-tags" placeholder="python, devtools, api...">
+      </div>
+      <div class="field">
+        <label for="modal-notes">Notas</label>
+        <textarea id="modal-notes" placeholder="Anotações sobre este link..."></textarea>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="modal-fav"> ⭐ Marcar como favorito
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeLinkModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLinkModal()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Scripts -->
+<script src="/static/js/api.js"></script>
+<script src="/static/js/app.js"></script>
+
+</body>
+</html>
