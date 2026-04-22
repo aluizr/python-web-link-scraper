@@ -10,6 +10,11 @@ interface NotionPageMetadata {
   icon: string | null;
 }
 
+interface NotionProperty {
+  type: string;
+  title?: { plain_text: string }[];
+}
+
 /**
  * Extract 32-character Notion page ID from various URL formats
  */
@@ -93,7 +98,7 @@ export function useNotionApi() {
       // Extract title from properties
       let title: string | null = null;
       if (data.properties) {
-        const titleProp = Object.values(data.properties).find((prop: any) => prop.type === "title") as any;
+        const titleProp = Object.values(data.properties).find((prop) => (prop as NotionProperty).type === "title") as NotionProperty | undefined;
         if (titleProp?.title?.[0]?.plain_text) {
           title = titleProp.title[0].plain_text;
         }

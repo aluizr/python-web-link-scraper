@@ -16,7 +16,9 @@ export function getCachedThumbSrc(
   if (raw.includes('/og-proxy?url=')) {
     try {
       raw = new URL(raw, 'http://localhost').searchParams.get('url') ?? raw;
-    } catch {}
+    } catch (err) {
+      console.debug("[image-cache] URL extraction error:", err);
+    }
   }
 
   const resolved = proxyFailed ? raw : (ensureProxiedIfCorp(raw) ?? raw);

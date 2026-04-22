@@ -259,7 +259,9 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         try {
           const extracted = new URL(finalUrl, "http://localhost").searchParams.get("url");
           if (extracted) finalUrl = extracted;
-        } catch {}
+        } catch (err) {
+          console.debug("[LinkForm] Proxy URL cleaning error:", err);
+        }
       }
       return finalUrl;
     };

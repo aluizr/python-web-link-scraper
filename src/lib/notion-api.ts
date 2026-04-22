@@ -10,6 +10,20 @@ export interface NotionPageMetadata {
   favicon: string | null;
 }
 
+interface NotionProperty {
+  type: string;
+  title?: { plain_text: string }[];
+  rich_text?: { plain_text: string }[];
+  name?: string;
+}
+
+interface NotionBlock {
+  type: string;
+  paragraph?: { rich_text: { plain_text: string }[] };
+  heading_1?: { rich_text: { plain_text: string }[] };
+  heading_2?: { rich_text: { plain_text: string }[] };
+}
+
 /**
  * Get stored Notion API token from localStorage
  */
@@ -44,13 +58,12 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
       console.debug("Notion API error:", response.status, response.statusText);
       return null;
     }
-
     const data = await response.json();
 
     // Extract title
     let title: string | null = null;
     if (data.properties) {
-      const titleProp = Object.values(data.properties).find((prop: any) => prop.type === "title") as any;
+      const titleProp = Object.values(data.properties).find((prop) => (prop as NotionProperty).type === "title") as NotionProperty | undefined;
       if (titleProp?.title?.[0]?.plain_text) {
         title = titleProp.title[0].plain_text;
       }
@@ -60,9 +73,9 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
     let description: string | null = null;
     if (data.properties) {
       // Try to find a "Description" property (rich_text type)
-      const descProp = Object.values(data.properties).find(
-        (prop: any) => prop.type === "rich_text" && (prop.name === "Description" || prop.name === "description")
-      ) as any;
+      const descProp = Object.entries(data.properties).find(
+        ([name, prop]) => (prop as NotionProperty).type === "rich_text" && (name.toLowerCase() === "description")
+      )?.[1] as NotionProperty | undefined;
       
       if (descProp?.rich_text?.[0]?.plain_text) {
         description = descProp.rich_text[0].plain_text;
@@ -88,21 +101,21 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
         if (blocksResponse.ok) {
           const blocksData = await blocksResponse.json();
           // Extract text from first paragraph or text block
-          for (const block of blocksData.results || []) {
+          for (const block of (blocksData.results as NotionBlock[] || [])) {
             if (block.type === "paragraph" && block.paragraph?.rich_text?.[0]?.plain_text) {
-              description = block.paragraph.rich_text.map((t: any) => t.plain_text).join("");
+              description = block.paragraph.rich_text.map((t) => t.plain_text).join("");
               if (description.length > 200) {
                 description = description.substring(0, 200) + "...";
               }
               break;
             } else if (block.type === "heading_1" && block.heading_1?.rich_text?.[0]?.plain_text) {
-              description = block.heading_1.rich_text.map((t: any) => t.plain_text).join("");
+              description = block.heading_1.rich_text.map((t) => t.plain_text).join("");
               if (description.length > 200) {
                 description = description.substring(0, 200) + "...";
               }
               break;
             } else if (block.type === "heading_2" && block.heading_2?.rich_text?.[0]?.plain_text) {
-              description = block.heading_2.rich_text.map((t: any) => t.plain_text).join("");
+              description = block.heading_2.rich_text.map((t) => t.plain_text).join("");
               if (description.length > 200) {
                 description = description.substring(0, 200) + "...";
               }

@@ -1,6 +1,16 @@
 import { useState, useCallback } from "react";
 import { fetchNotionPageMetadata } from "@/lib/notion-api";
 import { isNotionUrl } from "@/lib/notion-utils";
+import { LRUCache } from "@/lib/lru-cache";
+import { 
+  normalizeUrl, 
+  cleanMetadataTitle, 
+  extractOriginalImageUrl, 
+  getKnownFallback, 
+  getKnownFaviconFallback,
+  KNOWN_FALLBACKS,
+  KNOWN_FAVICON_FALLBACKS
+} from "@/lib/metadata-utils";
 
 export interface LinkMetadata {
   title: string | null;
@@ -12,88 +22,7 @@ export interface LinkMetadata {
   source: "notion" | "microlink" | "noembed" | "local" | null;
 }
 
-// LRU cache with bounded size for metadata requests
-// Persiste no localStorage para sobreviver a reloads
-class LRUCache<K, V> {
-  private maxSize: number;
-  private cache = new Map<K, { value: V; timestamp: number }>();
-  private expiry: number;
-  private storageKey: string;
-
-  constructor(maxSize = 100, expiryMs = 24 * 60 * 60 * 1000, storageKey = "webnest:metadata_cache") {
-    this.maxSize = maxSize;
-    this.expiry = expiryMs;
-    this.storageKey = storageKey;
-    this.loadFromStorage();
-  }
-
-  private loadFromStorage(): void {
-    try {
-      const stored = localStorage.getItem(this.storageKey);
-      if (stored) {
-        const data = JSON.parse(stored);
-        const now = Date.now();
-        // Carregar apenas entradas não expiradas
-        for (const [key, entry] of Object.entries(data)) {
-          const typedEntry = entry as { value: V; timestamp: number };
-          if (now - typedEntry.timestamp < this.expiry) {
-            this.cache.set(key as K, typedEntry);
-          }
-        }
-        console.log(`[LRUCache] Carregadas ${this.cache.size} entradas do cache`);
-      }
-    } catch (err) {
-      console.warn("[LRUCache] Erro ao carregar cache:", err);
-    }
-  }
-
-  private saveToStorage(): void {
-    try {
-      const data: Record<string, { value: V; timestamp: number }> = {};
-      for (const [key, entry] of this.cache.entries()) {
-        data[key as string] = entry;
-      }
-      localStorage.setItem(this.storageKey, JSON.stringify(data));
-    } catch (err) {
-      console.warn("[LRUCache] Erro ao salvar cache:", err);
-    }
-  }
-
-  get(key: K): V | undefined {
-    const entry = this.cache.get(key);
-    if (!entry) return undefined;
-    if (Date.now() - entry.timestamp > this.expiry) {
-      this.cache.delete(key);
-      this.saveToStorage();
-      return undefined;
-    }
-    // Move to end (most recently used)
-    this.cache.delete(key);
-    this.cache.set(key, entry);
-    return entry.value;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      // Evict oldest entry (first in Map iteration order)
-      const oldest = this.cache.keys().next().value;
-      if (oldest !== undefined) this.cache.delete(oldest);
-    }
-    this.cache.set(key, { value, timestamp: Date.now() });
-    this.saveToStorage();
-  }
-
-  delete(key: K): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-      this.saveToStorage();
-    }
-  }
-}
-
-const metadataCache = new LRUCache<string, LinkMetadata>(100);
+const metadataCache = new LRUCache<string, LinkMetadata>(100, 24 * 60 * 60 * 1000, "webnest:metadata_cache");
 
 const FETCH_TIMEOUT_MS = 8000;
 
@@ -107,128 +36,8 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, ti
   }
 }
 
-/** Normalize URL for consistent cache keys and clean fetch */
-function normalizeUrl(url: string): string {
-  try {
-    let cleanUrl = url.trim();
-    
-    // Remove browser text fragments (#:~:text=...)
-    if (cleanUrl.includes("#:~:text=")) {
-      cleanUrl = cleanUrl.split("#:~:text=")[0];
-    }
-    
-    const u = new URL(cleanUrl);
-    // Remove trailing slash, lowercase host, strip hash
-    return u.origin.toLowerCase() + u.pathname.replace(/\/+$/, "") + u.search;
-  } catch {
-    return url.trim().toLowerCase();
-  }
-}
-
-/** 
- * Clean title by removing common site suffixes 
- * e.g. "Title | Site Name" -> "Title"
- */
-function cleanMetadataTitle(title: string | null): string | null {
-  if (!title) return null;
-  
-  let cleaned = title.trim();
-  
-  // Common separators: " | ", " - ", " – ", " — "
-  const separators = [" | ", " - ", " – ", " — "];
-  
-  for (const sep of separators) {
-    if (cleaned.includes(sep)) {
-      const parts = cleaned.split(sep);
-      // If the last part looks like a site name (single word or common domain part)
-      const lastPart = parts[parts.length - 1].trim();
-      if (lastPart.length > 0 && lastPart.length < 20) {
-        cleaned = parts.slice(0, -1).join(sep).trim();
-      }
-    }
-  }
-  
-  return cleaned || title;
-}
-
-const VALID_IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|webp|gif|avif|svg)(\?.*)?$/i;
-
-function isValidImageUrl(url: string): boolean {
-  try {
-    const { pathname } = new URL(url);
-    return VALID_IMAGE_EXTENSIONS.test(pathname) || !pathname.includes('.');
-    // Se não tem extensão, deixa tentar (pode ser URL dinâmica)
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Extract original image URL from proxy services (Next.js, Vercel, etc)
- * These proxies often have CORS restrictions, so we extract the original URL
- */
-function extractOriginalImageUrl(imageUrl: string): string {
-  if (!imageUrl) return imageUrl;
-  
-  try {
-    const url = new URL(imageUrl);
-    
-    // Next.js Image Optimization: /_next/image?url=...
-    if (url.pathname.includes('/_next/image')) {
-      const originalUrl = url.searchParams.get('url');
-      if (originalUrl) {
-        // If it's a relative URL, make it absolute
-        if (originalUrl.startsWith('http')) {
-          return originalUrl;
-        } else if (originalUrl.startsWith('/')) {
-          return `${url.origin}${originalUrl}`;
-        }
-      }
-    }
-    
-    // Vercel Image Optimization: similar pattern
-    if (url.pathname.includes('/_vercel/image')) {
-      const originalUrl = url.searchParams.get('url');
-      if (originalUrl) {
-        return originalUrl.startsWith('http') ? originalUrl : imageUrl;
-      }
-    }
-    
-    // Cloudflare Image Resizing: /cdn-cgi/image/...
-    if (url.pathname.includes('/cdn-cgi/image/')) {
-      const parts = url.pathname.split('/cdn-cgi/image/');
-      if (parts[1]) {
-        // Extract URL after parameters
-        const afterParams = parts[1].split('/').slice(1).join('/');
-        if (afterParams.startsWith('http')) {
-          return afterParams;
-        }
-      }
-    }
-    
-    // Imgix, Unsplash
-    if (url.hostname.includes('imgix.net') || url.hostname === 'images.unsplash.com') {
-      const original = new URL(imageUrl);
-      original.search = '';
-      return original.toString();
-    }
-    
-    return imageUrl;
-  } catch {
-    return imageUrl;
-  }
-}
-
 export function invalidateThumbnailCache(url: string) {
-  let normalizedUrl = url.trim();
-  try {
-    const parsedUrl = new URL(normalizedUrl);
-    normalizedUrl = parsedUrl.origin + parsedUrl.pathname + parsedUrl.search;
-  } catch {
-    if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-      normalizedUrl = "https://" + normalizedUrl;
-    }
-  }
+  const normalizedUrl = normalizeUrl(url);
   metadataCache.delete(normalizedUrl);
   metadataCache.delete(url.trim());
 }
@@ -246,7 +55,8 @@ function buildLocalFallback(url: string): LinkMetadata {
       error: null,
       source: "local",
     };
-  } catch {
+  } catch (err) {
+    console.debug("[useMetadata] Fallback creation error:", err);
     return {
       title: null,
       description: null,
@@ -259,40 +69,26 @@ function buildLocalFallback(url: string): LinkMetadata {
   }
 }
 
-/**
- * Try to fetch metadata from Notion API
- * This handles Notion pages when an API key is available
- */
 async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
-  // Try to get Notion API key from localStorage
   const notionApiKey = localStorage.getItem("webnest:notion_api_key");
-  if (!notionApiKey) {
-    console.debug("No Notion API key configured, skipping Notion fetch");
-    return null;
-  }
-
-  // Only try Notion API for Notion URLs
-  if (!isNotionUrl(url)) {
+  if (!notionApiKey || !isNotionUrl(url)) {
     return null;
   }
 
   try {
     const notionMetadata = await fetchNotionPageMetadata(url, notionApiKey);
-    if (!notionMetadata) {
-      return null;
-    }
+    if (!notionMetadata) return null;
 
-    // Extract original URLs from proxy services
     let image = notionMetadata.image;
     if (image) {
       image = extractOriginalImageUrl(image);
     }
 
-    // If no custom favicon, use Notion's default favicon
     const favicon = notionMetadata.favicon || "https://www.notion.so/images/favicon.ico";
 
     return {
       ...notionMetadata,
+      title: cleanMetadataTitle(notionMetadata.title),
       image,
       favicon,
       loading: false,
@@ -300,76 +96,10 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
       source: "notion",
     };
   } catch (err) {
-    console.debug("Notion API error:", err);
+    console.debug("[useMetadata] Notion API error:", err);
     return null;
   }
 }
-
-/**
- * Known fallback images for sites that block scraping or have broken OG images
- */
-const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
-  'kaggle.com': 'https://www.kaggle.com/static/images/site-logo.svg',
-  'joblib.readthedocs.io': 'https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg',
-  'nanobananaimg.com': 'https://nanobananaimg.com/favicon.ico',
-  'salesforce.com': 'https://www.salesforce.com/content/dam/sfdc-docs/www/logos/logo-salesforce.svg',
-  'github.com': 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-  'linkedin.com': 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2rzsrca',
-  'twitter.com': 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png',
-  'x.com': 'https://abs.twimg.com/icons/apple-touch-icon-192x192.png',
-  'youtube.com': 'https://www.youtube.com/img/desktop/yt_1200.png',
-  'medium.com': 'https://miro.medium.com/v2/1*m-R_BkNf1Qjr1YbyOIJY2w.png',
-  'greenhouse.io': 'https://mma.prnewswire.com/media/1802066/Greenhouse_Logo.jpg',
-  'uol.com.br': 'https://conteudo.imguol.com.br/c/home/interacao/facebook/compartilhe.png',
-  'globo.com': 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Globo.com_logo.svg/512px-Globo.com_logo.svg.png',
-};
-
-export const KNOWN_FALLBACKS: Record<string, string> = (() => {
-  const dict = { ...DEFAULT_KNOWN_FALLBACKS };
-  try {
-    const stored = localStorage.getItem("webnest:known_fallbacks");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      for (const [k, v] of Object.entries(parsed)) {
-        dict[k] = v as string;
-      }
-      
-      // Self-heal known broken cached domains
-      if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
-        delete dict['claude.ai'];
-        localStorage.setItem("webnest:known_fallbacks", JSON.stringify(dict));
-      }
-    }
-  } catch {}
-  return dict;
-})();
-
-/**
- * Known fallback favicons for sites with CORS-blocked favicons
- */
-const DEFAULT_FAVICON_FALLBACKS: Record<string, string> = {
-  'uol.com.br': 'https://www.uol.com.br/favicon.ico',
-  'globo.com': 'https://www.globo.com/favicon.ico',
-};
-
-export const KNOWN_FAVICON_FALLBACKS: Record<string, string> = (() => {
-  const dict = { ...DEFAULT_FAVICON_FALLBACKS };
-  try {
-    const stored = localStorage.getItem("webnest:known_favicon_fallbacks");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      for (const [k, v] of Object.entries(parsed)) {
-        dict[k] = v as string;
-      }
-      
-      if (dict['claude.ai'] && (dict['claude.ai'].includes('claude.ai/images') || dict['claude.ai'].includes('wikimedia.org'))) {
-        delete dict['claude.ai'];
-        localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(dict));
-      }
-    }
-  } catch {}
-  return dict;
-})();
 
 export function saveKnownFallbacks(fallbacks: Record<string, string>) {
   Object.assign(KNOWN_FALLBACKS, fallbacks);
@@ -381,108 +111,35 @@ export function saveKnownFaviconFallbacks(fallbacks: Record<string, string>) {
   localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(KNOWN_FAVICON_FALLBACKS));
 }
 
-/**
- * Get fallback image for known problematic domains
- */
-export function getKnownFallback(url: string): string | null {
-  try {
-    const hostname = new URL(url).hostname;
-    
-    // Check exact matches first
-    if (KNOWN_FALLBACKS[hostname]) {
-      return KNOWN_FALLBACKS[hostname];
-    }
-    
-    // Check partial matches
-    for (const [domain, fallback] of Object.entries(KNOWN_FALLBACKS)) {
-      if (hostname.includes(domain)) {
-        return fallback;
-      }
-    }
-    
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Get fallback favicon for known problematic domains
- */
-export function getKnownFaviconFallback(url: string): string | null {
-  try {
-    const hostname = new URL(url).hostname;
-    
-    // Check exact matches first
-    if (KNOWN_FAVICON_FALLBACKS[hostname]) {
-      return KNOWN_FAVICON_FALLBACKS[hostname];
-    }
-    
-    // Check partial matches
-    for (const [domain, fallback] of Object.entries(KNOWN_FAVICON_FALLBACKS)) {
-      if (hostname.includes(domain)) {
-        return fallback;
-      }
-    }
-    
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Try to extract OG image directly from HTML when APIs fail
- * Uses server-side proxy to avoid CSP restrictions
- */
 async function fetchOgImageFromHtml(url: string): Promise<string | null> {
   try {
-    console.log("[fetchOgImageFromHtml] Fetching HTML via proxy from:", url);
-    
-    // Use server-side proxy to avoid CSP restrictions
     const proxyUrl = `/html-proxy?url=${encodeURIComponent(url)}`;
     const response = await fetchWithTimeout(proxyUrl);
 
-    if (!response.ok) {
-      console.log("[fetchOgImageFromHtml] Proxy response not OK:", response.status);
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = await response.json();
-    console.log("[fetchOgImageFromHtml] Proxy returned:", data);
-    
     if (data.ogImage) {
-      console.log("[fetchOgImageFromHtml] Found OG image:", data.ogImage);
-      
-      // Validate that the image URL is absolute
       try {
         new URL(data.ogImage);
         return data.ogImage;
       } catch {
-        // If relative URL, make it absolute
         try {
           const baseUrl = new URL(url);
-          const absoluteUrl = new URL(data.ogImage, baseUrl.origin).href;
-          console.log("[fetchOgImageFromHtml] Converted relative to absolute:", absoluteUrl);
-          return absoluteUrl;
-        } catch {
-          console.log("[fetchOgImageFromHtml] Failed to convert relative URL");
+          return new URL(data.ogImage, baseUrl.origin).href;
+        } catch (err) {
+          console.debug("[useMetadata] HTML proxy relative URL conversion error:", err);
           return null;
         }
       }
     }
-
-    console.log("[fetchOgImageFromHtml] No OG image found in HTML");
     return null;
   } catch (err) {
-    console.debug("[fetchOgImageFromHtml] Error:", err);
+    console.debug("[useMetadata] HTML proxy error:", err);
     return null;
   }
 }
 
-/**
- * Try to extract metadata using Microlink API with fallback
- */
 async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
   try {
     const microlinkUrl = new URL("https://api.microlink.io");
@@ -496,16 +153,9 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
 
     if (!response.ok) {
       if (response.status === 429) {
-        console.warn("[fetchFromMicrolink] Rate limit atingido (429), usando fallbacks");
         localStorage.setItem("webnest:microlink_rate_limit", Date.now().toString());
-      } else if (response.status === 400) {
-        // Log clean message for known limitation (anti-bot / pro plan required)
-        console.info(`[fetchFromMicrolink] Site blocked or Microlink Pro required (${response.status}) for: ${url}. Attempting fallbacks.`);
-      } else {
-        console.warn(`[fetchFromMicrolink] HTTP Error ${response.status}, checking for known fallbacks`);
       }
       
-      // Even if Microlink fails (400, 403, 429), try our local HTML proxy as it might not be blocked.
       const fallback = getKnownFallback(url);
       if (fallback) {
         let title = null;
@@ -513,7 +163,9 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
           const urlObj = new URL(url);
           const hostname = urlObj.hostname.replace(/^www\./i, "");
           title = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-        } catch {}
+        } catch (err) {
+          console.debug("[useMetadata] Title derivation error:", err);
+        }
         return {
           title,
           description: null,
@@ -525,8 +177,6 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
         };
       }
 
-      // If no known fallback, try our robust local HTML proxy before giving up on this provider
-      console.log("[fetchFromMicrolink] Microlink failed, trying local HTML proxy fallback for:", url);
       const htmlMetadata = await fetchOgImageFromHtml(url);
       if (htmlMetadata) {
         return {
@@ -549,24 +199,23 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     const rawTitle = data.data.title || null;
     const isBlockedPage = rawTitle && (
       /^error:/i.test(rawTitle.trim()) ||
-      /^Attention Required!/i.test(rawTitle.trim()) ||
-      /^Just a moment\.\.\./i.test(rawTitle.trim()) ||
+      /Attention Required!/i.test(rawTitle.trim()) ||
+      /Just a moment\.\.\./i.test(rawTitle.trim()) ||
       /Cloudflare/i.test(rawTitle.trim()) ||
       /Access Denied/i.test(rawTitle.trim()) ||
-      /403 Forbidden/i.test(rawTitle.trim()) ||
-      /Not Acceptable!/i.test(rawTitle.trim())
+      /403 Forbidden/i.test(rawTitle.trim())
     );
 
     if (isBlockedPage) {
-      console.warn("[fetchFromMicrolink] Detected Anti-Bot/Error page:", rawTitle);
       const fallback = getKnownFallback(url);
-      
       let derivedTitle = null;
       try {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname.replace(/^www\./i, "");
         derivedTitle = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-      } catch {}
+      } catch (err) {
+        console.debug("[useMetadata] Blocked page title derivation error:", err);
+      }
 
       return {
         title: derivedTitle,
@@ -585,74 +234,35 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
         const urlObj = new URL(url);
         const hostname = urlObj.hostname.replace(/^www\./i, "");
         title = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-      } catch {
+      } catch (err) {
+        console.debug("[useMetadata] Microlink empty title derivation error:", err);
         title = null;
       }
     }
 
-    // Check known fallbacks FIRST, overriding Microlink's returned image
-    // This is crucial for domains where we know their OG image is broken or completely blocked by CORS in the browser
-    let image = null;
-    const fallback = getKnownFallback(url);
-    if (fallback) {
-      console.log("[fetchFromMicrolink] Using known fallback (overriding original image):", fallback);
-      image = fallback;
-    } else {
-      image = data.data.image?.url || null;
-      console.log("[fetchFromMicrolink] Microlink image:", image);
-    }
-    console.log("[fetchFromMicrolink] Microlink statusCode:", data.statusCode);
+    let image = getKnownFallback(url) || data.data.image?.url || null;
     
-    // If still no image, try fetching directly from HTML
-    // This works for sites that Microlink can't access but we can
     if (!image) {
-      console.log("[fetchFromMicrolink] No OG image from Microlink, trying direct HTML fetch");
       image = await fetchOgImageFromHtml(url);
-      console.log("[fetchFromMicrolink] HTML fetch result:", image);
     }
     
-    // If still no image, use screenshot as last resort.
-    // Guard: skip screenshot if the page title signals an error response
-    // (e.g., "Error: 403", "Access Denied", "404 Not Found", "429 Too Many Requests").
     const screenshotUrl = data.data.screenshot?.url || null;
     const titleLower = (rawTitle || "").toLowerCase();
-    const looksLikeErrorPage =
-      /^error:/i.test(titleLower) ||
-      /\b(403|404|429|500|502|503)\b/.test(titleLower) ||
-      /(access denied|forbidden|not found|too many requests|rate limit|unauthorized)/i.test(titleLower);
+    const looksLikeErrorPage = /\b(403|404|429|500|502|503)\b/.test(titleLower) ||
+      /(access denied|forbidden|not found|too many requests|rate limit)/i.test(titleLower);
 
     if (!image && screenshotUrl && !looksLikeErrorPage) {
       image = screenshotUrl;
-      console.log("[fetchFromMicrolink] Using screenshot:", image);
-    } else if (!image && screenshotUrl && looksLikeErrorPage) {
-      console.log("[fetchFromMicrolink] Skipping screenshot — title suggests error page:", rawTitle);
     }
     
-    // Extract original URL from proxy services to avoid CORS issues
     if (image) {
-      const originalImage = image;
       image = extractOriginalImageUrl(image);
-      if (originalImage !== image) {
-        console.log("[fetchFromMicrolink] Extracted from proxy:", originalImage, "->", image);
-      }
     }
 
-    console.log("[fetchFromMicrolink] Final image:", image);
-
-    // Get favicon with fallback for known problematic sites
-    let favicon = data.data.logo?.url || null;
-    if (!favicon) {
-      const faviconFallback = getKnownFaviconFallback(url);
-      if (faviconFallback) {
-        console.log("[fetchFromMicrolink] Using known favicon fallback:", faviconFallback);
-        favicon = faviconFallback;
-      }
-    }
-
-    if (!title && !image && !data.data.description) return null;
+    const favicon = data.data.logo?.url || getKnownFaviconFallback(url);
 
     return {
-      title,
+      title: cleanMetadataTitle(title),
       description: data.data.description || null,
       image,
       favicon,
@@ -661,14 +271,11 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
       source: "microlink",
     };
   } catch (err) {
-    console.debug("Microlink error:", err);
+    console.debug("[useMetadata] Microlink fetch error:", err);
     return null;
   }
 }
 
-/**
- * Third fallback: noembed works well for common content providers
- */
 async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
   try {
     const noembedUrl = new URL("https://noembed.com/embed");
@@ -676,37 +283,26 @@ async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
 
     const response = await fetchWithTimeout(noembedUrl.toString(), {
       method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
+      headers: { Accept: "application/json" },
     });
 
-    if (!response.ok) {
-      return null;
-    }
+    if (!response.ok) return null;
 
     const data = await response.json();
-
-    if (data.error) {
-      return null;
-    }
+    if (data.error) return null;
 
     const title = data.title || data.author_name || data.provider_name || null;
-    const description = data.provider_name || null;
     let image = data.thumbnail_url || null;
     
-    // Extract original URL from proxy services
     if (image) {
       image = extractOriginalImageUrl(image);
     }
 
-    if (!title && !description && !image) {
-      return null;
-    }
+    if (!title && !image) return null;
 
     return {
-      title,
-      description,
+      title: cleanMetadataTitle(title),
+      description: data.provider_name || null,
       image,
       favicon: null,
       loading: false,
@@ -714,15 +310,11 @@ async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
       source: "noembed",
     };
   } catch (err) {
-    console.debug("Noembed error:", err);
+    console.debug("[useMetadata] Noembed error:", err);
     return null;
   }
 }
 
-/**
- * Hook to fetch metadata from a URL
- * Uses Microlink API as primary, with noembed and local derivation as fallbacks
- */
 export function useMetadata() {
   const [metadata, setMetadata] = useState<LinkMetadata>({
     title: null,
@@ -736,106 +328,41 @@ export function useMetadata() {
 
   const fetchMetadata = useCallback(async (url: string): Promise<LinkMetadata> => {
     if (!url || !url.trim()) {
-      setMetadata({
-        title: null,
-        description: null,
-        image: null,
-        favicon: null,
-        loading: false,
-        error: null,
-        source: null,
-      });
-      return {
-        title: null,
-        description: null,
-        image: null,
-        favicon: null,
-        loading: false,
-        error: null,
-        source: null,
-      };
+      const empty: LinkMetadata = { title: null, description: null, image: null, favicon: null, loading: false, error: null, source: null };
+      setMetadata(empty);
+      return empty;
     }
 
     setMetadata((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Normalize URL - ensure it has a protocol
-      let normalizedUrl = url.trim();
-      
-      // Check if URL is valid
-      try {
-        new URL(normalizedUrl);
-      } catch {
-        if (!normalizedUrl.startsWith("http://") && !normalizedUrl.startsWith("https://")) {
-          normalizedUrl = "https://" + normalizedUrl;
-        }
-      }
-
-      // Strip hash and normalize — use this as both cache key and fetch URL
-      const parsedUrl = new URL(normalizedUrl);
-      normalizedUrl = parsedUrl.origin + parsedUrl.pathname + parsedUrl.search;
-
-      // Check cache with the clean URL
-      const cleanCacheKey = normalizedUrl;
-      const cached = metadataCache.get(cleanCacheKey);
+      const normalizedUrl = normalizeUrl(url);
+      const cached = metadataCache.get(normalizedUrl);
       if (cached) {
         setMetadata(cached);
         return cached;
       }
 
-      // Try Notion API first for Notion URLs (if API key is configured)
       let result = await fetchFromNotion(normalizedUrl);
+      if (!result) result = await fetchFromMicrolink(normalizedUrl);
+      if (!result) result = await fetchFromNoembed(normalizedUrl);
+      if (!result) result = buildLocalFallback(normalizedUrl);
 
-      // Try primary API - Microlink
-      if (!result) {
-        result = await fetchFromMicrolink(normalizedUrl);
-      }
-
-      // Third fallback for common providers (YouTube, Vimeo, etc.)
-      if (!result) {
-        result = await fetchFromNoembed(normalizedUrl);
-      }
-
-      // If still no result, derive a basic local fallback from URL
-      if (!result) {
-        result = buildLocalFallback(normalizedUrl);
-      }
-
-      // Validar a extensão da imagem salva (impedir arquivos .web maliciosos/inválidos que quebram o html)
-      if (result.image && !isValidImageUrl(result.image)) {
-        console.warn("[useMetadata] Image dropped due to invalid extension:", result.image);
-        result.image = null;
-      }
-
-      // Clean title and truncate description
-      if (result.title) {
-        result.title = cleanMetadataTitle(result.title);
-      }
-      if (result.description && result.description.length > 160) {
-        result.description = result.description.substring(0, 157) + "...";
-      }
-
-      // Update cache
-      metadataCache.set(cleanCacheKey, result);
-
+      metadataCache.set(normalizedUrl, result);
       setMetadata(result);
       return result;
     } catch (err) {
-      const result: LinkMetadata = {
+      const errorResult: LinkMetadata = {
         title: null,
         description: null,
         image: null,
         favicon: null,
         loading: false,
-        error: null, // Don't show error to user, just silently fail
+        error: err instanceof Error ? err.message : "Erro desconhecido",
         source: null,
       };
-      
-      // Still cache the result — use normalized URL if available, else raw
-      metadataCache.set(url.trim(), result);
-      
-      setMetadata(result);
-      return result;
+      setMetadata(errorResult);
+      return errorResult;
     }
   }, []);
 

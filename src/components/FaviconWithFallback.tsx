@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ensureProxied } from "@/lib/image-utils";
-import { getKnownFaviconFallback } from "@/hooks/use-metadata";
+import { getKnownFaviconFallback } from "@/lib/metadata-utils";
 
 /**
  * Paleta de cores consistente para avatares de fallback.
@@ -115,7 +115,9 @@ export function FaviconWithFallback({
         if (hostname.includes('wikimedia.org')) {
            return finalFavicon; // Nunca proxear wikimedia
         }
-      } catch {}
+      } catch (err) {
+        console.debug("[FaviconWithFallback] URL parsing error:", err);
+      }
 
       return ensureProxied(finalFavicon);
     }
