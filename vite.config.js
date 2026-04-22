@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => ({
       allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
     },
     headers: {
-      "Content-Security-Policy": `default-src 'self'; script-src 'self' 'wasm-unsafe-eval' ${mode === "development" ? "'unsafe-inline'" : "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='"}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://noembed.com https://api.microlink.io https://*.microlink.io https://api.notion.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests`,
+      "Content-Security-Policy": `default-src 'self'; script-src 'self' 'wasm-unsafe-eval' ${mode === "development" ? "'unsafe-inline'" : "'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='"}; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://noembed.com https://api.microlink.io https://*.microlink.io https://api.notion.com https://r.jina.ai; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests`,
       "X-Frame-Options": "DENY",
       "X-Content-Type-Options": "nosniff",
       "X-XSS-Protection": "1; mode=block",
@@ -35,8 +35,6 @@ export default defineConfig(({ mode }) => ({
           // Proxy para buscar HTML e extrair metadados
           server.middlewares.use("/html-proxy", async (req, res) => {
             const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
-            
-            console.log("[html-proxy] Request for:", rawUrl);
             
             if (!rawUrl) {
               res.statusCode = 400;
@@ -67,13 +65,29 @@ export default defineConfig(({ mode }) => ({
                 hostname: target.hostname,
                 path: target.pathname + target.search,
                 headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                  "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
+                  "Cache-Control": "max-age=0",
+                  "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+                  "Sec-Ch-Ua-Mobile": "?0",
+                  "Sec-Ch-Ua-Platform": '"Windows"',
+                  "Sec-Fetch-Dest": "document",
+                  "Sec-Fetch-Mode": "navigate",
+                  "Sec-Fetch-Site": "none",
+                  "Sec-Fetch-User": "?1",
+                  "Upgrade-Insecure-Requests": "1"
                 },
               };
 
               client.get(options, (upstream) => {
-                console.log("[html-proxy] Response status:", upstream.statusCode);
+                if (upstream.statusCode === 301 || upstream.statusCode === 302) {
+                   const location = upstream.headers.location;
+                   if (location) {
+                     const nextUrl = location.startsWith('http') ? location : new URL(location, target.origin).href;
+                     return fetchUrl(nextUrl);
+                   }
+                }
 
                 if (upstream.statusCode >= 400) {
                   res.statusCode = upstream.statusCode;
@@ -87,68 +101,56 @@ export default defineConfig(({ mode }) => ({
                 });
 
                 upstream.on("end", () => {
-                  // Extract og:image, twitter:image, image_src from HTML
-                  const ogImageMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):image["']\s+content=["']([^"']+)["']/i);
-                  const imageSrcMatch = html.match(/<link\s+rel=["']image_src["']\s+href=["']([^"']+)["']/i);
-                  const itemPropMatch = html.match(/<meta\s+itemprop=["']image["']\s+content=["']([^"']+)["']/i);
+                  // Advanced Title Extraction
+                  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+                  const ogTitleMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):title["']\s+content=["']([^"']+)["']/i);
+                  const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
                   
-                  let ogImage = ogImageMatch ? ogImageMatch[1] : (imageSrcMatch ? imageSrcMatch[1] : (itemPropMatch ? itemPropMatch[1] : null));
+                  let title = (ogTitleMatch ? ogTitleMatch[1] : (titleMatch ? titleMatch[1] : (h1Match ? h1Match[1] : null)));
+                  
+                  // Advanced Image Extraction
+                  const ogImageMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):image["']\s+content=["']([^"']+)["']/i);
+                  const relImageMatch = html.match(/<link\s+rel=["'](?:image_src|apple-touch-icon)["']\s+href=["']([^"']+)["']/i);
+                  const thumbnailMatch = html.match(/<meta\s+name=["']thumbnail["']\s+content=["']([^"']+)["']/i);
+                  
+                  let ogImage = ogImageMatch ? ogImageMatch[1] : (relImageMatch ? relImageMatch[1] : (thumbnailMatch ? thumbnailMatch[1] : null));
 
-                  // Make relative URLs absolute
+                  // Convert relative image URLs
                   if (ogImage && !ogImage.startsWith('http')) {
                     try {
-                      const baseUrl = new URL(rawUrl);
-                      ogImage = new URL(ogImage, baseUrl.origin).href;
-                      console.log("[html-proxy] Converted relative URL to absolute:", ogImage);
-                    } catch (e) {
-                      console.log("[html-proxy] Failed to convert relative URL:", e.message);
+                      ogImage = new URL(ogImage, target.origin).href;
+                    } catch {
                       ogImage = null;
                     }
                   }
 
-                  // Extract title (og:title, twitter:title, or <title>)
-                  const ogTitleMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):title["']\s+content=["']([^"']+)["']/i);
-                  const htmlTitleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-                  const ogTitle = ogTitleMatch ? ogTitleMatch[1] : (htmlTitleMatch ? htmlTitleMatch[1] : null);
-
-                  // Extract description (og:description, twitter:description, or <meta name="description">)
+                  // Advanced Description Extraction
                   const ogDescMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):description["']\s+content=["']([^"']+)["']/i);
                   const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-                  const ogDescription = ogDescMatch ? ogDescMatch[1] : (metaDescMatch ? metaDescMatch[1] : null);
+                  let description = ogDescMatch ? ogDescMatch[1] : (metaDescMatch ? metaDescMatch[1] : null);
 
-                  console.log("[html-proxy] Extracted metadata:", { ogImage, ogTitle, ogDescription });
+                  // Extract Favicon
+                  const favMatch = html.match(/<link\s+rel=["'](?:shortcut )?icon["']\s+href=["']([^"']+)["']/i);
+                  let favicon = favMatch ? favMatch[1] : null;
+                  if (favicon && !favicon.startsWith('http')) {
+                    try {
+                      favicon = new URL(favicon, target.origin).href;
+                    } catch {
+                      favicon = null;
+                    }
+                  }
 
                   res.setHeader("Content-Type", "application/json");
                   res.setHeader("Access-Control-Allow-Origin", "*");
-                  // Normalize and limit metadata length
-                  const cleanOgImage = ogImage ? ogImage.trim() : null;
-                  let title = (ogTitle || "").trim();
-                  
-                  // Clean site branding from title (e.g. "Title | Site" -> "Title")
-                  const separators = [" | ", " - ", " – ", " — "];
-                  for (const sep of separators) {
-                    if (title.includes(sep)) {
-                      const parts = title.split(sep);
-                      const lastPart = parts[parts.length - 1].trim();
-                      // Only strip if the last part is relatively short (branding)
-                      if (lastPart.length > 0 && lastPart.length < 20) {
-                        title = parts.slice(0, -1).join(sep).trim();
-                      }
-                    }
-                  }
-                  
-                  const description = (ogDescription || "").trim().substring(0, 300);
-                  
-                  res.setHeader("Content-Type", "application/json");
                   res.statusCode = 200;
                   res.end(JSON.stringify({ 
-                    ogImage: cleanOgImage, 
-                    ogTitle: title.substring(0, 70) || null,
-                    ogDescription: description.substring(0, 160) || null
+                    title: title ? title.trim().substring(0, 200) : null,
+                    description: description ? description.trim().substring(0, 400) : null,
+                    ogImage: ogImage ? ogImage.trim() : null,
+                    favicon: favicon ? favicon.trim() : null
                   }));
                 });
               }).on("error", (err) => {
-                console.error("[html-proxy] Error:", err.message);
                 res.statusCode = 502;
                 res.end(JSON.stringify({ error: err.message }));
               });
@@ -164,6 +166,34 @@ export default defineConfig(({ mode }) => ({
           
           const domainLastFetch = new Map();
           const DOMAIN_MIN_INTERVAL = 1000; // Aumentado para 1.0s para evitar 429 (Too Many Requests)
+
+          // Proxy para a API do Notion (evitar CORS no frontend)
+          server.middlewares.use("/notion-api", async (req, res) => {
+            const url = new URL(req.url, "http://localhost:8080");
+            const targetPath = url.pathname.replace("/notion-api", "");
+            
+            const options = {
+              hostname: "api.notion.com",
+              path: targetPath + url.search,
+              method: req.method,
+              headers: {
+                ...req.headers,
+                host: "api.notion.com",
+              },
+            };
+
+            const proxyReq = https.request(options, (proxyRes) => {
+              res.writeHead(proxyRes.statusCode, proxyRes.headers);
+              proxyRes.pipe(res);
+            });
+
+            req.pipe(proxyReq);
+
+            proxyReq.on("error", (err) => {
+              res.statusCode = 502;
+              res.end(JSON.stringify({ error: err.message }));
+            });
+          });
 
           // Proxy para imagens
           server.middlewares.use("/og-proxy", async (req, res) => {
@@ -240,7 +270,7 @@ export default defineConfig(({ mode }) => ({
                     path: target.pathname + target.search,
                     headers: {
                       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                      "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
                       "Accept-Language": "en-US,en;q=0.9",
                       "Accept-Encoding": "gzip, deflate, br",
                       "Referer": target.origin + "/",

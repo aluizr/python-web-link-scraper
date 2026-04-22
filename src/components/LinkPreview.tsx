@@ -69,7 +69,7 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
       <div className="flex items-start gap-3">
         {debouncedImage && !imageFailed ? (
           <img
-            src={debouncedImage.startsWith('data:') || proxyFailed ? debouncedImage : `/og-proxy?url=${encodeURIComponent(debouncedImage)}`}
+            src={debouncedImage.startsWith('data:') || debouncedImage.includes('supabase.co/storage') || proxyFailed ? debouncedImage : `/og-proxy?url=${encodeURIComponent(debouncedImage)}`}
             alt="Preview"
             className="h-20 w-20 object-cover rounded border flex-shrink-0"
             onError={() => {

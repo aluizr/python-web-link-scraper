@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 
-const NOTION_TOKEN_KEY = "webnest_notion_api_token";
+const NOTION_TOKEN_KEY = "webnest:notion_api_key";
 const NOTION_API_VERSION = "2022-06-28";
 
 interface NotionPageMetadata {
@@ -79,7 +79,7 @@ export function useNotionApi() {
     if (!pageId) return null;
 
     try {
-      const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+      const response = await fetch(`/notion-api/v1/pages/${pageId}`, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 const NOTION_TOKEN_KEY = "webnest:notion_api_key";
 
@@ -31,6 +31,9 @@ export function NotionSettingsDialog({ open, onOpenChange }: NotionSettingsDialo
     }
   }, [open]);
 
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+
   const handleSave = () => {
     const trimmed = token.trim();
     if (trimmed) {
@@ -42,13 +45,43 @@ export function NotionSettingsDialog({ open, onOpenChange }: NotionSettingsDialo
     setTimeout(() => {
       onOpenChange(false);
       setSaved(false);
+      setTestResult(null);
     }, 1000);
+  };
+
+  const handleTest = async () => {
+    if (!token.trim()) return;
+    setTesting(true);
+    setTestResult(null);
+    
+    try {
+      const response = await fetch("/notion-api/v1/users/me", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token.trim()}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (response.ok) {
+        setTestResult("success");
+      } else {
+        setTestResult("error");
+      }
+    } catch (err) {
+      console.error("Notion test error:", err);
+      setTestResult("error");
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleClear = () => {
     localStorage.removeItem(NOTION_TOKEN_KEY);
     setToken("");
     setSaved(true);
+    setTestResult(null);
     setTimeout(() => setSaved(false), 2000);
   };
 
@@ -65,15 +98,41 @@ export function NotionSettingsDialog({ open, onOpenChange }: NotionSettingsDialo
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="notion-token">Token de Integração</Label>
-            <Input
-              id="notion-token"
-              type="password"
-              placeholder="secret_abc123..."
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
+            <div className="flex gap-2">
+              <Input
+                id="notion-token"
+                type="password"
+                placeholder="secret_abc123..."
+                value={token}
+                onChange={(e) => {
+                  setToken(e.target.value);
+                  setTestResult(null);
+                }}
+                className="font-mono text-sm flex-1"
+              />
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                onClick={handleTest}
+                disabled={testing || !token.trim()}
+                className="shrink-0"
+              >
+                {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Testar"}
+              </Button>
+            </div>
+            
+            {testResult === "success" && (
+              <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Token válido!
+              </p>
+            )}
+            {testResult === "error" && (
+              <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
+                <XCircle className="h-3.5 w-3.5" /> Token inválido ou erro de conexão.
+              </p>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-2">
               O token é armazenado apenas no seu navegador e nunca é enviado para nossos servidores.
             </p>
           </div>

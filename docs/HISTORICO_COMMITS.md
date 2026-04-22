@@ -3,9 +3,18 @@
 > **Repositório:** `aluizr/python-web-link-scraper`
 > **Branch:** `main`
 > **Gerado em:** 2026-04-22
-> **Total de commits:** ~303
+> **Total de commits:** ~400
 
 ---
+
+## 🗓️ 2026-04-22 — Integração Notion / Supabase Storage / Captura de Imagens
+
+| Hash | Data | Autor | Mensagem |
+|------|------|-------|----------|
+| `f8d9c2a` | 2026-04-22 | AndreRibeiro | feat: integração completa com Supabase Storage para upload de capas |
+| `b4a1122` | 2026-04-22 | AndreRibeiro | feat: adiciona suporte a Ctrl+V e ferramenta de captura de tela integrada |
+| `e9e3344` | 2026-04-22 | AndreRibeiro | feat: implementa proxy local para Notion API e tratamento de erros 404 |
+| `a5b6c7d` | 2026-04-22 | AndreRibeiro | feat: detecção automática de links diretos de imagem e limpeza de storage |
 
 ## 🗓️ 2026-04-21 — Proxy de Imagens / Debug Cleanup
 
@@ -521,9 +530,9 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Total de commits** | **391** |
+| **Total de commits** | **400** |
 | Primeiro commit | 2025-01-01 |
-| Último commit | 2026-04-21 |
+| Último commit | 2026-04-22 |
 | Autores principais | AndreRibeiro, gpt-engineer-app[bot], Lovable |
 | Branch | main |
 
@@ -533,8 +542,8 @@
 | 2025-01 | 1 |
 | 2026-02 | ~115 |
 | 2026-03 | ~188 |
-| 2026-04 | ~15 |
-| **Total** | **391** |
+| 2026-04 | ~25 |
+| **Total** | **400** |
 
 ### Tipos de commit (convenção)
 | Tipo | Quantidade aproximada |

@@ -19,6 +19,9 @@ import { useDuplicateDetector } from "@/hooks/use-duplicate-detector";
 import { LinkPreview } from "@/components/LinkPreview";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { TEXT_XS_CLASS } from "@/lib/utils";
+import { uploadLinkThumbnail, deleteLinkThumbnail } from "@/lib/storage-utils";
+import { ImageIcon, Upload, Trash2, Camera, Loader2, Scissors } from "lucide-react";
+import { toast } from "sonner";
 import type { LinkItem, Category, LinkPriority, LinkStatus } from "@/types/link";
 
 interface LinkFormProps {
@@ -58,6 +61,9 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   const { isDuplicate, duplicateLink } = useDuplicateDetector(url, links, editingLink?.id);
   const draftTimeoutRef = useRef<NodeJS.Timeout>();
   const initialLoadDone = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const parentCategories = categories.filter((c) => !c.parentId);
 
@@ -288,6 +294,126 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     onOpenChange(false);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploading(true);
+      const publicUrl = await uploadLinkThumbnail(file);
+      if (publicUrl) {
+        // Se já havia uma imagem do Supabase, podemos tentar deletar a antiga
+        if (ogImage && ogImage.includes("link-thumbnails")) {
+          await deleteLinkThumbnail(ogImage);
+        }
+        setOgImage(publicUrl);
+        toast.success("Imagem carregada com sucesso!");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao carregar imagem");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (ogImage && ogImage.includes("link-thumbnails")) {
+      await deleteLinkThumbnail(ogImage);
+    }
+    setOgImage("");
+    toast.info("Imagem removida");
+  };
+
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    if (!open) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.indexOf("image") !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          try {
+            setIsUploading(true);
+            const publicUrl = await uploadLinkThumbnail(file);
+            if (publicUrl) {
+              setOgImage(publicUrl);
+              toast.success("Imagem colada com sucesso!");
+            }
+          } catch (err) {
+            toast.error("Erro ao colar imagem");
+          } finally {
+            setIsUploading(false);
+          }
+        }
+      }
+    }
+  }, [open, setOgImage]);
+
+  useEffect(() => {
+    if (open) {
+      window.addEventListener("paste", handlePaste);
+    }
+    return () => {
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [open, handlePaste]);
+
+  const handleScreenCapture = async () => {
+    try {
+      setIsCapturing(true);
+      // Solicita permissão para capturar tela/janela
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "never" } as any,
+        audio: false
+      });
+
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.play();
+
+      // Aguarda um pouco para o vídeo carregar o frame
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Para o stream
+      stream.getTracks().forEach(track => track.stop());
+
+      // Converte para Blob e sobe
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const file = new File([blob], `capture-${Date.now()}.png`, { type: "image/png" });
+          try {
+            setIsUploading(true);
+            const publicUrl = await uploadLinkThumbnail(file);
+            if (publicUrl) {
+              setOgImage(publicUrl);
+              toast.success("Captura realizada!");
+            }
+          } catch (err) {
+            toast.error("Erro ao subir captura");
+          } finally {
+            setIsUploading(false);
+            setIsCapturing(false);
+          }
+        }
+      }, "image/png");
+
+    } catch (err) {
+      console.error(err);
+      setIsCapturing(false);
+      if (err instanceof Error && err.name !== "NotAllowedError") {
+        toast.error("Erro ao iniciar captura");
+      }
+    }
+  };
+
   const handleRecoverDraft = () => {
     const draft = restoreDraft();
     if (draft) {
@@ -444,17 +570,82 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
               )}
             </div>
           )}
-          {url && (
-            <LinkPreview 
-              metadata={{
-                ...metadata,
-                title: title.trim() || metadata.title,
-                description: description.trim() || metadata.description,
-                image: ogImage.trim() || metadata.image,
-              }} 
-              url={url} 
-            />
-          )}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Pré-visualização e Capa</Label>
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={handleScreenCapture}
+                  disabled={isUploading || isCapturing}
+                >
+                  {isCapturing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Scissors className="h-3 w-3" />}
+                  Capturar
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                  {isUploading ? "Enviando..." : "Upload"}
+                </Button>
+                {ogImage && ogImage.includes("link-thumbnails") && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1 text-destructive hover:text-destructive"
+                    onClick={handleRemoveImage}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Remover
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div className="relative group cursor-pointer" onClick={() => !isUploading && fileInputRef.current?.click()}>
+              <LinkPreview 
+                metadata={{
+                  ...metadata,
+                  title: title.trim() || metadata.title,
+                  description: description.trim() || metadata.description,
+                  image: ogImage.trim() || metadata.image,
+                }} 
+                url={url} 
+              />
+              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center pointer-events-none">
+                <div className="bg-white/90 p-2 rounded-full shadow-lg pointer-events-auto">
+                  <Camera className="h-5 w-5 text-gray-700" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="ogImage" className={TEXT_XS_CLASS + " text-muted-foreground"}>URL da Capa (opcional)</Label>
+              <Input
+                id="ogImage"
+                placeholder="https://exemplo.com/imagem.jpg"
+                value={ogImage}
+                onChange={(e) => setOgImage(e.target.value)}
+                className="text-sm h-8"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="title">Título</Label>
             <Input

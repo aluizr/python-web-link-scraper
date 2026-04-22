@@ -12,6 +12,7 @@ import {
   getCachedCategories,
   addPendingAction,
 } from "@/lib/offline-cache";
+import { deleteLinkThumbnail } from "@/lib/storage-utils";
 import type { LinkItem, Category, SearchFilters } from "@/types/link";
 import type { PostgrestError } from "@supabase/supabase-js";
 
@@ -424,25 +425,36 @@ export function useLinks(userId: string | undefined) {
   // ✅ Deletar permanentemente
   const permanentDeleteLink = useCallback(async (id: string) => {
     return withRateLimit("link:delete", async () => {
+      const link = links.find((l) => l.id === id);
       const { error } = await supabase.from("links").delete().eq("id", id);
       if (error) {
         logger.error("Erro ao deletar link permanentemente", error, { linkId: id });
       } else {
+        if (link?.ogImage) {
+          await deleteLinkThumbnail(link.ogImage);
+        }
         setLinks((prev) => prev.filter((l) => l.id !== id));
         logger.info("link.deleted_permanently", { linkId: id });
       }
     });
-  }, []);
+  }, [links]);
 
   // ✅ Esvaziar lixeira
   const emptyTrash = useCallback(async () => {
     return withRateLimit("link:delete", async () => {
-      const trashIds = links.filter((l) => l.deletedAt).map((l) => l.id);
+      const trashed = links.filter((l) => l.deletedAt);
+      const trashIds = trashed.map((l) => l.id);
       if (trashIds.length === 0) return;
       const { error } = await supabase.from("links").delete().in("id", trashIds);
       if (error) {
         logger.error("Erro ao esvaziar lixeira", error);
       } else {
+        // Limpar imagens do storage em lote
+        for (const link of trashed) {
+          if (link.ogImage) {
+            await deleteLinkThumbnail(link.ogImage);
+          }
+        }
         setLinks((prev) => prev.filter((l) => !l.deletedAt));
         logger.info("trash.emptied", { deletedCount: trashIds.length });
       }

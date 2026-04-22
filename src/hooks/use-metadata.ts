@@ -24,7 +24,7 @@ export interface LinkMetadata {
 
 const metadataCache = new LRUCache<string, LinkMetadata>(100, 24 * 60 * 60 * 1000, "webnest:metadata_cache");
 
-const FETCH_TIMEOUT_MS = 8000;
+const FETCH_TIMEOUT_MS = 12000;
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
@@ -97,6 +97,10 @@ async function fetchFromNotion(url: string): Promise<LinkMetadata | null> {
     };
   } catch (err) {
     console.debug("[useMetadata] Notion API error:", err);
+    // Re-throw if it's a specific Notion error we want to show
+    if (err instanceof Error && (err.message.includes("Notion") || err.message.includes("compartilhada"))) {
+      throw err;
+    }
     return null;
   }
 }
@@ -111,7 +115,7 @@ export function saveKnownFaviconFallbacks(fallbacks: Record<string, string>) {
   localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(KNOWN_FAVICON_FALLBACKS));
 }
 
-async function fetchOgImageFromHtml(url: string): Promise<string | null> {
+async function fetchFromLocalProxy(url: string): Promise<LinkMetadata | null> {
   try {
     const proxyUrl = `/html-proxy?url=${encodeURIComponent(url)}`;
     const response = await fetchWithTimeout(proxyUrl);
@@ -119,23 +123,59 @@ async function fetchOgImageFromHtml(url: string): Promise<string | null> {
     if (!response.ok) return null;
 
     const data = await response.json();
-    if (data.ogImage) {
-      try {
-        new URL(data.ogImage);
-        return data.ogImage;
-      } catch {
-        try {
-          const baseUrl = new URL(url);
-          return new URL(data.ogImage, baseUrl.origin).href;
-        } catch (err) {
-          console.debug("[useMetadata] HTML proxy relative URL conversion error:", err);
-          return null;
-        }
-      }
-    }
-    return null;
+    if (!data.title && !data.ogImage) return null;
+
+    return {
+      title: cleanMetadataTitle(data.title),
+      description: data.description || null,
+      image: data.ogImage ? extractOriginalImageUrl(data.ogImage) : null,
+      favicon: data.favicon || getKnownFaviconFallback(url),
+      loading: false,
+      error: null,
+      source: "local",
+    };
   } catch (err) {
-    console.debug("[useMetadata] HTML proxy error:", err);
+    console.debug("[useMetadata] Local proxy error:", err);
+    return null;
+  }
+}
+
+async function fetchFromJinaReader(url: string): Promise<LinkMetadata | null> {
+  try {
+    // Jina Reader is a free service that renders pages and extracts clean content
+    // We use the JSON output format if possible, but the basic one is r.jina.ai/URL
+    // By default it returns Markdown, but we can try to parse it or use their API if known.
+    // For now, we'll use the simple reader which is very good at bypassing blocks.
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    
+    const response = await fetchWithTimeout(jinaUrl, {
+      headers: {
+        'Accept': 'application/json', // Jina supports JSON if requested
+        'X-Return-Format': 'markdown'
+      }
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (!data.data) return null;
+
+    // Jina nests OG tags in a metadata object
+    const image = data.data.image || data.data.metadata?.['og:image'] || data.data.metadata?.['twitter:image'] || null;
+    const title = data.data.title || data.data.metadata?.['og:title'] || data.data.metadata?.['twitter:title'] || null;
+    const description = data.data.description || data.data.metadata?.['og:description'] || data.data.content?.substring(0, 200) || null;
+
+    return {
+      title: cleanMetadataTitle(title),
+      description: description,
+      image: image ? extractOriginalImageUrl(image) : null,
+      favicon: getKnownFaviconFallback(url),
+      loading: false,
+      error: null,
+      source: "local",
+    };
+  } catch (err) {
+    console.debug("[useMetadata] Jina Reader error:", err);
     return null;
   }
 }
@@ -177,18 +217,8 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
         };
       }
 
-      const htmlMetadata = await fetchOgImageFromHtml(url);
-      if (htmlMetadata) {
-        return {
-          title: null,
-          description: null,
-          image: htmlMetadata,
-          favicon: getKnownFaviconFallback(url),
-          loading: false,
-          error: null,
-          source: "local",
-        };
-      }
+      const localMetadata = await fetchFromLocalProxy(url);
+      if (localMetadata) return localMetadata;
       
       return null;
     }
@@ -243,7 +273,8 @@ async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
     let image = getKnownFallback(url) || data.data.image?.url || null;
     
     if (!image) {
-      image = await fetchOgImageFromHtml(url);
+      const local = await fetchFromLocalProxy(url);
+      image = local?.image || null;
     }
     
     const screenshotUrl = data.data.screenshot?.url || null;
@@ -336,7 +367,27 @@ export function useMetadata() {
     setMetadata((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
+      // 🖼️ Detecção de Links Diretos de Imagem (PNG, SVG, JPG, etc.) - Antes de tudo
+      const isDirectImage = /\.(png|svg|jpg|jpeg|webp|gif|avif|ico)(\?.*)?$/i.test(url.trim());
+      if (isDirectImage) {
+        console.log("[useMetadata] Link de imagem direta detectado:", url);
+        const fileName = url.split('/').pop()?.split('?')[0] || "Imagem";
+        const result: LinkMetadata = {
+          title: `Imagem: ${fileName}`,
+          description: "Link direto para arquivo de imagem.",
+          image: url.trim(),
+          favicon: getKnownFaviconFallback(url),
+          loading: false,
+          error: null,
+          source: "local",
+        };
+        metadataCache.set(url.trim(), result);
+        setMetadata(result);
+        return result;
+      }
+
       const normalizedUrl = normalizeUrl(url);
+
       const cached = metadataCache.get(normalizedUrl);
       if (cached) {
         setMetadata(cached);
@@ -346,6 +397,8 @@ export function useMetadata() {
       let result = await fetchFromNotion(normalizedUrl);
       if (!result) result = await fetchFromMicrolink(normalizedUrl);
       if (!result) result = await fetchFromNoembed(normalizedUrl);
+      if (!result) result = await fetchFromLocalProxy(normalizedUrl);
+      if (!result) result = await fetchFromJinaReader(normalizedUrl);
       if (!result) result = buildLocalFallback(normalizedUrl);
 
       metadataCache.set(normalizedUrl, result);

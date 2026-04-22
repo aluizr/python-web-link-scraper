@@ -104,6 +104,11 @@ export function extractOriginalImageUrl(imageUrl: string): string {
       return original.toString();
     }
     
+    // Do NOT strip params from Notion/S3 or signed URLs (essential for access)
+    if (url.hostname.includes('notion-static.com') || url.hostname.includes('s3.us-west-2.amazonaws.com') || url.searchParams.has('X-Amz-Signature')) {
+      return imageUrl;
+    }
+    
     return imageUrl;
   } catch {
     return imageUrl;

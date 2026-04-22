@@ -45,7 +45,7 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
   if (!pageId) return null;
 
   try {
-    const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+    const response = await fetch(`/notion-api/v1/pages/${pageId}`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${apiToken}`,
@@ -55,6 +55,12 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Página não encontrada ou não compartilhada com a integração no Notion.");
+      }
+      if (response.status === 401) {
+        throw new Error("Token do Notion inválido ou expirado.");
+      }
       console.debug("Notion API error:", response.status, response.statusText);
       return null;
     }
@@ -89,7 +95,7 @@ export async function fetchNotionPageMetadata(urlOrPageId: string, token?: strin
     // If no description property, try to fetch first block content
     if (!description) {
       try {
-        const blocksResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=3`, {
+        const blocksResponse = await fetch(`/notion-api/v1/blocks/${pageId}/children?page_size=3`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiToken}`,
