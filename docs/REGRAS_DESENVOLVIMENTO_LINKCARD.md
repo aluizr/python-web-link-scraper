@@ -1,78 +1,50 @@
+# 🛡️ Guia de Desenvolvimento: LinkCard.tsx
+
+Este arquivo é o componente central da interface do WebNest. Por ser complexo e altamente interativo, siga rigorosamente estas diretrizes para evitar regressões de UI ou erros de build.
+
+## ⚠️ 1. Integridade do Arquivo (Antigo .kiro)
+
+Para evitar corrupção durante edições automáticas por IA:
+- **Imports Primeiro:** NUNCA insira funções ou constantes entre blocos de `import`.
+- **Ordem:** 1. Imports -> 2. Constantes auxiliares -> 3. Interfaces (Props) -> 4. Componente Principal.
+- **Exportação:** Mantenha o componente como `export function LinkCard`.
+
+## 🎨 2. Design System & Tokens
+
+Mantenha a consistência visual usando os utilitários definidos em `@/lib/utils`:
+- **Textos Pequenos:** Use `${TEXT_XS_CLASS}` em descrições, notas e labels secundários.
+- **Badges:** Use `COMPACT_BADGE_CLASS` para status, prioridade e tags.
+- **Botões de Ação:** Use `${ICON_BTN_MD_CLASS}` para botões de edição, favorito e lixeira.
+- **Cores Dinâmicas:** Ao lidar com cores de categorias, sempre use o sistema de fallback:
+  ```tsx
+  style={{ backgroundColor: `${color}20`, color: color, borderColor: `${color}40` }}
+  ```
+
+## 🖼️ 3. Gestão de Imagens (Capa e Favicon)
+
+- **Favicons:** Use SEMPRE o componente `<FaviconWithFallback />`. Ele centraliza a lógica de fallback e detecção de erros.
+- **Capas (ogImage):** 
+  - Imagens do **Supabase Storage** (contendo `supabase.co/storage`) devem ser carregadas diretamente.
+  - Imagens externas devem passar pelo proxy `/og-proxy?url=...` se houver problemas de CORS.
+  - SEMPRE implemente o `onError` para disparar `invalidateThumbnailCache(link.url)`.
+
+## 🖱️ 4. Drag & Drop (Altamente Sensível)
+
+O `LinkCard` é uma "peça" fundamental do sistema de reordenação. Não altere as props de drag sem testar o `Index.tsx`:
+- **Atributos:** Mantenha `draggable={dragEnabled}` e `data-card-id={link.id}`.
+- **Eventos:** Não remova ou altere o comportamento de `onDragStart`, `onDragOver` e `onDrop`. Eles são essenciais para a reordenação manual.
+- **Feedback Visual:** Mantenha as classes condicionais para `${isDragging}` e `${isDropZone}`.
+
+## ♿ 5. Acessibilidade & UX
+
+- **Tooltips/Titles:** Ícones que indicam estado (ex: `ShieldAlert` para links quebrados) DEVEM ter um elemento `<title>` ou Tooltip explicativo.
+- **Links Externos:** Use sempre `target="_blank"` e `rel="noopener noreferrer"`.
+- **Truncamento:** Use `truncate` ou `line-clamp-X` para evitar que títulos longos quebrem o layout do card.
+
+## 🚀 6. Performance
+
+- O `LinkCard` é renderizado centenas de vezes. Evite cálculos pesados dentro do corpo do componente.
+- Use `useMemo` para transformações de dados complexas se necessário.
+
 ---
-inclusion: fileMatch
-fileMatchPattern: "src/components/LinkCard.tsx"
----
-
-# Regras para LinkCard.tsx
-
-## ⚠️ IMPORTANTE: Evitar Corrupção do Arquivo
-
-Este arquivo teve problemas de corrupção no passado. Siga estas regras:
-
-### ❌ NUNCA FAÇA ISSO:
-
-```typescript
-import { Something } from "somewhere";
-
-// ❌ ERRO: Função entre imports
-function myFunction() {
-  // ...
-}
-
-import { OtherThing } from "elsewhere";
-```
-
-### ✅ SEMPRE FAÇA ASSIM:
-
-```typescript
-// Todos os imports primeiro
-import { Something } from "somewhere";
-import { OtherThing } from "elsewhere";
-
-// Depois constantes e funções
-function myFunction() {
-  // ...
-}
-
-// Depois o componente
-export function LinkCard() {
-  // ...
-}
-```
-
-## Estrutura Correta do Arquivo
-
-1. **Imports** (linhas 1-20)
-   - Ícones do lucide-react
-   - Componentes UI
-   - Tipos e utilitários
-
-2. **Constantes** (após imports)
-   - `statusLabel`
-   - `priorityLabel`
-
-3. **Interface** (após constantes)
-   - `LinkCardProps`
-
-4. **Componente** (após interface)
-   - `export function LinkCard()`
-
-## Favicon
-
-- Use `link.favicon` diretamente no `FaviconWithFallback`
-- NÃO crie funções auxiliares para favicon
-- O `FaviconWithFallback` já lida com todos os casos
-
-## Thumbnails
-
-- Use `link.ogImage` diretamente no `<img src={link.ogImage}>`
-- NÃO use `ensureProxied()` - URLs diretas funcionam melhor
-- Mantenha os logs de debug `onLoad` e `onError`
-
-## Validação
-
-Antes de commitar, o hook `.git/hooks/pre-commit` valida:
-- Não há funções entre imports
-- O build compila sem erros
-
-Se o hook falhar, corrija o arquivo antes de commitar.
+*Este guia substitui as regras antigas localizadas em .kiro/steering.*

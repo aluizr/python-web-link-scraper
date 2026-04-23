@@ -537,7 +537,16 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarContent className="pt-4">
+      <div className="p-6 pb-2 flex items-center gap-3">
+        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-primary/20 shadow-sm">
+          <img src="/logo.png" alt="WebNest Logo" className="h-7 w-7 object-contain" />
+        </div>
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">WebNest</h1>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Digital Archive</p>
+        </div>
+      </div>
+      <SidebarContent className="pt-2">
         {/* Main nav */}
         <SidebarGroup>
           <SidebarGroupContent>
