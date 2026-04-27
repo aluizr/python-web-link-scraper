@@ -19,8 +19,10 @@ import { useDuplicateDetector } from "@/hooks/use-duplicate-detector";
 import { LinkPreview } from "@/components/LinkPreview";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { TEXT_XS_CLASS } from "@/lib/utils";
-import { uploadLinkThumbnail, deleteLinkThumbnail } from "@/lib/storage-utils";
-import { ImageIcon, Upload, Trash2, Camera, Loader2, Scissors } from "lucide-react";
+import { uploadLinkThumbnail, deleteLinkThumbnail, getLocalBlobUrl } from "@/lib/storage-utils";
+import { ImageIcon, Upload, Trash2, Camera, Loader2, Scissors, Crop, ScissorsSquareDashedBottom } from "lucide-react";
+import { ScreenCropSelector } from "@/components/ScreenCropSelector";
+import { ImageCropTool } from "@/components/ImageCropTool";
 import { toast } from "sonner";
 import type { LinkItem, Category, LinkPriority, LinkStatus } from "@/types/link";
 
@@ -62,8 +64,11 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   const draftTimeoutRef = useRef<NodeJS.Timeout>();
   const initialLoadDone = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [isUploading, setIsUploading]     = useState(false);
+  const [isCapturing, setIsCapturing]     = useState(false);
+  const [cropImageSrc, setCropImageSrc]   = useState<string | null>(null);
+  const [cropOgImageSrc, setCropOgImageSrc] = useState<string | null>(null);
+  const [isCropLoading, setIsCropLoading] = useState(false);
 
   const parentCategories = categories.filter((c) => !c.parentId);
 
@@ -414,6 +419,106 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     }
   };
 
+  const handleSelectArea = async () => {
+    try {
+      setIsCapturing(true);
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: "never" } as any,
+        audio: false,
+      });
+
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.play();
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      stream.getTracks().forEach((track) => track.stop());
+
+      const dataUrl = canvas.toDataURL("image/png");
+      setCropImageSrc(dataUrl);
+    } catch (err) {
+      if (err instanceof Error && err.name !== "NotAllowedError") {
+        toast.error("Erro ao iniciar captura de área");
+      }
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    setCropImageSrc(null);
+    try {
+      setIsUploading(true);
+      const file = new File([blob], `crop-${Date.now()}.png`, { type: "image/png" });
+      const publicUrl = await uploadLinkThumbnail(file);
+      if (publicUrl) {
+        if (ogImage && ogImage.includes("link-thumbnails")) {
+          await deleteLinkThumbnail(ogImage);
+        }
+        setOgImage(publicUrl);
+        toast.success("Área selecionada como capa!");
+      }
+    } catch (err) {
+      toast.error("Erro ao subir imagem recortada");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setCropImageSrc(null);
+  };
+
+  // ── Recortar imagem existente (ogImage) ──────────────────────────────────
+  const handleOpenImageCrop = async () => {
+    if (!ogImage) return;
+    setIsCropLoading(true);
+    try {
+      // Converte para objectURL local (Supabase client para Storage URLs,
+      // fetch com CORS para URLs externas) — garante canvas sem taint
+      const blobUrl = await getLocalBlobUrl(ogImage);
+      setCropOgImageSrc(blobUrl);
+    } catch (err) {
+      // Fallback: passa a URL diretamente (ImageCropTool tentará de novo internamente)
+      setCropOgImageSrc(ogImage);
+    } finally {
+      setIsCropLoading(false);
+    }
+  };
+
+  const handleImageCropConfirm = async (blob: Blob) => {
+    // Revoga o objectURL para liberar memória
+    if (cropOgImageSrc?.startsWith("blob:")) URL.revokeObjectURL(cropOgImageSrc);
+    setCropOgImageSrc(null);
+    try {
+      setIsUploading(true);
+      const file = new File([blob], `crop-${Date.now()}.webp`, { type: "image/webp" });
+      const publicUrl = await uploadLinkThumbnail(file);
+      if (publicUrl) {
+        if (ogImage && ogImage.includes("link-thumbnails")) {
+          await deleteLinkThumbnail(ogImage);
+        }
+        setOgImage(publicUrl);
+        toast.success("Imagem recortada e salva!");
+      }
+    } catch {
+      toast.error("Erro ao salvar imagem recortada");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageCropCancel = () => {
+    if (cropOgImageSrc?.startsWith("blob:")) URL.revokeObjectURL(cropOgImageSrc);
+    setCropOgImageSrc(null);
+  };
+
   const handleRecoverDraft = () => {
     const draft = restoreDraft();
     if (draft) {
@@ -461,6 +566,22 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
   return (
     <>
+      {/* Overlay de seleção de área (screen capture) */}
+      {cropImageSrc && (
+        <ScreenCropSelector
+          imageSrc={cropImageSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
+      {/* Ferramenta de recorte da imagem existente */}
+      {cropOgImageSrc && (
+        <ImageCropTool
+          imageSrc={cropOgImageSrc}
+          onConfirm={handleImageCropConfirm}
+          onCancel={handleImageCropCancel}
+        />
+      )}
       {/* Dialog de recuperação de rascunho */}
       <AlertDialog open={showDraftRecovery} onOpenChange={setShowDraftRecovery}>
         <AlertDialogContent>
@@ -571,9 +692,9 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
             </div>
           )}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2">
               <Label>Pré-visualização e Capa</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -597,12 +718,38 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1"
+                  onClick={handleSelectArea}
+                  disabled={isUploading || isCapturing}
+                >
+                  {isCapturing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Crop className="h-3 w-3" />}
+                  Selecionar Área
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                 >
                   {isUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                   {isUploading ? "Enviando..." : "Upload"}
                 </Button>
+                {ogImage && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={handleOpenImageCrop}
+                    disabled={isUploading || isCropLoading}
+                  >
+                    {isCropLoading
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <ScissorsSquareDashedBottom className="h-3 w-3" />}
+                    {isCropLoading ? "Carregando..." : "Recortar"}
+                  </Button>
+                )}
                 {ogImage && ogImage.includes("link-thumbnails") && (
                   <Button
                     type="button"
@@ -618,21 +765,49 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
               </div>
             </div>
             
-            <div className="relative group cursor-pointer" onClick={() => !isUploading && fileInputRef.current?.click()}>
-              <LinkPreview 
-                metadata={{
-                  ...metadata,
-                  title: title.trim() || metadata.title,
-                  description: description.trim() || metadata.description,
-                  image: ogImage.trim() || metadata.image,
-                }} 
-                url={url} 
-              />
-              <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center pointer-events-none">
-                <div className="bg-white/90 p-2 rounded-full shadow-lg pointer-events-auto">
-                  <Camera className="h-5 w-5 text-gray-700" />
-                </div>
+            <div className="relative group overflow-hidden rounded-xl border border-border/50 bg-muted/20">
+              <div 
+                className={`transition-all duration-500 ${isUploading || isCropLoading ? "blur-md opacity-40 grayscale scale-[0.98] pointer-events-none" : "cursor-pointer"}`}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+              >
+                <LinkPreview 
+                  metadata={{
+                    ...metadata,
+                    title: title.trim() || metadata.title,
+                    description: description.trim() || metadata.description,
+                    image: ogImage.trim() || metadata.image,
+                  }} 
+                  url={url} 
+                />
               </div>
+
+              {/* Overlay de Feedback Visual em Tempo Real */}
+              {(isUploading || isCropLoading) && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-300">
+                  <div className="bg-background/80 backdrop-blur-md px-5 py-4 rounded-3xl shadow-2xl border border-primary/20 flex flex-col items-center gap-3 scale-110">
+                    <div className="relative">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <div className="absolute inset-0 h-8 w-8 animate-ping opacity-20 bg-primary rounded-full" />
+                    </div>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">
+                        {isUploading ? "Processando" : "Carregando"}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground font-medium">Aguarde um instante</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Dica de interação */}
+              {!isUploading && !isCropLoading && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-primary/5 transition-colors pointer-events-none flex items-center justify-center">
+                  <div className="bg-background/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-xl border border-border/50 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold">Alterar Capa</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -677,15 +852,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="ogImage">URL da Imagem (Thumb)</Label>
-              <Input
-                id="ogImage"
-                placeholder="https://exemplo.com/imagem.jpg"
-                value={ogImage}
-                onChange={(e) => setOgImage(e.target.value)}
-              />
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="favicon">URL do Favicon</Label>
               <Input

@@ -64,3 +64,42 @@ export async function deleteLinkThumbnail(url: string): Promise<void> {
     logger.error("Erro ao deletar imagem do Supabase Storage:", err);
   }
 }
+
+/**
+ * Baixa uma imagem e retorna um objectURL local (seguro para uso em canvas).
+ * - URLs do Supabase Storage: usa o client JS autenticado (bypassa CORS)
+ * - URLs externas: tenta fetch com mode=cors
+ * Em ambos os casos, o objectURL criado deve ser revogado com URL.revokeObjectURL() pelo chamador.
+ */
+export async function getLocalBlobUrl(url: string): Promise<string> {
+  if (!url) throw new Error("URL vazia");
+
+  // Blob/data URL já é local — retorna direto
+  if (url.startsWith("blob:") || url.startsWith("data:")) return url;
+
+  // URL do Supabase Storage — usa client autenticado para evitar CORS
+  if (url.includes(BUCKET_NAME)) {
+    try {
+      // Extrai o path relativo ao bucket (tudo após "/link-thumbnails/")
+      const marker = `/${BUCKET_NAME}/`;
+      const idx = url.indexOf(marker);
+      if (idx !== -1) {
+        const filePath = url.slice(idx + marker.length);
+        const { data, error } = await supabase.storage
+          .from(BUCKET_NAME)
+          .download(filePath);
+        if (!error && data) return URL.createObjectURL(data);
+      }
+    } catch (err) {
+      logger.warn("[storage-utils] fallback ao fetch direto:", err);
+    }
+  }
+
+  // URL externa — busca via /og-proxy (que já está no connect-src da CSP)
+  // Fetch direto para CDNs externas seria bloqueado pela CSP
+  const proxied = `/og-proxy?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxied);
+  if (!res.ok) throw new Error(`Proxy retornou HTTP ${res.status}`);
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
