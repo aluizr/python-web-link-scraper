@@ -1,7 +1,7 @@
 # Análise Geral do Projeto — WebNest
 
-**Data:** 22 de Fevereiro, 2026  
-**Versão:** 0.14.0  
+**Data:** 28 de Abril, 2026  
+**Versão:** 0.14.4  
 **Framework:** React 18.3 + Vite 7.3 + TypeScript 5.8  
 **Banco de Dados:** Supabase (PostgreSQL)  
 **Componentes UI:** Shadcn/UI + Radix UI  
@@ -94,8 +94,7 @@ webnest/
 │   │   └── validation.test.ts       # 20 testes — schemas Zod
 │   ├── App.tsx                      # Root component c/ routing
 │   ├── main.tsx                     # Entry point React
-│   ├── index.css                    # Estilos globais + 8 temas + Tiptap CSS
-│   └── App.css                      # Estilos app
+│   └── index.css                    # Estilos globais + 8 temas + Tiptap CSS
 ├── supabase/
 │   ├── migrations/                  # SQL migrations (10+ arquivos)
 │   └── config.toml                  # Supabase config local

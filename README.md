@@ -61,7 +61,6 @@ Detalhes completos da release: [CHANGELOG 0.14.4](CHANGELOG.md#0144--2026-04-01)
 - **PWA + Offline** com cache local e fila de sincronização
 - **Segurança**: RLS, PKCE auth, rate limiting, API key rotation, CSP headers
 - **Error Boundary** + logging centralizado (com Sentry/LogRocket opcionais)
-- **Docker** multi-stage com variantes dev, prod e nginx
 
 ## Tecnologias
 
@@ -102,11 +101,9 @@ npm run dev
 | `npm run lint` | Linting com ESLint |
 | `npm test` | Testes com Vitest |
 
-## Deploy
+O projeto é hospedado como uma Single Page Application (SPA) estática. Pode ser implantado facilmente em Vercel, Netlify, Cloudflare Pages ou GitHub Pages.
 
-O projeto suporta deploy via Docker ou qualquer provedor de hospedagem estática (Vercel, Netlify, etc.).
-
-Consulte [DOCKER.md](DOCKER.md) para instruções de deploy com Docker.
+Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [ROADMAP_BACKEND_PYTHON.md](docs/ROADMAP_BACKEND_PYTHON.md).
 
 ## Domínio customizado
 
