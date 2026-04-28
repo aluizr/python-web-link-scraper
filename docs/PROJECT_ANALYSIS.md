@@ -1,7 +1,7 @@
 # Análise Geral do Projeto — WebNest
 
 **Data:** 28 de Abril, 2026  
-**Versão:** 0.14.4  
+**Versão:** 0.14.5  
 **Framework:** React 18.3 + Vite 7.3 + TypeScript 5.8  
 **Banco de Dados:** Supabase (PostgreSQL)  
 **Componentes UI:** Shadcn/UI + Radix UI  

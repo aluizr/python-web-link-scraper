@@ -2,16 +2,46 @@
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
-Versão mais recente: [0.14.4 — 2026-04-01](CHANGELOG.md#0144--2026-04-01)
+Versão mais recente: [0.14.5 — 2026-04-28](CHANGELOG.md#0145--2026-04-28)
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.14.5 | 2026-04-28 | [Ver mudanças](CHANGELOG.md#0145--2026-04-28) |
 | 0.14.4 | 2026-04-01 | [Ver mudanças](CHANGELOG.md#0144--2026-04-01) |
 | 0.14.3 | 2026-03-31 | [Ver mudanças](CHANGELOG.md#0143--2026-03-31) |
 | 0.14.2 | 2026-03-11 | [Ver mudanças](CHANGELOG.md#0142--2026-03-11) |
 | 0.14.1 | 2026-03-06 | [Ver mudanças](CHANGELOG.md#0141--2026-03-06) |
 | 0.14.0 | 2026-02-22 | [Ver mudanças](CHANGELOG.md#0140--2026-02-22) |
 | 0.13.0 | 2026-02-21 | [Ver mudanças](CHANGELOG.md#0130--2026-02-21) |
+
+---
+
+## [0.14.5] — 2026-04-28
+
+### Auditoria e Integridade (P1)
+
+`Documentação`
+
+- **Consolidação de Segurança**: Unificação dos manuais de segurança (`AUDIT`, `SUMMARY`, `IMPLEMENTATION`) no novo `docs/SECURITY_GUIDE.md`.
+- **Limpeza de Repositório**: Remoção de arquivos redundantes e obsoletos (`RELEASE_NOTES_0.14.2.md`, `HISTORICO_COMMITS.md`).
+- **Roadmap de Futuro**: Criação do `docs/ROADMAP_BACKEND_PYTHON.md` para documentar a visão de migração para backend dedicado e Docker.
+- **Sincronização**: Atualização do `README.md`, `PROJECT_ANALYSIS.md` e `package.json` para refletir o estado atual do projeto.
+
+### Performance e Qualidade (P2)
+
+`Componentes`
+
+- **Otimização do `LinkCard`**: Implementação de `React.memo` e `useMemo` para evitar renderizações redundantes.
+- **Prevenção de Conflitos**: Adicionado `e.stopPropagation()` em todos os botões de ação do card para evitar interferência com o sistema de Drag & Drop.
+- **Guia de Estilo**: Formalização dos padrões de desenvolvimento no `docs/REGRAS_DESENVOLVIMENTO_LINKCARD.md`.
+
+### Estética e UX (P3)
+
+`Correções de Bug`
+
+- **Limpeza de Console**: Remoção de logs de debug em `LinkNotionView.tsx`.
+- **Favicons Resilientes**: Substituição do serviço da Google pelo **Icon Horse** como fonte primária para eliminar erros 404 no console.
+- **Auto-Swap de Favicons**: Implementação de interceptor em `FaviconWithFallback.tsx` que troca proativamente URLs da Google por Icon Horse, limpando o console mesmo para links antigos do banco de dados.
 
 ---
 
