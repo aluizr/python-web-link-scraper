@@ -19,12 +19,13 @@ O hook verifica:
 - ✅ Não há funções entre imports
 - ✅ O build compila sem erros
 
-### 2. Regras de Steering
+### 2. Guia de Desenvolvimento
 
-O arquivo `.kiro/steering/linkcard-rules.md` é carregado automaticamente quando você edita `LinkCard.tsx`, fornecendo orientações sobre:
+Consulte [REGRAS_DESENVOLVIMENTO_LINKCARD.md](REGRAS_DESENVOLVIMENTO_LINKCARD.md) para diretrizes sobre:
 - Estrutura correta do arquivo
-- Como usar favicon e thumbnails
-- O que evitar
+- Tipagem estrita e performance (memo/useMemo)
+- Prevenção de conflitos de eventos (stopPropagation)
+- Uso de favicons e thumbnails
 
 ### 3. Estrutura Correta
 
