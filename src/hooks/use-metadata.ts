@@ -50,7 +50,7 @@ function buildLocalFallback(url: string): LinkMetadata {
       title: host,
       description: null,
       image: null,
-      favicon: `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=32`,
+      favicon: `https://icon.horse/icon/${parsed.hostname}`,
       loading: false,
       error: null,
       source: "local",

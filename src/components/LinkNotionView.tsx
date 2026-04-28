@@ -562,7 +562,6 @@ export function LinkNotionView({
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover relative z-10"
-                    onLoad={() => console.log('[LinkNotionView] Image loaded:', link.ogImage)}
                     onError={() => {
                       // Se já está aguardando retry, ignora
                       if (retryingImages.has(link.id)) return;
@@ -572,7 +571,6 @@ export function LinkNotionView({
                       if (currentRetry < 1) {
                         // Marca como "em retry" para bloquear novos disparos
                         setRetryingImages(prev => new Set(prev).add(link.id));
-                        console.log(`[LinkNotionView] Retrying image in 3s: ${link.id}`);
 
                         setTimeout(() => {
                           setRetryCounts(prev => ({ ...prev, [link.id]: currentRetry + 1 }));

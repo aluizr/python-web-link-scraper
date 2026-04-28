@@ -97,9 +97,18 @@ export function FaviconWithFallback({
 
     // If custom favicon provided, use proxy for external URLs
     if (favicon && favicon.startsWith("http")) {
-      // Don't proxy Google or Icon Horse
-      if (favicon.includes('google.com/s2/favicons') || favicon.includes('icon.horse')) {
+      // Don't proxy Icon Horse
+      if (favicon.includes('icon.horse')) {
         return favicon;
+      }
+
+      // If it's a known problematic Google favicon, swap it to Icon Horse immediately
+      if (favicon.includes('google.com/s2/favicons')) {
+        try {
+          const params = new URL(favicon, "http://localhost").searchParams;
+          const domain = params.get('domain');
+          if (domain) return `https://icon.horse/icon/${domain}`;
+        } catch { /* ignore */ }
       }
       
       // Clean up proxy if it's wikimedia (to avoid 429 rate limits)
@@ -122,18 +131,18 @@ export function FaviconWithFallback({
       return ensureProxied(finalFavicon);
     }
     
-    // Otherwise use Google favicon service (more permissive with CORP)
+    // Default: Use Icon Horse (more resilient and better fallbacks)
     try {
       const hostname = new URL(url).hostname;
       if (!hostname) return null;
       
       const knownFallback = getKnownFaviconFallback(url);
       if (knownFallback) {
-        return ensureProxied(knownFallback) + "&silent=true";
+        return ensureProxied(knownFallback);
       }
       
-      // Proxy Google service to SILENCE 404s
-      return ensureProxied(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`) + "&silent=true";
+      // Icon Horse as primary service
+      return `https://icon.horse/icon/${hostname}`;
     } catch {
       return null;
     }
