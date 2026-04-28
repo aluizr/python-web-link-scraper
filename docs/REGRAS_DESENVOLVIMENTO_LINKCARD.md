@@ -46,5 +46,19 @@ O `LinkCard` é uma "peça" fundamental do sistema de reordenação. Não altere
 - O `LinkCard` é renderizado centenas de vezes. Evite cálculos pesados dentro do corpo do componente.
 - Use `useMemo` para transformações de dados complexas se necessário.
 
+## 🔒 7. Tipagem e Segurança de Tipos
+
+- **Zero `any`**: NUNCA use `any`. Se uma prop ou variável for complexa, defina uma interface ou use os tipos de `@/types/link`.
+- **Eventos**: Use tipos específicos para eventos (ex: `React.MouseEvent`, `React.DragEvent`) para garantir suporte total do IntelliSense.
+
+## ⚡ 8. Propagação de Eventos
+
+- **Botões Internos**: Todos os botões de ação (`Pencil`, `Trash`, `Star`) DEVEM usar `e.stopPropagation()` em seus handlers para não disparar eventos de clique ou drag do card pai.
+
+## 🚀 9. Otimização de Re-render
+
+- **React.memo**: O componente deve ser exportado envolto em `React.memo` se as props de callback forem estáveis (usando `useCallback` no componente pai).
+- **Cálculos no Render**: Transformações de arrays ou buscas em `categories` devem ser feitas dentro de um `useMemo` ou fora do componente se forem estáticas.
+
 ---
-*Este guia substitui as regras antigas localizadas em .kiro/steering.*
+*Este guia substitui as regras antigas localizadas em .kiro/steering e é atualizado conforme novas necessidades de integridade surgem.*

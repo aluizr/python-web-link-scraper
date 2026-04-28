@@ -117,7 +117,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
 
     if (!activeHandle) return;
 
-    let next: Rect = { ...b };
+    const next: Rect = { ...b };
     if (activeHandle === "move") {
       next.x = b.x + dx;
       next.y = b.y + dy;
@@ -171,7 +171,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       return;
     }
     if (!activeHandle) return;
-    let next: Rect = { ...b };
+    const next: Rect = { ...b };
     if (activeHandle === "move") { next.x = b.x + dx; next.y = b.y + dy; }
     else {
       if (activeHandle.includes("e")) next.w = b.w + dx;

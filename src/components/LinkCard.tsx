@@ -1,5 +1,5 @@
 import { Star, ExternalLink, Pencil, Trash2, GripVertical, StickyNote, ShieldAlert, Link as LinkIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, memo, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ const getAvatarColor = (url: string) => {
   }
 };
 
-export function LinkCard({
+export const LinkCard = memo(function LinkCard({
   link,
   categories,
   onToggleFavorite,
@@ -84,6 +84,32 @@ export function LinkCard({
 }: LinkCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const dragEnabled = Boolean(onDragStart);
+
+  // ✅ Memoize category style calculation
+  const categoryStyle = useMemo(() => {
+    if (!link.category || !categories) return {};
+    
+    const cat = categories.find((c) => {
+      const parts: string[] = [c.name];
+      let cur = c;
+      while (cur.parentId) {
+        const p = categories.find((x) => x.id === cur.parentId);
+        if (!p) break;
+        parts.unshift(p.name);
+        cur = p;
+      }
+      return parts.join(" / ") === link.category;
+    });
+
+    const color = cat?.color;
+    if (!color) return {};
+
+    return {
+      backgroundColor: `${color}20`,
+      color: color,
+      borderColor: `${color}40`,
+    };
+  }, [link.category, categories]);
 
   return (
     <Card
@@ -201,7 +227,10 @@ export function LinkCard({
                 variant="ghost"
                 size="icon"
                 className={`${ICON_BTN_MD_CLASS} shrink-0`}
-                onClick={() => onToggleFavorite(link.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(link.id);
+                }}
               >
                 <Star
                   className={`h-4 w-4 ${link.isFavorite ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
@@ -220,28 +249,7 @@ export function LinkCard({
                 <Badge
                   variant="secondary"
                   className={COMPACT_BADGE_CLASS}
-                  style={(() => {
-                    // ✅ Find color from category hierarchy
-                    if (!categories) return {};
-                    const cat = categories.find((c) => {
-                      const parts: string[] = [c.name];
-                      let cur = c;
-                      while (cur.parentId) {
-                        const p = categories.find((x) => x.id === cur.parentId);
-                        if (!p) break;
-                        parts.unshift(p.name);
-                        cur = p;
-                      }
-                      return parts.join(" / ") === link.category;
-                    });
-                    const color = cat?.color;
-                    if (!color) return {};
-                    return {
-                      backgroundColor: `${color}20`,
-                      color: color,
-                      borderColor: `${color}40`,
-                    };
-                  })()}
+                  style={categoryStyle}
                 >
                   {link.category}
                 </Badge>
@@ -283,12 +291,15 @@ export function LinkCard({
           </div>
 
           <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={() => onEdit(link)}>
+            <Button variant="ghost" size="icon" className={ICON_BTN_MD_CLASS} onClick={(e) => {
+              e.stopPropagation();
+              onEdit(link);
+            }}>
               <Pencil className="h-3.5 w-3.5" />
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} text-destructive`}>
+                <Button variant="ghost" size="icon" className={`${ICON_BTN_MD_CLASS} text-destructive`} onClick={(e) => e.stopPropagation()}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </AlertDialogTrigger>
@@ -315,4 +326,4 @@ export function LinkCard({
         </CardContent>
     </Card>
   );
-}
+});

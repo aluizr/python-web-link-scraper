@@ -370,7 +370,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       setIsCapturing(true);
       // Solicita permissão para capturar tela/janela
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "never" } as any,
+        video: { cursor: "never" } as MediaTrackConstraints,
         audio: false
       });
 
@@ -423,7 +423,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     try {
       setIsCapturing(true);
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "never" } as any,
+        video: { cursor: "never" } as MediaTrackConstraints,
         audio: false,
       });
 
