@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Check, Move, RefreshCw } from "lucide-react";
+import { X, Check, Move, RefreshCw, Square, ArrowUpRight, Droplets, Type, Palette, MousePointer2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ensureProxied } from "@/lib/image-utils";
 
@@ -15,17 +15,42 @@ interface ScreenCropSelectorProps {
 }
 
 const HANDLE_DEFS: { id: HandleId; style: React.CSSProperties; cursor: string }[] = [
-  { id: "nw", style: { top: -6, left: -6 },                                      cursor: "nw-resize" },
-  { id: "n",  style: { top: -6, left: "50%", transform: "translateX(-50%)" },    cursor: "n-resize"  },
-  { id: "ne", style: { top: -6, right: -6 },                                     cursor: "ne-resize" },
-  { id: "e",  style: { top: "50%", right: -6, transform: "translateY(-50%)" },   cursor: "e-resize"  },
-  { id: "se", style: { bottom: -6, right: -6 },                                  cursor: "se-resize" },
-  { id: "s",  style: { bottom: -6, left: "50%", transform: "translateX(-50%)" }, cursor: "s-resize"  },
-  { id: "sw", style: { bottom: -6, left: -6 },                                   cursor: "sw-resize" },
-  { id: "w",  style: { top: "50%", left: -6, transform: "translateY(-50%)" },    cursor: "w-resize"  },
+  { id: "nw", style: { top: -8, left: -8 },                                      cursor: "nw-resize" },
+  { id: "n",  style: { top: -8, left: "50%", transform: "translateX(-50%)" },    cursor: "n-resize"  },
+  { id: "ne", style: { top: -8, right: -8 },                                     cursor: "ne-resize" },
+  { id: "e",  style: { top: "50%", right: -8, transform: "translateY(-50%)" },   cursor: "e-resize"  },
+  { id: "se", style: { bottom: -8, right: -8 },                                  cursor: "se-resize" },
+  { id: "s",  style: { bottom: -8, left: "50%", transform: "translateX(-50%)" }, cursor: "s-resize"  },
+  { id: "sw", style: { bottom: -8, left: -8 },                                   cursor: "sw-resize" },
+  { id: "w",  style: { top: "50%", left: -8, transform: "translateY(-50%)" },    cursor: "w-resize"  },
 ];
 
 const MIN = 12; // px mínimo da seleção
+
+function ToolButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      title={label}
+      onClick={onClick}
+      className={`h-8 w-10 p-0 ${active ? "bg-primary text-primary-foreground hover:bg-primary" : "text-white/60 hover:bg-white/10"}`}
+    >
+      {icon}
+    </Button>
+  );
+}
+
+function FilterButton({ active, onClick, label }: { active: boolean, onClick: () => void, label: string }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${active ? "bg-white/20 text-white" : "text-white/40 hover:text-white/70"}`}
+    >
+      {label}
+    </button>
+  );
+}
 
 export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCropSelectorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,6 +59,10 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
 
   const [rect, setRect]               = useState<Rect | null>(null);
   const [activeHandle, setActiveHandle] = useState<HandleId | null>(null);
+  const [tool, setTool] = useState<"crop" | "arrow" | "rect" | "blur" | "text">("crop");
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  const [imageFilter, setImageFilter] = useState<string>("none");
+  
   // "draw" = criando nova seleção arrastando o fundo; null = idle
   const mode       = useRef<"draw" | null>(null);
   const dragStart  = useRef<{ mx: number; my: number; rect: Rect }>({ mx: 0, my: 0, rect: { x: 0, y: 0, w: 0, h: 0 } });
@@ -51,6 +80,18 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       canvas.width  = img.naturalWidth;
       canvas.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
+
+      // Iniciar com uma seleção padrão (80% da área visível)
+      const cw = containerRef.current?.clientWidth || 800;
+      const ch = containerRef.current?.clientHeight || 600;
+      const w = cw * 0.8;
+      const h = ch * 0.8;
+      setRect({
+        x: (cw - w) / 2,
+        y: (ch - h) / 2,
+        w: w,
+        h: h
+      });
     };
     img.src = ensureProxied(imageSrc);
   }, [imageSrc]);
@@ -85,20 +126,37 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     if (e.button !== 0) return;
     e.stopPropagation();
     const pos = toCss(e.clientX, e.clientY);
+    
+    if (tool !== "crop") {
+      setAnnotations([...annotations, {
+        type: tool,
+        x1: pos.x,
+        y1: pos.y,
+        x2: pos.x,
+        y2: pos.y,
+        isDrawing: true
+      }]);
+      return;
+    }
+
     mode.current = "draw";
     dragStart.current = { mx: e.clientX, my: e.clientY, rect: { x: pos.x, y: pos.y, w: 0, h: 0 } };
     setRect({ x: pos.x, y: pos.y, w: 0, h: 0 });
     setActiveHandle(null);
-  }, [toCss]);
+  }, [toCss, tool, annotations]);
 
   // ── Início do arrasto de uma alça ────────────────────────────────────────
-  const onHandleDown = useCallback((e: React.MouseEvent, handle: HandleId) => {
+  const onHandleDown = useCallback((e: React.MouseEvent | React.TouchEvent, handle: HandleId) => {
     e.preventDefault();
     e.stopPropagation();
     if (!rect) return;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
     mode.current = null;
     setActiveHandle(handle);
-    dragStart.current = { mx: e.clientX, my: e.clientY, rect: { ...rect } };
+    dragStart.current = { mx: clientX, my: clientY, rect: { ...rect } };
   }, [rect]);
 
   // ── mousemove global ─────────────────────────────────────────────────────
@@ -106,6 +164,21 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     const dx = e.clientX - dragStart.current.mx;
     const dy = e.clientY - dragStart.current.my;
     const b  = dragStart.current.rect;
+
+    if (tool !== "crop") {
+      const pos = toCss(e.clientX, e.clientY);
+      const activeAnn = annotations[annotations.length - 1];
+      if (!activeAnn || !activeAnn.isDrawing) return;
+      
+      const newAnns = [...annotations];
+      newAnns[newAnns.length - 1] = {
+        ...activeAnn,
+        x2: pos.x,
+        y2: pos.y
+      };
+      setAnnotations(newAnns);
+      return;
+    }
 
     if (mode.current === "draw") {
       const pos = toCss(e.clientX, e.clientY);
@@ -134,9 +207,21 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
   }, [activeHandle, toCss, clampRect]);
 
   const onMouseUp = useCallback(() => {
+    if (tool !== "crop" && annotations.length > 0) {
+      const newAnns = [...annotations];
+      const last = newAnns[newAnns.length - 1];
+      if (last.isDrawing) {
+        last.isDrawing = false;
+        // Remover se for apenas um clique (sem arrasto significativo)
+        if (Math.abs(last.x1 - last.x2) < 3 && Math.abs(last.y1 - last.y2) < 3) {
+          newAnns.pop();
+        }
+        setAnnotations(newAnns);
+      }
+    }
     mode.current = null;
     setActiveHandle(null);
-  }, []);
+  }, [tool, annotations]);
 
   useEffect(() => {
     window.addEventListener("mousemove", onMouseMove);
@@ -151,10 +236,23 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
   const onBgTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     const pos = toCss(touch.clientX, touch.clientY);
+    
+    if (tool !== "crop") {
+      setAnnotations([...annotations, {
+        type: tool,
+        x1: pos.x,
+        y1: pos.y,
+        x2: pos.x,
+        y2: pos.y,
+        isDrawing: true
+      }]);
+      return;
+    }
+
     mode.current = "draw";
     dragStart.current = { mx: touch.clientX, my: touch.clientY, rect: { x: pos.x, y: pos.y, w: 0, h: 0 } };
     setRect({ x: pos.x, y: pos.y, w: 0, h: 0 });
-  }, [toCss]);
+  }, [toCss, tool, annotations]);
 
   const onTouchMove = useCallback((e: TouchEvent) => {
     e.preventDefault();
@@ -162,6 +260,21 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     const dx = touch.clientX - dragStart.current.mx;
     const dy = touch.clientY - dragStart.current.my;
     const b  = dragStart.current.rect;
+
+    if (tool !== "crop") {
+      const pos = toCss(touch.clientX, touch.clientY);
+      const activeAnn = annotations[annotations.length - 1];
+      if (!activeAnn || !activeAnn.isDrawing) return;
+      
+      const newAnns = [...annotations];
+      newAnns[newAnns.length - 1] = {
+        ...activeAnn,
+        x2: pos.x,
+        y2: pos.y
+      };
+      setAnnotations(newAnns);
+      return;
+    }
 
     if (mode.current === "draw") {
       const pos = toCss(touch.clientX, touch.clientY);
@@ -185,7 +298,21 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     setRect(clampRect(next));
   }, [activeHandle, toCss, clampRect]);
 
-  const onTouchEnd = useCallback(() => { mode.current = null; setActiveHandle(null); }, []);
+  const onTouchEnd = useCallback(() => { 
+    if (tool !== "crop" && annotations.length > 0) {
+      const newAnns = [...annotations];
+      const last = newAnns[newAnns.length - 1];
+      if (last.isDrawing) {
+        last.isDrawing = false;
+        if (Math.abs(last.x1 - last.x2) < 3 && Math.abs(last.y1 - last.y2) < 3) {
+          newAnns.pop();
+        }
+        setAnnotations(newAnns);
+      }
+    }
+    mode.current = null; 
+    setActiveHandle(null); 
+  }, [tool, annotations]);
 
   useEffect(() => {
     window.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -195,6 +322,34 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       window.removeEventListener("touchend",  onTouchEnd);
     };
   }, [onTouchMove, onTouchEnd]);
+
+  // ── Atalhos de Teclado ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      switch (e.key.toLowerCase()) {
+        case "c": setTool("crop"); break;
+        case "a": setTool("arrow"); break;
+        case "r": setTool("rect"); break;
+        case "b": setTool("blur"); break;
+        case "enter": 
+          if (hasValid) handleConfirm(); 
+          break;
+        case "escape": 
+          onCancel(); 
+          break;
+        case "z":
+          if (e.ctrlKey || e.metaKey) {
+            setAnnotations(prev => prev.slice(0, -1));
+          }
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [tool, hasValid, annotations]);
 
   // ── Confirmar ────────────────────────────────────────────────────────────
   const handleConfirm = () => {
@@ -216,7 +371,49 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     crop.height = Math.round(sh);
     const ctx = crop.getContext("2d");
     if (!ctx) return;
+    
+    // Aplicar filtro se houver
+    if (imageFilter !== "none") {
+      ctx.filter = imageFilter;
+    }
+    
     ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+    
+    // Desenhar anotações no recorte final
+    annotations.forEach(ann => {
+      ctx.save();
+      const x1 = ann.x1 * scaleX - sx;
+      const y1 = ann.y1 * scaleY - sy;
+      const x2 = ann.x2 * scaleX - sx;
+      const y2 = ann.y2 * scaleY - sy;
+      
+      if (ann.type === "rect") {
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+      } else if (ann.type === "arrow") {
+        const headlen = 15;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fillStyle = "#ef4444";
+        ctx.fill();
+      } else if (ann.type === "blur") {
+        ctx.filter = "blur(12px)";
+        ctx.drawImage(canvas, ann.x1 * scaleX, ann.y1 * scaleY, (ann.x2 - ann.x1) * scaleX, (ann.y2 - ann.y1) * scaleY, x1, y1, x2 - x1, y2 - y1);
+      }
+      ctx.restore();
+    });
+    
     crop.toBlob((blob) => { if (blob) onConfirm(blob); }, "image/png");
   };
 
@@ -237,6 +434,31 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Seletor de Ferramentas */}
+          <div className="flex items-center bg-white/5 rounded-md p-0.5 mr-2 border border-white/10">
+            <ToolButton active={tool === "crop"} onClick={() => setTool("crop")} icon={<MousePointer2 className="h-4 w-4" />} label="Mover / Recortar (C)" />
+            <ToolButton active={tool === "arrow"} onClick={() => setTool("arrow")} icon={<ArrowUpRight className="h-4 w-4" />} label="Seta (A)" />
+            <ToolButton active={tool === "rect"} onClick={() => setTool("rect")} icon={<Square className="h-4 w-4" />} label="Retângulo (R)" />
+            <ToolButton active={tool === "blur"} onClick={() => setTool("blur")} icon={<Droplets className="h-4 w-4" />} label="Desfoque (B)" />
+          </div>
+
+          <div className="h-6 w-px bg-white/10 mx-1" />
+
+          {/* Seletor de Filtros */}
+          <div className="flex items-center bg-white/5 rounded-md p-0.5 mr-4 border border-white/10">
+            <FilterButton active={imageFilter === "none"} onClick={() => setImageFilter("none")} label="Original" />
+            <FilterButton active={imageFilter === "grayscale(100%)"} onClick={() => setImageFilter("grayscale(100%)")} label="P&B" />
+            <FilterButton active={imageFilter === "contrast(150%)"} onClick={() => setImageFilter("contrast(150%)")} label="Contraste" />
+          </div>
+
+          {annotations.length > 0 && (
+            <Button size="sm" variant="ghost"
+              className="text-white/60 hover:text-white hover:bg-white/10 h-8 mr-2"
+              onClick={() => setAnnotations([])}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Limpar Edições
+            </Button>
+          )}
+
           {hasValid && (
             <span className="text-white/35 text-xs font-mono hidden sm:block">
               {Math.round(rect!.w)} × {Math.round(rect!.h)}
@@ -271,11 +493,37 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
         onMouseDown={onBgMouseDown}
         onTouchStart={onBgTouchStart}
       >
-        {/* Imagem de fundo (canvas) */}
+        {/* Imagem de fundo (canvas) com filtro */}
         <canvas
           ref={canvasRef}
-          className="max-w-full max-h-full object-contain pointer-events-none"
+          className="max-w-full max-h-full object-contain pointer-events-none transition-all duration-300"
+          style={{ filter: imageFilter }}
         />
+
+        {/* Camada de Anotações (SVG) */}
+        <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible z-20">
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+            </marker>
+          </defs>
+          {annotations.map((ann, i) => {
+            if (ann.type === "rect") {
+              return <rect key={i} x={Math.min(ann.x1, ann.x2)} y={Math.min(ann.y1, ann.y2)} width={Math.abs(ann.x2 - ann.x1)} height={Math.abs(ann.y2 - ann.y1)} fill="none" stroke="#ef4444" strokeWidth="3" rx="2" />;
+            }
+            if (ann.type === "arrow") {
+              return <line key={i} x1={ann.x1} y1={ann.y1} x2={ann.x2} y2={ann.y2} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrowhead)" />;
+            }
+            if (ann.type === "blur") {
+              return (
+                <foreignObject key={i} x={Math.min(ann.x1, ann.x2)} y={Math.min(ann.y1, ann.y2)} width={Math.abs(ann.x2 - ann.x1)} height={Math.abs(ann.y2 - ann.y1)}>
+                  <div className="w-full h-full backdrop-blur-md bg-white/10 border border-white/20 rounded" />
+                </foreignObject>
+              );
+            }
+            return null;
+          })}
+        </svg>
 
         {/* Overlay escuro fora da seleção */}
         {rect && rect.w > 0 && rect.h > 0 && (
@@ -298,6 +546,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
               className="absolute border-2 border-primary shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
               style={{ top: rect.y, left: rect.x, width: rect.w, height: rect.h, cursor: "move" }}
               onMouseDown={(e) => onHandleDown(e, "move")}
+              onTouchStart={(e) => onHandleDown(e, "move")}
             >
               {/* Grade de terços */}
               <div className="absolute inset-0 pointer-events-none">
@@ -309,14 +558,25 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
                 ))}
               </div>
 
-              {/* 8 alças de redimensionamento */}
+              {/* 8 alças de redimensionamento com área de toque expandida */}
               {HANDLE_DEFS.map(({ id, style, cursor }) => (
                 <div
                   key={id}
-                  className="absolute w-3.5 h-3.5 bg-white border-2 border-primary rounded-sm shadow-md z-10 hover:scale-125 transition-transform"
-                  style={{ ...style, cursor }}
+                  className="absolute z-10 flex items-center justify-center"
+                  style={{ 
+                    ...style, 
+                    cursor, 
+                    width: 24, 
+                    height: 24,
+                    // Compensar a posição para que o centro da área de toque seja o ponto da alça
+                    marginLeft: style.left === "50%" ? -12 : (style.left === -8 ? -8 : -16),
+                    marginTop: style.top === "50%" ? -12 : (style.top === -8 ? -8 : -16)
+                  }}
                   onMouseDown={(e) => onHandleDown(e, id)}
-                />
+                  onTouchStart={(e) => onHandleDown(e, id)}
+                >
+                  <div className="w-3.5 h-3.5 bg-white border-2 border-primary rounded-sm shadow-md hover:scale-125 transition-transform" />
+                </div>
               ))}
             </div>
 
