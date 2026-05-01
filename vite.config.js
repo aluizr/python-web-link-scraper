@@ -399,14 +399,16 @@ export default defineConfig(({ mode }) => ({
               const reqCheck = client.request({
                 hostname: target.hostname,
                 path: target.pathname + target.search,
-                method: "HEAD",
-                timeout: 2000,
+                method: "GET", // GET é mais compatível que HEAD para muitos servidores
+                timeout: 3000,
+                headers: {
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+                }
               }, (checkRes) => {
-                // Se der redirect, consideramos OK (o navegador vai seguir o redirect)
-                const ok = (checkRes.statusCode >= 200 && checkRes.statusCode < 400);
+                const ok = checkRes.statusCode >= 200 && checkRes.statusCode < 400;
                 res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify({ ok }));
-                checkRes.resume();
+                checkRes.destroy(); // Fecha a conexão imediatamente após receber o cabeçalho
               });
               reqCheck.on("error", () => {
                 res.end(JSON.stringify({ ok: false }));
