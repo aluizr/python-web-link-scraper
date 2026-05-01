@@ -164,11 +164,18 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
   // Auto-preview: when URL changes, try to get favicon and metadata
   useEffect(() => {
-    if (!url) return;
+    if (!url || !open) return;
+    
+    // Se estiver editando e a URL for a mesma do link original, não faz nada
+    const isEditingOriginalUrl = editingLink && normalizeUrl(url) === normalizeUrl(editingLink.url);
+    if (isEditingOriginalUrl && initialLoadDone.current) return;
+
     try {
       const hostname = new URL(url).hostname;
-      // Use Google Favicon Service (consistent with FaviconWithFallback)
-      setFavicon(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`);
+      // Só sobrescreve o favicon se não estiver editando ou se o campo estiver vazio
+      if (!editingLink || !favicon) {
+        setFavicon(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`);
+      }
     } catch {
       // invalid URL, ignore
     }
@@ -185,15 +192,18 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         if (!description && result.description) {
           setDescription(result.description);
         }
-        // Auto-fill OG image
-        if (result.image) {
-          setOgImage(result.image);
+        // Auto-fill OG image apenas se estiver vazio ou se for um novo link
+        if (result.image && (!ogImage || !editingLink)) {
+          // Se for novo link, ou se o campo de imagem estiver vazio, preenche
+          if (!ogImage || !editingLink) {
+             setOgImage(result.image);
+          }
         }
       });
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [url, editingLink, autoFilledTitle, title, description, fetchMetadata]);
+  }, [url, open, editingLink, autoFilledTitle, title, description, ogImage, favicon, fetchMetadata]);
 
   // Auto-save draft com debounce (não salva enquanto está editando um link existente)
   useEffect(() => {

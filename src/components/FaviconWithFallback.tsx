@@ -81,75 +81,50 @@ export function FaviconWithFallback({
   className = "",
 }: FaviconWithFallbackProps) {
   const [failed, setFailed] = useState(false);
-  const [useSecondaryFallback, setUseSecondaryFallback] = useState(false);
+  const [fallbackLevel, setFallbackLevel] = useState(0); // 0: custom, 1: iconhorse, 2: google
   const avatarData = getAvatarData(url);
 
-  // Determinar URL do favicon
+  // Determinar URL do favicon baseado no nível de fallback atual
   const faviconUrl = (() => {
-    if (useSecondaryFallback) {
-      try {
-        const hostname = new URL(url).hostname;
-        return `https://icon.horse/icon/${hostname}`;
-      } catch {
-        return null;
-      }
-    }
-
-    // If custom favicon provided, use proxy for external URLs
-    if (favicon && favicon.startsWith("http")) {
-      // Don't proxy Icon Horse
-      if (favicon.includes('icon.horse')) {
-        return favicon;
-      }
-
-      // If it's a known problematic Google favicon, swap it to Icon Horse immediately
-      if (favicon.includes('google.com/s2/favicons')) {
-        try {
-          const params = new URL(favicon, "http://localhost").searchParams;
-          const domain = params.get('domain');
-          if (domain) return `https://icon.horse/icon/${domain}`;
-        } catch { /* ignore */ }
-      }
-      
-      // Clean up proxy if it's wikimedia (to avoid 429 rate limits)
-      let finalFavicon = favicon;
-      try {
-        if (finalFavicon.includes('/og-proxy?url=')) {
-          const params = new URL(finalFavicon, "http://localhost").searchParams;
-          const urlParam = params.get('url');
-          if (urlParam) finalFavicon = urlParam;
-        }
-        
-        const hostname = new URL(finalFavicon).hostname;
-        if (hostname.includes('wikimedia.org')) {
-           return finalFavicon; // Nunca proxear wikimedia
-        }
-      } catch (err) {
-        console.debug("[FaviconWithFallback] URL parsing error:", err);
-      }
-
-      return ensureProxied(finalFavicon);
-    }
-    
-    // Default: Use Icon Horse (more resilient and better fallbacks)
     try {
       const hostname = new URL(url).hostname;
       if (!hostname) return null;
-      
-      const knownFallback = getKnownFaviconFallback(url);
-      if (knownFallback) {
-        return ensureProxied(knownFallback);
+
+      // Nível 0: Favicon customizado vindo dos metadados
+      if (fallbackLevel === 0 && favicon && typeof favicon === "string" && favicon.startsWith("http")) {
+        // Se for um serviço de favicon do Google/Gstatic, eles são instáveis e 
+        // frequentemente retornam pixels transparentes. Pulamos para o Icon Horse.
+        const isUnreliableService = favicon.includes('google.com/s2/favicons') || 
+                                    favicon.includes('gstatic.com/faviconV2');
+                               
+        if (isUnreliableService) {
+           return ensureProxied(`https://icon.horse/icon/${hostname}`);
+        }
+        
+        // Evitar proxear wikimedia para não estourar rate limits
+        if (favicon.includes('wikimedia.org')) return favicon;
+        
+        return ensureProxied(favicon);
+      }
+
+      // Nível 1: Icon Horse (Serviço resiliente e de alta qualidade)
+      // Se chegamos aqui, ou o nível 0 falhou ou foi pulado.
+      if (fallbackLevel <= 1) {
+        const knownFallback = getKnownFaviconFallback(url);
+        if (knownFallback) return ensureProxied(knownFallback);
+        
+        return ensureProxied(`https://icon.horse/icon/${hostname}`);
       }
       
-      // Icon Horse as primary service
-      return `https://icon.horse/icon/${hostname}`;
+      return null;
     } catch {
       return null;
     }
   })();
 
-  // Se não tem URL de favicon válida ou falhou permanentemente, mostrar avatar
-  if (!faviconUrl || (failed && useSecondaryFallback)) {
+  // Se atingiu o nível máximo de falha ou não tem URL válida, mostra avatar
+  // (Removemos o nível 2/Google para evitar pixels transparentes invisíveis)
+  if (!faviconUrl || fallbackLevel > 1 || failed) {
     return (
       <div
         className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className}`}
@@ -158,9 +133,10 @@ export function FaviconWithFallback({
           height: size,
           backgroundColor: avatarData.color.bg,
           color: avatarData.color.text,
-          fontSize: size * 0.5,
+          fontSize: Math.max(9, size * 0.55),
           fontWeight: 700,
           lineHeight: 1,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.05)",
         }}
         title={avatarData.hostname}
         aria-hidden="true"
@@ -174,12 +150,12 @@ export function FaviconWithFallback({
     <img
       src={faviconUrl}
       alt=""
-      key={faviconUrl} // Recriar imagem ao mudar para o fallback
+      key={`${faviconUrl}-${fallbackLevel}`} // Forçar re-render ao mudar nível
       className={`shrink-0 rounded ${className}`}
       style={{ width: size, height: size }}
       onError={() => {
-        if (!useSecondaryFallback) {
-          setUseSecondaryFallback(true);
+        if (fallbackLevel < 1) {
+          setFallbackLevel(prev => prev + 1);
         } else {
           setFailed(true);
         }

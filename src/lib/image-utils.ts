@@ -2,7 +2,17 @@
  * Domains that should NEVER be proxied.
  * These usually serve public images without CORP restrictions, and may block/rate-limit proxy requests.
  */
-const SKIP_PROXY_DOMAINS = new Set<string>([]);
+const SKIP_PROXY_DOMAINS = new Set<string>([
+  'supabase.co',
+  'google.com',
+  'gstatic.com',
+  'amazonaws.com',
+  'github.com',
+  'githubusercontent.com',
+  'twimg.com',
+  'ytimg.com',
+  'notion.so'
+]);
 
 /**
  * Ensures an image URL goes through the /og-proxy to bypass CORS restrictions

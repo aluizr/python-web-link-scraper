@@ -321,13 +321,14 @@ export default defineConfig(({ mode }) => ({
                         }
                       }
                       
-                      // Final fallback: return a 1x1 transparent PNG with index 200 OK to SILENCE browser console errors
-                      console.log(`[og-proxy] SILENCING error ${upstream.statusCode} for ${hostname}. Returning transparent pixel.`);
-                      const transparentPixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
-                      res.setHeader("Content-Type", "image/png");
-                      res.setHeader("Cache-Control", "public, max-age=86400");
-                      res.statusCode = 200;
-                      res.end(transparentPixel);
+                      // Retornar o erro real para que o frontend possa acionar o fallback (onError)
+                      console.log(`[og-proxy] ERROR ${upstream.statusCode} for ${hostname}. Propagating to client.`);
+                      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+                      res.setHeader("Pragma", "no-cache");
+                      res.setHeader("Expires", "0");
+                      res.statusCode = upstream.statusCode;
+                      res.end(`Proxy error: Upstream returned ${upstream.statusCode}`);
+                      return;
                       return;
                     }
                     
