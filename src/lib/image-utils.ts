@@ -4,16 +4,9 @@
  */
 const SKIP_PROXY_DOMAINS = new Set<string>([
   'supabase.co',
-  'google.com',
-  'gstatic.com',
   'amazonaws.com',
-  'github.com',
-  'githubusercontent.com',
-  'twimg.com',
   'ytimg.com',
-  'notion.so',
-  'icon.horse',
-  'duckduckgo.com'
+  'icon.horse'
 ]);
 
 /**

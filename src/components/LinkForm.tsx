@@ -403,17 +403,21 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       stream.getTracks().forEach(track => track.stop());
 
       // Converte para Blob e sobe
+      console.log("[LinkForm] Captura de tela cheia concluída. Gerando Blob...");
       canvas.toBlob(async (blob) => {
         if (blob) {
           const file = new File([blob], `capture-${Date.now()}.png`, { type: "image/png" });
           try {
             setIsUploading(true);
+            console.log("[LinkForm] Iniciando upload da captura...");
             const publicUrl = await uploadLinkThumbnail(file);
             if (publicUrl) {
               setOgImage(publicUrl);
               toast.success("Captura realizada!");
+              console.log("[LinkForm] Upload concluído:", publicUrl);
             }
           } catch (err) {
+            console.error("[LinkForm] Erro no upload da captura:", err);
             toast.error("Erro ao subir captura");
           } finally {
             setIsUploading(false);
@@ -421,9 +425,8 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
           }
         }
       }, "image/png");
-
     } catch (err) {
-      console.error(err);
+      console.error("[LinkForm] Falha ao iniciar getDisplayMedia:", err);
       setIsCapturing(false);
       if (err instanceof Error && err.name !== "NotAllowedError") {
         toast.error("Erro ao iniciar captura");
@@ -464,10 +467,12 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   };
 
   const handleCropConfirm = async (blob: Blob) => {
+    console.log("[LinkForm] Recebido blob do ScreenCropSelector (seleção de área). Tamanho:", blob.size);
     setCropImageSrc(null);
     try {
       setIsUploading(true);
       const file = new File([blob], `crop-${Date.now()}.png`, { type: "image/png" });
+      console.log("[LinkForm] Iniciando upload do recorte de área...");
       const publicUrl = await uploadLinkThumbnail(file);
       if (publicUrl) {
         if (ogImage && ogImage.includes("link-thumbnails")) {
@@ -475,8 +480,10 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         }
         setOgImage(publicUrl);
         toast.success("Área selecionada como capa!");
+        console.log("[LinkForm] Upload de área concluído:", publicUrl);
       }
     } catch (err) {
+      console.error("[LinkForm] Erro no upload do recorte de área:", err);
       toast.error("Erro ao subir imagem recortada");
     } finally {
       setIsUploading(false);
@@ -490,27 +497,17 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
   // ── Recortar imagem existente (ogImage) ──────────────────────────────────
   const handleOpenImageCrop = async () => {
     if (!ogImage) return;
-    setIsCropLoading(true);
-    try {
-      // Converte para objectURL local (Supabase client para Storage URLs,
-      // fetch com CORS para URLs externas) — garante canvas sem taint
-      const blobUrl = await getLocalBlobUrl(ogImage);
-      setCropOgImageSrc(blobUrl);
-    } catch (err) {
-      // Fallback: passa a URL diretamente (ImageCropTool tentará de novo internamente)
-      setCropOgImageSrc(ogImage);
-    } finally {
-      setIsCropLoading(false);
-    }
+    setCropOgImageSrc(ogImage);
   };
 
   const handleImageCropConfirm = async (blob: Blob) => {
-    // Revoga o objectURL para liberar memória
+    console.log("[LinkForm] Recebido blob do ScreenCropSelector (edição de imagem). Tamanho:", blob.size);
     if (cropOgImageSrc?.startsWith("blob:")) URL.revokeObjectURL(cropOgImageSrc);
     setCropOgImageSrc(null);
     try {
       setIsUploading(true);
       const file = new File([blob], `crop-${Date.now()}.webp`, { type: "image/webp" });
+      console.log("[LinkForm] Iniciando upload da imagem editada...");
       const publicUrl = await uploadLinkThumbnail(file);
       if (publicUrl) {
         if (ogImage && ogImage.includes("link-thumbnails")) {
@@ -518,8 +515,10 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
         }
         setOgImage(publicUrl);
         toast.success("Imagem recortada e salva!");
+        console.log("[LinkForm] Upload de edição concluído:", publicUrl);
       }
-    } catch {
+    } catch (err) {
+      console.error("[LinkForm] Erro no upload da edição:", err);
       toast.error("Erro ao salvar imagem recortada");
     } finally {
       setIsUploading(false);
@@ -578,20 +577,12 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
   return (
     <>
-      {/* Overlay de seleção de área (screen capture) */}
-      {cropImageSrc && (
+      {/* Recortar imagem existente ou captura de tela - Unificado no ScreenCropSelector */}
+      {(cropImageSrc || cropOgImageSrc) && (
         <ScreenCropSelector
-          imageSrc={cropImageSrc}
-          onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
-        />
-      )}
-      {/* Ferramenta de recorte da imagem existente */}
-      {cropOgImageSrc && (
-        <ImageCropTool
-          imageSrc={cropOgImageSrc}
-          onConfirm={handleImageCropConfirm}
-          onCancel={handleImageCropCancel}
+          imageSrc={(cropImageSrc || cropOgImageSrc)!}
+          onConfirm={cropImageSrc ? handleCropConfirm : handleImageCropConfirm}
+          onCancel={cropImageSrc ? handleCropCancel : handleImageCropCancel}
         />
       )}
       {/* Dialog de recuperação de rascunho */}

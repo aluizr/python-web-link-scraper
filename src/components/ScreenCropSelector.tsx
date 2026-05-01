@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Check, Move, RefreshCw, Square, ArrowUpRight, Droplets, Type, Palette, MousePointer2 } from "lucide-react";
+import { X, Check, Move, RefreshCw, Square, ArrowUpRight, Droplets, Type, Palette, MousePointer2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ensureProxied } from "@/lib/image-utils";
 
@@ -62,39 +62,15 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
   const [tool, setTool] = useState<"crop" | "arrow" | "rect" | "blur" | "text">("crop");
   const [annotations, setAnnotations] = useState<any[]>([]);
   const [imageFilter, setImageFilter] = useState<string>("none");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
   // "draw" = criando nova seleção arrastando o fundo; null = idle
   const mode       = useRef<"draw" | null>(null);
   const dragStart  = useRef<{ mx: number; my: number; rect: Rect }>({ mx: 0, my: 0, rect: { x: 0, y: 0, w: 0, h: 0 } });
 
-  // ── Carrega imagem no canvas ─────────────────────────────────────────────
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      imgRef.current = img;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      canvas.width  = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      ctx.drawImage(img, 0, 0);
-
-      // Iniciar com uma seleção padrão (80% da área visível)
-      const cw = containerRef.current?.clientWidth || 800;
-      const ch = containerRef.current?.clientHeight || 600;
-      const w = cw * 0.8;
-      const h = ch * 0.8;
-      setRect({
-        x: (cw - w) / 2,
-        y: (ch - h) / 2,
-        w: w,
-        h: h
-      });
-    };
-    img.src = ensureProxied(imageSrc);
-  }, [imageSrc]);
+  const hasValid = !!(rect && rect.w >= MIN && rect.h >= MIN);
 
   // ── Helpers de coordenadas CSS relativas ao container ────────────────────
   const toCss = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
@@ -120,6 +96,42 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
     h = Math.min(h, ch - y);
     return { x, y, w, h };
   }, []);
+
+  // ── Carrega imagem no canvas ─────────────────────────────────────────────
+  useEffect(() => {
+    setIsLoading(true);
+    setError(null);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      imgRef.current = img;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+
+      // Iniciar com uma seleção padrão (80% da área visível)
+      const cw = containerRef.current?.clientWidth || 800;
+      const ch = containerRef.current?.clientHeight || 600;
+      const w = Math.min(cw * 0.8, 800);
+      const h = Math.min(ch * 0.8, 600);
+      setRect({
+        x: (cw - w) / 2,
+        y: (ch - h) / 2,
+        w: w,
+        h: h
+      });
+      setIsLoading(false);
+    };
+    img.onerror = () => {
+      setError("Não foi possível carregar a imagem para edição. Tente usar a captura de tela ou verifique a URL.");
+      setIsLoading(false);
+    };
+    img.src = ensureProxied(imageSrc);
+  }, [imageSrc]);
 
   // ── Início do arrasto sobre o fundo (criar nova seleção) ─────────────────
   const onBgMouseDown = useCallback((e: React.MouseEvent) => {
@@ -204,7 +216,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       if (activeHandle.includes("n")) { next.y = b.y + dy; next.h = b.h - dy; }
     }
     setRect(clampRect(next));
-  }, [activeHandle, toCss, clampRect]);
+  }, [activeHandle, toCss, clampRect, tool, annotations]);
 
   const onMouseUp = useCallback(() => {
     if (tool !== "crop" && annotations.length > 0) {
@@ -296,7 +308,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       if (activeHandle.includes("n")) { next.y = b.y + dy; next.h = b.h - dy; }
     }
     setRect(clampRect(next));
-  }, [activeHandle, toCss, clampRect]);
+  }, [activeHandle, toCss, clampRect, tool, annotations]);
 
   const onTouchEnd = useCallback(() => { 
     if (tool !== "crop" && annotations.length > 0) {
@@ -322,6 +334,97 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       window.removeEventListener("touchend",  onTouchEnd);
     };
   }, [onTouchMove, onTouchEnd]);
+
+  // ── Confirmar ────────────────────────────────────────────────────────────
+  const handleConfirm = useCallback(async () => {
+    if (!rect || rect.w < MIN || rect.h >= 10000) return; // Segurança contra valores absurdos
+    
+    console.log("[ScreenCrop] Iniciando processamento do recorte...", { rect, annotations: annotations.length, filter: imageFilter });
+    setIsSaving(true);
+
+    try {
+      const canvas = canvasRef.current;
+      const el     = containerRef.current;
+      if (!canvas || !el) throw new Error("Referências do Canvas ou Container não encontradas.");
+
+      const containerWidth = el.clientWidth;
+      const containerHeight = el.clientHeight;
+      const imageWidth = canvas.width;
+      const imageHeight = canvas.height;
+
+      const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight);
+      const displayedWidth = imageWidth * scale;
+      const displayedHeight = imageHeight * scale;
+      
+      const offsetX = (containerWidth - displayedWidth) / 2;
+      const offsetY = (containerHeight - displayedHeight) / 2;
+
+      // Mapear e CLAMP (limitar) as coordenadas para dentro da imagem real
+      const sx = Math.max(0, (rect.x - offsetX) * (1 / scale));
+      const sy = Math.max(0, (rect.y - offsetY) * (1 / scale));
+      const sw = Math.min(imageWidth - sx, rect.w * (1 / scale));
+      const sh = Math.min(imageHeight - sy, rect.h * (1 / scale));
+
+      console.log("[ScreenCrop] Coordenadas mapeadas para o original:", { sx, sy, sw, sh });
+
+      if (sw <= 0 || sh <= 0) throw new Error("Área de seleção inválida (fora dos limites da imagem).");
+
+      const crop = document.createElement("canvas");
+      crop.width  = Math.round(sw);
+      crop.height = Math.round(sh);
+      const ctx = crop.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("Não foi possível obter o contexto 2D do Canvas de recorte.");
+      
+      if (imageFilter !== "none") ctx.filter = imageFilter;
+      
+      ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+      
+      // Desenhar anotações
+      annotations.forEach((ann, idx) => {
+        ctx.save();
+        const ax1 = (ann.x1 - offsetX) * (1 / scale) - sx;
+        const ay1 = (ann.y1 - offsetY) * (1 / scale) - sy;
+        const ax2 = (ann.x2 - offsetX) * (1 / scale) - sx;
+        const ay2 = (ann.y2 - offsetY) * (1 / scale) - sy;
+        
+        if (ann.type === "rect") {
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 3 * (1 / scale);
+          ctx.strokeRect(Math.min(ax1, ax2), Math.min(ay1, ay2), Math.abs(ax2 - ax1), Math.abs(ay2 - ay1));
+        } else if (ann.type === "arrow") {
+          const headlen = 15 * (1 / scale);
+          const angle = Math.atan2(ay2 - ay1, ax2 - ax1);
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 3 * (1 / scale);
+          ctx.beginPath(); ctx.moveTo(ax1, ay1); ctx.lineTo(ax2, ay2); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(ax2, ay2);
+          ctx.lineTo(ax2 - headlen * Math.cos(angle - Math.PI / 6), ay2 - headlen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(ax2 - headlen * Math.cos(angle + Math.PI / 6), ay2 - headlen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath(); ctx.fillStyle = "#ef4444"; ctx.fill();
+        } else if (ann.type === "blur") {
+          ctx.filter = "blur(12px)";
+          ctx.drawImage(canvas, (ann.x1 - offsetX) * (1 / scale), (ann.y1 - offsetY) * (1 / scale), (ann.x2 - ann.x1) * (1 / scale), (ann.y2 - ann.y1) * (1 / scale), ax1, ay1, ax2 - ax1, ay2 - ay1);
+        }
+        ctx.restore();
+      });
+      
+      console.log("[ScreenCrop] Gerando Blob final...");
+      crop.toBlob((blob) => { 
+        if (blob) {
+          console.log("[ScreenCrop] Recorte concluído com sucesso. Enviando para o componente pai.");
+          onConfirm(blob); 
+        } else {
+          throw new Error("Falha ao converter Canvas para Blob.");
+        }
+      }, "image/png", 0.9);
+
+    } catch (err) {
+      console.error("[ScreenCrop] Erro crítico no handleConfirm:", err);
+      setError(err instanceof Error ? err.message : "Erro desconhecido ao processar imagem.");
+      setIsSaving(false);
+    }
+  }, [rect, annotations, imageFilter, onConfirm]);
 
   // ── Atalhos de Teclado ──────────────────────────────────────────────────
   useEffect(() => {
@@ -349,75 +452,8 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [tool, hasValid, annotations]);
+  }, [tool, hasValid, annotations, onCancel, handleConfirm]);
 
-  // ── Confirmar ────────────────────────────────────────────────────────────
-  const handleConfirm = () => {
-    if (!rect || rect.w < MIN || rect.h < MIN) return;
-    const canvas = canvasRef.current;
-    const el     = containerRef.current;
-    if (!canvas || !el) return;
-
-    const bounds = el.getBoundingClientRect();
-    const scaleX = canvas.width  / bounds.width;
-    const scaleY = canvas.height / bounds.height;
-    const sx = rect.x * scaleX;
-    const sy = rect.y * scaleY;
-    const sw = Math.max(1, rect.w * scaleX);
-    const sh = Math.max(1, rect.h * scaleY);
-
-    const crop = document.createElement("canvas");
-    crop.width  = Math.round(sw);
-    crop.height = Math.round(sh);
-    const ctx = crop.getContext("2d");
-    if (!ctx) return;
-    
-    // Aplicar filtro se houver
-    if (imageFilter !== "none") {
-      ctx.filter = imageFilter;
-    }
-    
-    ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
-    
-    // Desenhar anotações no recorte final
-    annotations.forEach(ann => {
-      ctx.save();
-      const x1 = ann.x1 * scaleX - sx;
-      const y1 = ann.y1 * scaleY - sy;
-      const x2 = ann.x2 * scaleX - sx;
-      const y2 = ann.y2 * scaleY - sy;
-      
-      if (ann.type === "rect") {
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
-      } else if (ann.type === "arrow") {
-        const headlen = 15;
-        const angle = Math.atan2(y2 - y1, x2 - x1);
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.closePath();
-        ctx.fillStyle = "#ef4444";
-        ctx.fill();
-      } else if (ann.type === "blur") {
-        ctx.filter = "blur(12px)";
-        ctx.drawImage(canvas, ann.x1 * scaleX, ann.y1 * scaleY, (ann.x2 - ann.x1) * scaleX, (ann.y2 - ann.y1) * scaleY, x1, y1, x2 - x1, y2 - y1);
-      }
-      ctx.restore();
-    });
-    
-    crop.toBlob((blob) => { if (blob) onConfirm(blob); }, "image/png");
-  };
-
-  const hasValid = rect && rect.w >= MIN && rect.h >= MIN;
   const cursorStyle = activeHandle === "move" ? "grabbing" : mode.current === "draw" ? "crosshair" : "crosshair";
 
   return (
@@ -477,10 +513,18 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
             <X className="h-4 w-4 mr-1" /> Cancelar
           </Button>
           <Button size="sm"
-            disabled={!hasValid}
-            className="h-8 bg-primary hover:bg-primary/90 disabled:opacity-40"
+            disabled={!hasValid || isSaving}
+            className="h-8 bg-primary hover:bg-primary/90 disabled:opacity-40 min-w-[120px]"
             onClick={handleConfirm}>
-            <Check className="h-4 w-4 mr-1" /> Confirmar seleção
+            {isSaving ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Salvando...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-1" /> Confirmar seleção
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -493,6 +537,35 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
         onMouseDown={onBgMouseDown}
         onTouchStart={onBgTouchStart}
       >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+            <div className="flex flex-col items-center gap-3">
+              <RefreshCw className="h-8 w-8 text-primary animate-spin" />
+              <p className="text-white/60 text-sm animate-pulse">Carregando imagem...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-[60]">
+            <div className="max-w-md w-full bg-destructive/10 border border-destructive/20 p-6 rounded-2xl text-center space-y-4 mx-4">
+              <div className="h-12 w-12 bg-destructive/20 rounded-full flex items-center justify-center mx-auto">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <h3 className="text-white font-semibold">Erro no Carregamento</h3>
+              <p className="text-white/70 text-sm leading-relaxed">{error}</p>
+              <div className="flex justify-center gap-3">
+                <Button variant="ghost" onClick={onCancel} className="text-white hover:bg-white/10">
+                  Cancelar
+                </Button>
+                <Button onClick={() => window.location.reload()} className="bg-destructive hover:bg-destructive/90">
+                  Tentar Novamente
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Imagem de fundo (canvas) com filtro */}
         <canvas
           ref={canvasRef}
