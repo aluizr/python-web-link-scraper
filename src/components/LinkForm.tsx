@@ -175,7 +175,8 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       const hostname = new URL(url).hostname;
       // Só sobrescreve o favicon se não estiver editando ou se o campo estiver vazio
       if (!editingLink || !favicon) {
-        setFavicon(`https://icons.duckduckgo.com/ip3/${hostname}.ico`);
+        // Não sugerimos mais URLs genéricas, deixamos o scraper ou o fallback agir
+        setFavicon("");
       }
     } catch {
       // invalid URL, ignore

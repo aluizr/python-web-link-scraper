@@ -129,15 +129,25 @@ export default defineConfig(({ mode }) => ({
                   const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
                   let description = ogDescMatch ? ogDescMatch[1] : (metaDescMatch ? metaDescMatch[1] : null);
 
-                  // Extract Favicon
-                  const favMatch = html.match(/<link\s+rel=["'](?:shortcut )?icon["']\s+href=["']([^"']+)["']/i);
-                  let favicon = favMatch ? favMatch[1] : null;
+                  // Extração de Favicon (Melhorada para buscar originais de alta resolução)
+                  const favRegex = /<link\s+[^>]*rel=["'](?:shortcut\s+)?icon|apple-touch-icon|image_src["'][^>]*href=["']([^"']+)["']/gi;
+                  let favicon = null;
+                  let match;
+                  while ((match = favRegex.exec(html)) !== null) {
+                    favicon = match[1];
+                    // Se acharmos um ícone que parece ser de alta resolução (apple-touch), paramos nele
+                    if (match[0].includes('apple-touch-icon') || match[0].includes('32x32')) break;
+                  }
+
                   if (favicon && !favicon.startsWith('http')) {
                     try {
                       favicon = new URL(favicon, target.origin).href;
                     } catch {
                       favicon = null;
                     }
+                  } else if (!favicon) {
+                    // Fallback para o padrão da raiz se nada for encontrado no HTML
+                    favicon = `${target.origin}/favicon.ico`;
                   }
 
                   res.setHeader("Content-Type", "application/json");
@@ -371,6 +381,39 @@ export default defineConfig(({ mode }) => ({
               console.error("[og-proxy] ERROR:", err.message, "for URL:", rawUrl);
               res.statusCode = err.statusCode || 502;
               res.end(`Proxy error: ${err.message}`);
+            }
+          });
+          
+          // Endpoint de verificação silenciosa (sem erro no console)
+          server.middlewares.use("/check-image", async (req, res) => {
+            const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
+            if (!rawUrl) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ ok: false }));
+              return;
+            }
+
+            try {
+              const target = new URL(rawUrl);
+              const client = target.protocol === "https:" ? https : http;
+              const reqCheck = client.request({
+                hostname: target.hostname,
+                path: target.pathname + target.search,
+                method: "HEAD",
+                timeout: 2000,
+              }, (checkRes) => {
+                // Se der redirect, consideramos OK (o navegador vai seguir o redirect)
+                const ok = (checkRes.statusCode >= 200 && checkRes.statusCode < 400);
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ ok }));
+                checkRes.resume();
+              });
+              reqCheck.on("error", () => {
+                res.end(JSON.stringify({ ok: false }));
+              });
+              reqCheck.end();
+            } catch {
+              res.end(JSON.stringify({ ok: false }));
             }
           });
         },

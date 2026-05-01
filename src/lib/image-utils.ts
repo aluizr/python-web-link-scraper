@@ -11,7 +11,9 @@ const SKIP_PROXY_DOMAINS = new Set<string>([
   'githubusercontent.com',
   'twimg.com',
   'ytimg.com',
-  'notion.so'
+  'notion.so',
+  'icon.horse',
+  'duckduckgo.com'
 ]);
 
 /**

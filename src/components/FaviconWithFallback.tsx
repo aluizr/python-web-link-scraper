@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ensureProxied } from "@/lib/image-utils";
 import { getKnownFaviconFallback } from "@/lib/metadata-utils";
 
@@ -81,55 +81,83 @@ export function FaviconWithFallback({
   className = "",
 }: FaviconWithFallbackProps) {
   const [failed, setFailed] = useState(false);
-  const [fallbackLevel, setFallbackLevel] = useState(0); // 0: custom, 1: iconhorse, 2: google
+  const [fallbackLevel, setFallbackLevel] = useState(0); 
+  const [isChecking, setIsChecking] = useState(false);
+  const [verifiedUrl, setVerifiedUrl] = useState<string | null>(null);
   const avatarData = getAvatarData(url);
 
-  // Determinar URL do favicon baseado no nível de fallback atual
-  const faviconUrl = (() => {
-    try {
-      const hostname = new URL(url).hostname;
-      if (!hostname) return null;
+  // Efeito para verificar silenciosamente se a URL funciona antes de renderizar
+  useEffect(() => {
+    let active = true;
+    
+    async function checkUrl(targetUrl: string | null) {
+      if (!targetUrl) return false;
+      
+      try {
+        const checkRes = await fetch(`/check-image?url=${encodeURIComponent(targetUrl)}`);
+        const data = await checkRes.json();
+        return data.ok;
+      } catch {
+        return false;
+      }
+    }
 
-      // Nível 0: Favicon customizado vindo dos metadados (se for uma URL válida e não-Google)
-      if (fallbackLevel === 0 && favicon && typeof favicon === "string" && favicon.startsWith("http")) {
-        const isUnreliableService = favicon.includes('google.com/s2/favicons') || 
-                                    favicon.includes('gstatic.com/faviconV2');
-                               
-        if (!isUnreliableService) {
-          // Evitar proxear wikimedia
-          if (favicon.includes('wikimedia.org')) return favicon;
-          return ensureProxied(favicon);
+    async function runCheck() {
+      // Se já falhou ou não tem URL no nível atual, não faz nada
+      if (failed) return;
+
+      const currentUrl = getFaviconUrl(fallbackLevel);
+      if (!currentUrl) {
+        if (active) setFailed(true);
+        return;
+      }
+
+      if (active) setIsChecking(true);
+      const ok = await checkUrl(currentUrl);
+      
+      if (active) {
+        if (ok) {
+          setVerifiedUrl(currentUrl);
+          setIsChecking(false);
+        } else {
+          // Se falhou silenciosamente, move para o próximo nível
+          if (fallbackLevel < 3) {
+            setFallbackLevel(prev => prev + 1);
+          } else {
+            setFailed(true);
+          }
+          setIsChecking(false);
         }
       }
+    }
 
-      // Nível 1: DuckDuckGo Icons (Extremamente rápido e confiável)
-      if (fallbackLevel <= 1) {
-        const knownFallback = getKnownFaviconFallback(url);
-        if (knownFallback) return ensureProxied(knownFallback);
-        
-        return `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
-      }
+    runCheck();
+    return () => { active = false; };
+  }, [url, favicon, fallbackLevel, failed]);
 
-      // Nível 2: Icon Horse (Alta resiliência)
-      if (fallbackLevel === 2) {
-        return ensureProxied(`https://icon.horse/icon/${hostname}`);
-      }
-      
-      return null;
-    } catch {
-      // Se não houver hostname válido, ainda podemos tentar usar o favicon direto se for uma URL
-      if (favicon && typeof favicon === "string" && favicon.startsWith("http")) {
+  // Função auxiliar para obter a URL baseada no nível (sem disparar o render da imagem)
+  function getFaviconUrl(level: number) {
+    try {
+      const hostname = new URL(url).hostname;
+      const cleanHostname = hostname.replace(/^www\./, "");
+
+      if (level === 0 && favicon && typeof favicon === "string" && favicon.startsWith("http")) {
+        // Agora tentamos QUALQUER favicon detectado, pois o sistema de check silencia erros
         return ensureProxied(favicon);
       }
+      if (level === 1) return `https://icon.horse/icon/${cleanHostname}`;
+      if (level === 2) return `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`;
       return null;
+    } catch {
+      return (level === 0 && favicon && typeof favicon === "string" && favicon.startsWith("http")) ? ensureProxied(favicon) : null;
     }
-  })();
+  }
 
-  // Se atingiu o nível máximo de falha ou não tem URL válida, mostra avatar
-  if (!faviconUrl || fallbackLevel > 2 || failed) {
+  // Se está verificando ou falhou tudo, mostra avatar (ou um placeholder invisível enquanto checa)
+  if (isChecking || failed || !verifiedUrl) {
     return (
       <div
-        className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className}`}
+        className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className} transition-opacity duration-200 ${isChecking ? "opacity-50" : "opacity-100"}`}
         style={{
           width: size,
           height: size,
@@ -150,13 +178,15 @@ export function FaviconWithFallback({
 
   return (
     <img
-      src={faviconUrl}
+      src={verifiedUrl}
       alt=""
-      key={`${faviconUrl}-${fallbackLevel}`} // Forçar re-render ao mudar nível
-      className={`shrink-0 rounded ${className} object-contain`}
+      key={verifiedUrl}
+      className={`shrink-0 rounded ${className} object-contain animate-in fade-in duration-300`}
       style={{ width: size, height: size }}
       onError={() => {
-        if (fallbackLevel < 2) {
+        // Backup: se o check passou mas a imagem falhou no render por algum motivo raro
+        setVerifiedUrl(null);
+        if (fallbackLevel < 3) {
           setFallbackLevel(prev => prev + 1);
         } else {
           setFailed(true);
