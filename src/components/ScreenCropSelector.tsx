@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Check, Move, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ensureProxied } from "@/lib/image-utils";
+
 
 interface Rect { x: number; y: number; w: number; h: number; }
 
@@ -39,6 +41,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
   // ── Carrega imagem no canvas ─────────────────────────────────────────────
   useEffect(() => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       imgRef.current = img;
       const canvas = canvasRef.current;
@@ -49,7 +52,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
       canvas.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
     };
-    img.src = imageSrc;
+    img.src = ensureProxied(imageSrc);
   }, [imageSrc]);
 
   // ── Helpers de coordenadas CSS relativas ao container ────────────────────

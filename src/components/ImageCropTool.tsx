@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Check, RotateCcw, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ensureProxied } from "@/lib/image-utils";
+
 
 type HandleId = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -53,7 +55,7 @@ export function ImageCropTool({ imageSrc, onConfirm, onCancel }: ImageCropToolPr
   useEffect(() => {
     setImageLoaded(false);
     setError(null);
-    setImgObjectUrl(imageSrc || null);
+    setImgObjectUrl(imageSrc ? ensureProxied(imageSrc) : null);
   }, [imageSrc]);
 
   useEffect(() => { return () => {}; }, [imgObjectUrl]);
@@ -255,6 +257,7 @@ export function ImageCropTool({ imageSrc, onConfirm, onCancel }: ImageCropToolPr
           alt="Para recorte"
           className="relative max-w-[95%] max-h-[95%] object-contain pointer-events-none"
           style={{ display: imageLoaded ? "block" : "none" }}
+          crossOrigin="anonymous"
           onLoad={() => {
             setNaturalSize({ w: imgRef.current!.naturalWidth, h: imgRef.current!.naturalHeight });
             setImageLoaded(true);

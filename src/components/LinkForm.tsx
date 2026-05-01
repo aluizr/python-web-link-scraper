@@ -23,6 +23,7 @@ import { uploadLinkThumbnail, deleteLinkThumbnail, getLocalBlobUrl } from "@/lib
 import { ImageIcon, Upload, Trash2, Camera, Loader2, Scissors, Crop, ScissorsSquareDashedBottom } from "lucide-react";
 import { ScreenCropSelector } from "@/components/ScreenCropSelector";
 import { ImageCropTool } from "@/components/ImageCropTool";
+import { FaviconWithFallback } from "@/components/FaviconWithFallback";
 import { toast } from "sonner";
 import type { LinkItem, Category, LinkPriority, LinkStatus } from "@/types/link";
 
@@ -174,7 +175,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       const hostname = new URL(url).hostname;
       // Só sobrescreve o favicon se não estiver editando ou se o campo estiver vazio
       if (!editingLink || !favicon) {
-        setFavicon(`https://www.google.com/s2/favicons?domain=${hostname}&sz=32`);
+        setFavicon(`https://icons.duckduckgo.com/ip3/${hostname}.ico`);
       }
     } catch {
       // invalid URL, ignore
@@ -865,12 +866,24 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
 
             <div className="space-y-2">
               <Label htmlFor="favicon">URL do Favicon</Label>
-              <Input
-                id="favicon"
-                placeholder="https://exemplo.com/icon.png"
-                value={favicon}
-                onChange={(e) => setFavicon(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <div 
+                  className="flex items-center justify-center w-8 h-8 rounded border shrink-0 overflow-hidden"
+                  style={{ 
+                    backgroundImage: "conic-gradient(#eee 0.25turn, #fff 0.25turn 0.5turn, #eee 0.5turn 0.75turn, #fff 0.75turn)",
+                    backgroundSize: "8px 8px"
+                  }}
+                >
+                  <FaviconWithFallback url={url} favicon={favicon} size={20} />
+                </div>
+                <Input
+                  id="favicon"
+                  placeholder="https://exemplo.com/icon.png"
+                  value={favicon}
+                  onChange={(e) => setFavicon(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
           <div className="space-y-2">

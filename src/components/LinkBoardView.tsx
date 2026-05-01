@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FaviconWithFallback } from "@/components/FaviconWithFallback";
 import { ensureProxied } from "@/lib/image-utils";
 import {
   Select,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FaviconWithFallback } from "@/components/FaviconWithFallback";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1139,7 +1140,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                     </button>
                   )}
                   <div className="flex items-start gap-2">
-                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={18} className="mt-0.5" />
+
                     <div className="min-w-0 flex-1">
                       {editingTitleId === link.id ? (
                         <Input
@@ -1181,6 +1182,19 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                           {link.description}
                         </p>
                       )}
+
+                      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
+                        <span className="truncate">
+                          {(() => {
+                            try {
+                              return new URL(link.url).hostname.replace(/^www\./, "");
+                            } catch {
+                              return link.url;
+                            }
+                          })()}
+                        </span>
+                      </div>
 
                       {/* Tags */}
                       {link.tags.length > 0 && (

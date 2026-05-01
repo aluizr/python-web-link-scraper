@@ -980,7 +980,7 @@ export function LinkGalleryView({
               )}
 
               <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <FaviconWithFallback url={link.url} favicon={link.favicon} size={12} />
+                <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
                 <span className="truncate">{getHostname(link.url)}</span>
               </div>
 

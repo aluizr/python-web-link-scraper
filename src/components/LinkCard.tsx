@@ -201,12 +201,7 @@ export const LinkCard = memo(function LinkCard({
               <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />
             </div>
           
-          <FaviconWithFallback
-            url={link.url}
-            favicon={link.favicon}
-            size={24}
-            className="mt-1"
-          />
+
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <a
@@ -243,6 +238,18 @@ export const LinkCard = memo(function LinkCard({
                 {link.description}
               </p>
             )}
+            <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
+              <span className="truncate">
+                {(() => {
+                  try {
+                    return new URL(link.url).hostname.replace(/^www\./, "");
+                  } catch {
+                    return link.url;
+                  }
+                })()}
+              </span>
+            </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {link.category && (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, Loader2, Globe } from "lucide-react";
+import { FaviconWithFallback } from "./FaviconWithFallback";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import type { LinkMetadata } from "@/hooks/use-metadata";
@@ -95,9 +96,12 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
               {metadata.description}
             </p>
           )}
-          <p className={`${TEXT_XS_CLASS} text-muted-foreground mt-2 truncate`}>
-            {getHostname(url)}
-          </p>
+          <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+            <FaviconWithFallback url={url} favicon={metadata.favicon} size={14} />
+            <p className={`${TEXT_XS_CLASS} text-muted-foreground truncate flex-1`}>
+              {getHostname(url)}
+            </p>
+          </div>
         </div>
       </div>
 

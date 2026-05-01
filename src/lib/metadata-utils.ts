@@ -137,6 +137,7 @@ const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
 const DEFAULT_FAVICON_FALLBACKS: Record<string, string> = {
   'uol.com.br': 'https://www.uol.com.br/favicon.ico',
   'globo.com': 'https://www.globo.com/favicon.ico',
+  'santanderopenacademy.com': 'https://www.santanderopenacademy.com/favicon.ico',
 };
 
 export const KNOWN_FALLBACKS: Record<string, string> = (() => {

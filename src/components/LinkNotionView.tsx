@@ -408,7 +408,7 @@ export function LinkNotionView({
                     rel="noopener noreferrer"
                     className={`inline-flex max-w-full items-center gap-1.5 font-medium tracking-[0.01em] text-foreground/70 hover:text-primary ${densityStyle.domainClass}`}
                   >
-                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={14} />
+                    <FaviconWithFallback url={link.url} favicon={link.favicon} size={16} />
                     <span className="truncate">{domain}</span>
                   </a>
 
