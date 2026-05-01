@@ -1,10 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ensureProxied } from "@/lib/image-utils";
-
-/**
- * Cache simples para evitar múltiplas checagens de rede para o mesmo ícone.
- */
-const checkCache: Record<string, boolean> = {};
+import { getKnownFaviconFallback } from "@/lib/metadata-utils";
 
 /**
  * Paleta de cores consistente para avatares de fallback.
@@ -50,126 +46,58 @@ interface FaviconWithFallbackProps {
   className?: string;
 }
 
+/**
+ * Componente de Favicon Ultra-Resiliente (Versão Restaurada e Estável).
+ */
 export function FaviconWithFallback({
   url,
   favicon,
   size = 24,
   className = "",
 }: FaviconWithFallbackProps) {
-  const [failed, setFailed] = useState(false);
   const [fallbackLevel, setFallbackLevel] = useState(0); 
-  const [isChecking, setIsChecking] = useState(false);
-  const [verifiedUrl, setVerifiedUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const avatarData = getAvatarData(url);
 
-  useEffect(() => {
-    let active = true;
-    
-    async function checkUrl(targetUrl: string | null) {
-      if (!targetUrl) return false;
-      if (checkCache[targetUrl] !== undefined) return checkCache[targetUrl];
-      
-      let urlToCheck = targetUrl;
-      if (targetUrl.startsWith('/og-proxy?url=')) {
-        try {
-          const params = new URL(targetUrl, window.location.origin).searchParams;
-          urlToCheck = params.get('url') || targetUrl;
-        } catch { /* ignore */ }
-      }
-
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
-        
-        const checkRes = await fetch(`/check-image?url=${encodeURIComponent(urlToCheck)}`, { signal: controller.signal });
-        const data = await checkRes.json();
-        clearTimeout(timeoutId);
-        
-        checkCache[targetUrl] = data.ok;
-        return data.ok;
-      } catch {
-        // Se houver erro na checagem ou timeout, assumimos OK para evitar supressão indevida
-        return true; 
-      }
+  const handleNextLevel = () => {
+    if (fallbackLevel < 5) {
+      setFallbackLevel(prev => prev + 1);
+    } else {
+      setFailed(true);
     }
+  };
 
-    async function runCheck() {
-      if (failed) return;
-      const currentUrl = getFaviconUrl(fallbackLevel);
-      
-      if (!currentUrl) {
-        if (active) setFailed(true);
-        return;
-      }
-
-      // Se já passou do nível 3, não precisa checar mais (backups estáveis)
-      if (fallbackLevel >= 3) {
-        if (active) {
-          setVerifiedUrl(currentUrl);
-          setIsChecking(false);
-        }
-        return;
-      }
-
-      if (active) setIsChecking(true);
-      const ok = await checkUrl(currentUrl);
-      
-      if (active) {
-        if (ok) {
-          setVerifiedUrl(currentUrl);
-          setIsChecking(false);
-        } else {
-          if (fallbackLevel < 5) {
-            setFallbackLevel(prev => prev + 1);
-          } else {
-            setFailed(true);
-          }
-          setIsChecking(false);
-        }
-      }
-    }
-
-    runCheck();
-    return () => { active = false; };
-  }, [url, favicon, fallbackLevel, failed]);
-
-  function getFaviconUrl(level: number) {
+  const faviconUrl = (() => {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname;
       const cleanHostname = hostname.replace(/^www\./, "");
 
-      // Nível 0: O ORIGINAL absoluto (Salvo no banco)
-      if (level === 0 && favicon && typeof favicon === "string" && favicon.length > 5) {
+      // Nível 0: Original do Banco
+      if (fallbackLevel === 0 && favicon && typeof favicon === "string" && favicon.length > 5) {
         return ensureProxied(favicon);
       }
-      
-      // Nível 1: Unavatar (Mestre em originais de alta qualidade)
-      if (level === 1) return `https://unavatar.io/${cleanHostname}?fallback=false`;
-      
-      // Nível 2: Nativo direto do site
-      if (level === 2) return `${urlObj.origin}/favicon.ico`;
-      
-      // Nível 3: Google HD (Muito confiável para os "comuns")
-      if (level === 3) return `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`;
-      
+      // Nível 1: Unavatar (Alta fidelidade)
+      if (fallbackLevel === 1) return `https://unavatar.io/${cleanHostname}?fallback=false`;
+      // Nível 2: Google HD
+      if (fallbackLevel === 2) return `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`;
+      // Nível 3: Nativo (/favicon.ico)
+      if (fallbackLevel === 3) return ensureProxied(`${urlObj.origin}/favicon.ico`);
       // Nível 4: DuckDuckGo
-      if (level === 4) return `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`;
-      
-      // Nível 5: Clearbit
-      if (level === 5) return `https://logo.clearbit.com/${cleanHostname}`;
+      if (fallbackLevel === 4) return `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`;
+      // Nível 5: Icon Horse
+      if (fallbackLevel === 5) return `https://icon.horse/icon/${cleanHostname}`;
       
       return null;
     } catch {
       return null;
     }
-  }
+  })();
 
-  if (isChecking || failed || !verifiedUrl) {
-    const isActuallyFailed = failed || (!isChecking && fallbackLevel >= 5);
+  if (failed || !faviconUrl || fallbackLevel > 5) {
     return (
       <div
-        className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className} transition-opacity duration-200 ${isChecking ? "opacity-50" : "opacity-100"}`}
+        className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className}`}
         style={{
           width: size, height: size,
           backgroundColor: avatarData.color.bg, color: avatarData.color.text,
@@ -185,19 +113,12 @@ export function FaviconWithFallback({
 
   return (
     <img
-      src={verifiedUrl}
+      src={faviconUrl}
       alt=""
-      key={verifiedUrl}
-      className={`shrink-0 rounded ${className} object-contain animate-in fade-in duration-300`}
+      key={faviconUrl}
+      className={`shrink-0 rounded ${className} object-contain animate-in fade-in duration-200`}
       style={{ width: size, height: size }}
-      onError={() => {
-        setVerifiedUrl(null);
-        if (fallbackLevel < 5) {
-          setFallbackLevel(prev => prev + 1);
-        } else {
-          setFailed(true);
-        }
-      }}
+      onError={handleNextLevel}
       loading="lazy"
     />
   );
