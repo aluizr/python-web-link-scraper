@@ -6,6 +6,7 @@ Versão mais recente: [0.14.5 — 2026-04-28](CHANGELOG.md#0145--2026-04-28)
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.15.0 | 2026-05-01 | [Ver mudanças](CHANGELOG.md#0150--2026-05-01) |
 | 0.14.5 | 2026-04-28 | [Ver mudanças](CHANGELOG.md#0145--2026-04-28) |
 | 0.14.4 | 2026-04-01 | [Ver mudanças](CHANGELOG.md#0144--2026-04-01) |
 | 0.14.3 | 2026-03-31 | [Ver mudanças](CHANGELOG.md#0143--2026-03-31) |
@@ -15,6 +16,28 @@ Versão mais recente: [0.14.5 — 2026-04-28](CHANGELOG.md#0145--2026-04-28)
 | 0.13.0 | 2026-02-21 | [Ver mudanças](CHANGELOG.md#0130--2026-02-21) |
 
 ---
+
+## [0.15.0] — 2026-05-01
+
+### Editor de Imagens v2.0 (P0)
+
+`Componentes`
+
+- **Unificação do ScreenCropSelector**: Substituição completa do antigo `ImageCropTool`. Agora, captura de tela, seleção de área e edição de imagens existentes usam a mesma interface potente.
+- **Anotações Vetoriais**: Adicionada camada SVG para desenho de **Setas**, **Retângulos** e **Desfoque (Blur)**, essencial para tutoriais ou ocultação de dados sensíveis.
+- **Filtros de Imagem**: Implementação de filtros diretos via Canvas (**P&B** e **Contraste**) para edição rápida sem necessidade de ferramentas externas.
+- **Atalhos Pro**: Mapeamento de teclas de produtividade (`A`, `R`, `B`, `C`, `Enter`, `Esc`, `Ctrl+Z`) para agilizar o fluxo de edição.
+
+`Resiliência e Performance`
+
+- **Solução Definitiva CORS**: Ajuste no sistema de proxy para garantir que imagens de qualquer domínio (GitHub, Google, etc.) possam ser processadas no Canvas sem bloqueios de segurança.
+- **Correção de DPI (Alta Resolução)**: Refatoração da matemática de mapeamento de coordenadas para suportar telas Retina/4K e evitar deslocamento de pixels no recorte final.
+- **Observabilidade**: Adição de logs de auditoria (`[ScreenCrop]`, `[LinkForm]`) para monitorar o fluxo de geração de Blobs e uploads.
+
+`Documentação`
+
+- **Novo Guia Técnico**: Criação do [`docs/IMAGE_EDITOR_SYSTEM.md`](docs/IMAGE_EDITOR_SYSTEM.md) detalhando toda a arquitetura e manutenção do sistema de imagem.
+
 
 ## [0.14.5] — 2026-04-28
 
