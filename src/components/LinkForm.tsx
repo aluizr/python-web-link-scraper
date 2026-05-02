@@ -804,9 +804,9 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
                 <LinkPreview 
                   metadata={{
                     ...metadata,
-                    title: title.trim() || metadata.title,
-                    description: description.trim() || metadata.description,
-                    image: ogImage.trim() || metadata.image,
+                    title: title?.trim() || metadata.title,
+                    description: description?.trim() || metadata.description,
+                    image: ogImage?.trim() || metadata.image,
                   }} 
                   url={url} 
                 />

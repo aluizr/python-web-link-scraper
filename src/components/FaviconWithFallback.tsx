@@ -68,7 +68,8 @@ export function FaviconWithFallback({
   }, [url, favicon]);
 
   const handleNextLevel = () => {
-    if (fallbackLevel < 5) {
+    setIsLoaded(false); // Mostra o avatar de fundo enquanto testa o próximo nível
+    if (fallbackLevel < 8) {
       setFallbackLevel(prev => prev + 1);
     } else {
       setFailed(true);
@@ -80,25 +81,32 @@ export function FaviconWithFallback({
   const faviconUrl = (() => {
     try {
       const urlObj = new URL(url);
-      const hostname = urlObj.hostname;
-      const cleanHostname = hostname.replace(/^www\./, "");
+      const cleanHostname = urlObj.hostname.replace(/^www\./, "");
+      const known = getKnownFaviconFallback(url);
 
-      // Nível 0: Original do Banco
-      if (fallbackLevel === 0 && favicon && typeof favicon === "string" && favicon.length > 5) {
-        return ensureProxied(favicon);
-      }
-      // Nível 1: Unavatar (Alta fidelidade)
-      if (fallbackLevel === 1) return `https://unavatar.io/${cleanHostname}?fallback=false`;
-      // Nível 2: Google HD
-      if (fallbackLevel === 2) return `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`;
-      // Nível 3: Nativo (/favicon.ico)
-      if (fallbackLevel === 3) return ensureProxied(`${urlObj.origin}/favicon.ico`);
-      // Nível 4: DuckDuckGo
-      if (fallbackLevel === 4) return `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`;
-      // Nível 5: Icon Horse
-      if (fallbackLevel === 5) return `https://icon.horse/icon/${cleanHostname}`;
+      // Constrói a sequência de fallbacks dinamicamente
+      const sequence = [];
       
-      return null;
+      // Nível 0: Original do Banco
+      if (favicon && typeof favicon === "string" && favicon.length > 5) {
+        sequence.push(ensureProxied(favicon));
+      }
+      
+      // Nível 0.5: Favicon conhecido (ex: GitHub, Google, Twitter)
+      if (known) {
+        sequence.push(known);
+      }
+      
+      // Próximos Níveis
+      sequence.push(
+        `https://unavatar.io/${cleanHostname}?fallback=false`,
+        `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`,
+        ensureProxied(`${urlObj.origin}/favicon.ico`),
+        `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`,
+        `https://icon.horse/icon/${cleanHostname}`
+      );
+
+      return sequence[fallbackLevel] || null;
     } catch {
       return null;
     }
@@ -124,7 +132,7 @@ export function FaviconWithFallback({
       </div>
 
       {/* Imagem Real (Carrega invisível e só aparece quando tiver sucesso) */}
-      {(!failed && faviconUrl && fallbackLevel <= 5) && (
+      {(!failed && faviconUrl) && (
         <img
           src={faviconUrl}
           alt=""
