@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ensureProxied } from "@/lib/image-utils";
 import { getKnownFaviconFallback } from "@/lib/metadata-utils";
 
@@ -57,7 +57,15 @@ export function FaviconWithFallback({
 }: FaviconWithFallbackProps) {
   const [fallbackLevel, setFallbackLevel] = useState(0); 
   const [failed, setFailed] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const avatarData = getAvatarData(url);
+
+  // Reseta os estados quando a URL muda para evitar carregar o favicon do link anterior
+  useEffect(() => {
+    setFallbackLevel(0);
+    setFailed(false);
+    setIsLoaded(false);
+  }, [url, favicon]);
 
   const handleNextLevel = () => {
     if (fallbackLevel < 5) {
@@ -66,6 +74,8 @@ export function FaviconWithFallback({
       setFailed(true);
     }
   };
+
+  const handleLoad = () => setIsLoaded(true);
 
   const faviconUrl = (() => {
     try {
@@ -94,12 +104,16 @@ export function FaviconWithFallback({
     }
   })();
 
-  if (failed || !faviconUrl || fallbackLevel > 5) {
-    return (
+  return (
+    <div className={`relative inline-flex shrink-0 ${className}`} style={{ width: size, height: size }}>
+      {/* 
+        Fallback Letter Avatar (Progressive Loading):
+        Fica sempre visível no fundo até a imagem real carregar com sucesso.
+        Evita a tela branca (flicker) ou ícones quebrados enquanto os fallbacks estão sendo testados.
+      */}
       <div
-        className={`inline-flex items-center justify-center rounded shrink-0 select-none ${className}`}
+        className={`absolute inset-0 flex items-center justify-center rounded select-none transition-opacity duration-300 ${isLoaded ? 'opacity-0' : 'opacity-100'}`}
         style={{
-          width: size, height: size,
           backgroundColor: avatarData.color.bg, color: avatarData.color.text,
           fontSize: Math.max(9, size * 0.55), fontWeight: 700,
           boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.05)",
@@ -108,19 +122,21 @@ export function FaviconWithFallback({
       >
         {avatarData.letter}
       </div>
-    );
-  }
 
-  return (
-    <img
-      src={faviconUrl}
-      alt=""
-      key={faviconUrl}
-      className={`shrink-0 rounded ${className} object-contain animate-in fade-in duration-200`}
-      style={{ width: size, height: size }}
-      onError={handleNextLevel}
-      loading="lazy"
-    />
+      {/* Imagem Real (Carrega invisível e só aparece quando tiver sucesso) */}
+      {(!failed && faviconUrl && fallbackLevel <= 5) && (
+        <img
+          src={faviconUrl}
+          alt=""
+          key={faviconUrl}
+          className={`absolute inset-0 rounded object-contain transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+          style={{ width: size, height: size }}
+          onLoad={handleLoad}
+          onError={handleNextLevel}
+          loading="lazy"
+        />
+      )}
+    </div>
   );
 }
 

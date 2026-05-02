@@ -182,30 +182,46 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
       // invalid URL, ignore
     }
 
-    // Fetch metadata with debounce (wait 500ms after user stops typing)
+    let active = true;
     const timer = setTimeout(() => {
+      if (!editingLink) {
+        setOgImage(null);
+        setTitle("");
+        setDescription("");
+        setFavicon(""); // Limpa explicitamente o favicon
+        setAutoFilledTitle(false);
+      }
+
       fetchMetadata(url).then((result) => {
-        // Auto-fill title if not already set and we got a title from metadata
-        if (!editingLink && !title && result.title && !autoFilledTitle) {
-          setTitle(result.title);
-          setAutoFilledTitle(true);
+        if (!active) return;
+        
+        if (!editingLink && result.title) {
+          setTitle(prev => {
+            if (!prev || !autoFilledTitle) {
+              setAutoFilledTitle(true);
+              return result.title || "";
+            }
+            return prev;
+          });
         }
-        // Auto-fill description if it's empty
-        if (!description && result.description) {
-          setDescription(result.description);
+        if (result.description) {
+          setDescription(prev => prev ? prev : result.description || "");
         }
-        // Auto-fill OG image apenas se estiver vazio ou se for um novo link
-        if (result.image && (!ogImage || !editingLink)) {
-          // Se for novo link, ou se o campo de imagem estiver vazio, preenche
-          if (!ogImage || !editingLink) {
-             setOgImage(result.image);
-          }
+        if (result.image) {
+          setOgImage(prev => prev ? prev : result.image);
+        }
+        if (result.favicon) {
+          setFavicon(prev => prev ? prev : result.favicon || "");
         }
       });
-    }, 500);
+    }, 700);
 
-    return () => clearTimeout(timer);
-  }, [url, open, editingLink, autoFilledTitle, title, description, ogImage, favicon, fetchMetadata]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, open, editingLink, fetchMetadata]);
 
   // Auto-save draft com debounce (não salva enquanto está editando um link existente)
   useEffect(() => {
@@ -340,6 +356,18 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
     }
     setOgImage("");
     toast.info("Imagem removida");
+  };
+
+  const handleFetchMetadata = async (targetUrl: string) => {
+    if (!targetUrl || isEditing) return;
+    
+    // Limpa estados anteriores para evitar "fantasmia" de metadados entre links
+    setOgImage(null);
+    setTitle("");
+    setDescription("");
+    
+    const result = await fetchMetadata(targetUrl);
+    // ... rest of implementation
   };
 
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
@@ -870,7 +898,7 @@ export function LinkForm({ open, onOpenChange, categories, links, editingLink, o
                 </div>
                 <Input
                   id="favicon"
-                  placeholder="https://exemplo.com/icon.png"
+                  placeholder="(Nenhum ícone encontrado)"
                   value={favicon}
                   onChange={(e) => setFavicon(e.target.value)}
                   className="flex-1"

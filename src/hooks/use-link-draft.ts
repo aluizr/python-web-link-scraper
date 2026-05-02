@@ -17,7 +17,7 @@ export interface LinkDraft {
   ogImage?: string;
 }
 
-const DRAFT_STORAGE_KEY = "link-draft";
+const DRAFT_STORAGE_KEY = "link-draft-v2";
 const DRAFT_TIMEOUT = 500; // ms - debounce interval
 
 /**

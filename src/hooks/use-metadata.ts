@@ -22,7 +22,9 @@ export interface LinkMetadata {
   source: "notion" | "microlink" | "noembed" | "local" | null;
 }
 
-const metadataCache = new LRUCache<string, LinkMetadata>(100, 24 * 60 * 60 * 1000, "webnest:metadata_cache");
+// Cache de metadados com versão para evitar dados corrompidos de versões anteriores
+const CACHE_VERSION = "v5";
+const metadataCache = new LRUCache<string, LinkMetadata>(100, 24 * 60 * 60 * 1000, `webnest:metadata_cache_${CACHE_VERSION}`);
 
 const FETCH_TIMEOUT_MS = 12000;
 
@@ -115,197 +117,6 @@ export function saveKnownFaviconFallbacks(fallbacks: Record<string, string>) {
   localStorage.setItem("webnest:known_favicon_fallbacks", JSON.stringify(KNOWN_FAVICON_FALLBACKS));
 }
 
-async function fetchFromLocalProxy(url: string): Promise<LinkMetadata | null> {
-  try {
-    const proxyUrl = `/html-proxy?url=${encodeURIComponent(url)}`;
-    const response = await fetchWithTimeout(proxyUrl);
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (!data.title && !data.ogImage) return null;
-
-    return {
-      title: cleanMetadataTitle(data.title),
-      description: data.description || null,
-      image: data.ogImage ? extractOriginalImageUrl(data.ogImage) : null,
-      favicon: data.favicon || getKnownFaviconFallback(url),
-      loading: false,
-      error: null,
-      source: "local",
-    };
-  } catch (err) {
-    console.debug("[useMetadata] Local proxy error:", err);
-    return null;
-  }
-}
-
-async function fetchFromJinaReader(url: string): Promise<LinkMetadata | null> {
-  try {
-    // Jina Reader is a free service that renders pages and extracts clean content
-    // We use the JSON output format if possible, but the basic one is r.jina.ai/URL
-    // By default it returns Markdown, but we can try to parse it or use their API if known.
-    // For now, we'll use the simple reader which is very good at bypassing blocks.
-    const jinaUrl = `https://r.jina.ai/${url}`;
-    
-    const response = await fetchWithTimeout(jinaUrl, {
-      headers: {
-        'Accept': 'application/json', // Jina supports JSON if requested
-        'X-Return-Format': 'markdown'
-      }
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (!data.data) return null;
-
-    // Jina nests OG tags in a metadata object
-    const image = data.data.image || data.data.metadata?.['og:image'] || data.data.metadata?.['twitter:image'] || null;
-    const title = data.data.title || data.data.metadata?.['og:title'] || data.data.metadata?.['twitter:title'] || null;
-    const description = data.data.description || data.data.metadata?.['og:description'] || data.data.content?.substring(0, 200) || null;
-
-    return {
-      title: cleanMetadataTitle(title),
-      description: description,
-      image: image ? extractOriginalImageUrl(image) : null,
-      favicon: getKnownFaviconFallback(url),
-      loading: false,
-      error: null,
-      source: "local",
-    };
-  } catch (err) {
-    console.debug("[useMetadata] Jina Reader error:", err);
-    return null;
-  }
-}
-
-async function fetchFromMicrolink(url: string): Promise<LinkMetadata | null> {
-  try {
-    const microlinkUrl = new URL("https://api.microlink.io");
-    microlinkUrl.searchParams.set("url", url);
-    microlinkUrl.searchParams.set("screenshot", "true");
-
-    const response = await fetchWithTimeout(microlinkUrl.toString(), {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        localStorage.setItem("webnest:microlink_rate_limit", Date.now().toString());
-      }
-      
-      const fallback = getKnownFallback(url);
-      if (fallback) {
-        let title = null;
-        try {
-          const urlObj = new URL(url);
-          const hostname = urlObj.hostname.replace(/^www\./i, "");
-          title = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-        } catch (err) {
-          console.debug("[useMetadata] Title derivation error:", err);
-        }
-        return {
-          title,
-          description: null,
-          image: fallback,
-          favicon: getKnownFaviconFallback(url),
-          loading: false,
-          error: null,
-          source: "microlink",
-        };
-      }
-
-      const localMetadata = await fetchFromLocalProxy(url);
-      if (localMetadata) return localMetadata;
-      
-      return null;
-    }
-
-    const data = await response.json();
-    if (!data.data) return null;
-
-    const rawTitle = data.data.title || null;
-    const isBlockedPage = rawTitle && (
-      /^error:/i.test(rawTitle.trim()) ||
-      /Attention Required!/i.test(rawTitle.trim()) ||
-      /Just a moment\.\.\./i.test(rawTitle.trim()) ||
-      /Cloudflare/i.test(rawTitle.trim()) ||
-      /Access Denied/i.test(rawTitle.trim()) ||
-      /403 Forbidden/i.test(rawTitle.trim())
-    );
-
-    if (isBlockedPage) {
-      const fallback = getKnownFallback(url);
-      let derivedTitle = null;
-      try {
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname.replace(/^www\./i, "");
-        derivedTitle = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-      } catch (err) {
-        console.debug("[useMetadata] Blocked page title derivation error:", err);
-      }
-
-      return {
-        title: derivedTitle,
-        description: null,
-        image: fallback || null,
-        favicon: getKnownFaviconFallback(url),
-        loading: false,
-        error: null,
-        source: "microlink",
-      };
-    }
-
-    let title = rawTitle;
-    if (!title) {
-      try {
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname.replace(/^www\./i, "");
-        title = hostname.split('.')[0].charAt(0).toUpperCase() + hostname.split('.')[0].slice(1);
-      } catch (err) {
-        console.debug("[useMetadata] Microlink empty title derivation error:", err);
-        title = null;
-      }
-    }
-
-    let image = getKnownFallback(url) || data.data.image?.url || null;
-    
-    if (!image) {
-      const local = await fetchFromLocalProxy(url);
-      image = local?.image || null;
-    }
-    
-    const screenshotUrl = data.data.screenshot?.url || null;
-    const titleLower = (rawTitle || "").toLowerCase();
-    const looksLikeErrorPage = /\b(403|404|429|500|502|503)\b/.test(titleLower) ||
-      /(access denied|forbidden|not found|too many requests|rate limit)/i.test(titleLower);
-
-    if (!image && screenshotUrl && !looksLikeErrorPage) {
-      image = screenshotUrl;
-    }
-    
-    if (image) {
-      image = extractOriginalImageUrl(image);
-    }
-
-    const favicon = data.data.logo?.url || getKnownFaviconFallback(url);
-
-    return {
-      title: cleanMetadataTitle(title),
-      description: data.data.description || null,
-      image,
-      favicon,
-      loading: false,
-      error: null,
-      source: "microlink",
-    };
-  } catch (err) {
-    console.debug("[useMetadata] Microlink fetch error:", err);
-    return null;
-  }
-}
 
 async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
   try {
@@ -346,6 +157,34 @@ async function fetchFromNoembed(url: string): Promise<LinkMetadata | null> {
   }
 }
 
+async function fetchFromUnifiedProxy(url: string): Promise<LinkMetadata | null> {
+  try {
+    const proxyUrl = `/api/metadata?url=${encodeURIComponent(url)}`;
+    const response = await fetchWithTimeout(proxyUrl);
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (data.error) {
+      console.debug("[useMetadata] Proxy returned error:", data.error);
+      return null;
+    }
+
+    return {
+      title: cleanMetadataTitle(data.title),
+      description: data.description || null,
+      image: data.image ? extractOriginalImageUrl(data.image) : null,
+      favicon: data.favicon || getKnownFaviconFallback(url),
+      loading: false,
+      error: null,
+      source: data.source || "local",
+    };
+  } catch (err) {
+    console.debug("[useMetadata] Unified proxy error:", err);
+    return null;
+  }
+}
+
 export function useMetadata() {
   const [metadata, setMetadata] = useState<LinkMetadata>({
     title: null,
@@ -364,13 +203,20 @@ export function useMetadata() {
       return empty;
     }
 
-    setMetadata((prev) => ({ ...prev, loading: true, error: null }));
+    setMetadata((prev) => ({ 
+      ...prev, 
+      loading: true, 
+      error: null,
+      title: null,
+      description: null,
+      image: null,
+      favicon: null
+    }));
 
     try {
       // 🖼️ Detecção de Links Diretos de Imagem (PNG, SVG, JPG, etc.) - Antes de tudo
       const isDirectImage = /\.(png|svg|jpg|jpeg|webp|gif|avif|ico)(\?.*)?$/i.test(url.trim());
       if (isDirectImage) {
-        console.log("[useMetadata] Link de imagem direta detectado:", url);
         const fileName = url.split('/').pop()?.split('?')[0] || "Imagem";
         const result: LinkMetadata = {
           title: `Imagem: ${fileName}`,
@@ -395,11 +241,18 @@ export function useMetadata() {
       }
 
       let result = await fetchFromNotion(normalizedUrl);
-      if (!result) result = await fetchFromMicrolink(normalizedUrl);
-      if (!result) result = await fetchFromNoembed(normalizedUrl);
-      if (!result) result = await fetchFromLocalProxy(normalizedUrl);
-      if (!result) result = await fetchFromJinaReader(normalizedUrl);
-      if (!result) result = buildLocalFallback(normalizedUrl);
+      
+      if (!result) {
+        result = await fetchFromUnifiedProxy(normalizedUrl);
+      }
+
+      if (!result) {
+        result = await fetchFromNoembed(normalizedUrl);
+      }
+
+      if (!result) {
+        result = buildLocalFallback(normalizedUrl);
+      }
 
       metadataCache.set(normalizedUrl, result);
       setMetadata(result);

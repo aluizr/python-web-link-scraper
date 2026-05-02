@@ -33,141 +33,123 @@ export default defineConfig(({ mode }) => ({
         name: "og-image-proxy",
         configureServer(server) {
           // Proxy para buscar HTML e extrair metadados
-          server.middlewares.use("/html-proxy", async (req, res) => {
-            const rawUrl = new URL(req.url, "http://localhost:8080").searchParams.get("url");
-            
-            if (!rawUrl) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ error: "Missing url parameter" }));
+          // Proxy Unificado para Metadados (HTML + Microlink + Jina)
+          // Sempre retorna 200 para evitar erros vermelhos no console do navegador
+          // PROXY DE METADADOS UNIFICADO (V4 - ULTRA STABLE)
+          server.middlewares.use(async (req, res, next) => {
+            const parsedUrl = new URL(req.url || "", "http://localhost:8080");
+            if (parsedUrl.pathname !== "/api/metadata") return next();
+
+            const targetUrl = parsedUrl.searchParams.get("url");
+            if (!targetUrl) {
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ error: "No URL provided" }));
               return;
             }
+
+            // Função auxiliar para fetch com Timeout e UA
+            const fetchPage = (u) => new Promise((resolve) => {
+              try {
+                const t = new URL(u);
+                const client = t.protocol === "https:" ? https : http;
+                client.get({
+                  hostname: t.hostname,
+                  path: t.pathname + t.search,
+                  headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" },
+                  timeout: 5000
+                }, (r) => {
+                  if ([301, 302, 307, 308].includes(r.statusCode) && r.headers.location) {
+                    return resolve(fetchPage(new URL(r.headers.location, t.origin).href));
+                  }
+                  const chunks = [];
+                  r.on("data", c => chunks.push(c));
+                  r.on("end", () => resolve({ body: Buffer.concat(chunks).toString("utf8"), url: t.href }));
+                }).on("error", () => resolve(null));
+              } catch { resolve(null); }
+            });
 
             try {
-              new URL(rawUrl);
-            } catch (e) {
-              res.statusCode = 400;
-              res.end(JSON.stringify({ error: "Invalid URL format" }));
-              return;
-            }
+              let meta = { title: null, description: null, image: null, favicon: null, source: "local" };
+              
+              // 1. Tenta Scraper Local
+              const local = await fetchPage(targetUrl);
+              if (local && local.body) {
+                const h = local.body;
+                const titleM = h.match(/<title[^>]*>([^<]+)<\/title>/i);
+                const ogTitleM = h.match(/<meta[^>]+(?:property|name)=["'](?:og|twitter):title["'][^>]+content=["']([^"']+)["']/i) ||
+                                 h.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og|twitter):title["']/i);
+                const ogImgM = h.match(/<meta[^>]+(?:property|name)=["'](?:og|twitter):image["'][^>]+content=["']([^"']+)["']/i) ||
+                               h.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og|twitter):image["']/i);
+                const ogDescM = h.match(/<meta[^>]+(?:property|name)=["'](?:og|twitter):description["'][^>]+content=["']([^"']+)["']/i) ||
+                                h.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og|twitter):description["']/i);
+                
+                const linkTags = h.match(/<link[^>]+>/gi) || [];
+                for (const tag of linkTags) {
+                  if (/rel=["']?(?:(?:shortcut )?icon|apple-touch-icon(?:-precomposed)?)["']?/i.test(tag)) {
+                    const hrefM = tag.match(/href=["']([^"']+)["']/i);
+                    if (hrefM) {
+                      meta.favicon = hrefM[1];
+                      if (!meta.favicon.includes(".ico")) break; 
+                    }
+                  }
+                }
 
-            const fetchUrl = (urlStr) => {
-              let target;
-              try {
-                target = new URL(urlStr);
-              } catch (e) {
-                res.statusCode = 400;
-                res.end(JSON.stringify({ error: "Invalid url" }));
-                return;
+                meta.title = (ogTitleM ? ogTitleM[1] : (titleM ? titleM[1] : null))?.trim();
+                meta.description = (ogDescM ? ogDescM[1] : null)?.trim();
+                meta.image = (ogImgM ? ogImgM[1] : null);
+                
+                if (meta.image && !meta.image.startsWith("http")) {
+                  meta.image = new URL(meta.image, new URL(local.url).origin).href;
+                }
+                
+                if (meta.favicon && !meta.favicon.startsWith("http")) {
+                  meta.favicon = new URL(meta.favicon, new URL(local.url).origin).href;
+                }
               }
 
-              const client = target.protocol === "https:" ? https : http;
-              const options = {
-                hostname: target.hostname,
-                path: target.pathname + target.search,
-                headers: {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                  "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
-                  "Cache-Control": "max-age=0",
-                  "Sec-Ch-Ua": '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-                  "Sec-Ch-Ua-Mobile": "?0",
-                  "Sec-Ch-Ua-Platform": '"Windows"',
-                  "Sec-Fetch-Dest": "document",
-                  "Sec-Fetch-Mode": "navigate",
-                  "Sec-Fetch-Site": "none",
-                  "Sec-Fetch-User": "?1",
-                  "Upgrade-Insecure-Requests": "1"
-                },
-              };
-
-              client.get(options, (upstream) => {
-                if (upstream.statusCode === 301 || upstream.statusCode === 302) {
-                   const location = upstream.headers.location;
-                   if (location) {
-                     const nextUrl = location.startsWith('http') ? location : new URL(location, target.origin).href;
-                     return fetchUrl(nextUrl);
-                   }
-                }
-
-                if (upstream.statusCode >= 400) {
-                  res.statusCode = upstream.statusCode;
-                  res.end(JSON.stringify({ error: `Upstream error: ${upstream.statusCode}` }));
-                  return;
-                }
-
-                let html = "";
-                upstream.on("data", (chunk) => {
-                  html += chunk.toString();
+              // 2. Se falhar imagem ou título for ruim, tenta Microlink
+              const isBadTitle = !meta.title || meta.title.length < 5 || meta.title.toLowerCase().includes(new URL(targetUrl).hostname.toLowerCase());
+              if (!meta.image || isBadTitle) {
+                const ml = await new Promise(resML => {
+                  https.get(`https://api.microlink.io?url=${encodeURIComponent(targetUrl)}&screenshot=true&image=true&meta=true`, (rML) => {
+                    let d = "";
+                    rML.on("data", c => d += c);
+                    rML.on("end", () => { try { resML(JSON.parse(d)); } catch { resML(null); } });
+                  }).on("error", () => resML(null));
                 });
 
-                upstream.on("end", () => {
-                  // Advanced Title Extraction
-                  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-                  const ogTitleMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):title["']\s+content=["']([^"']+)["']/i);
-                  const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-                  
-                  let title = (ogTitleMatch ? ogTitleMatch[1] : (titleMatch ? titleMatch[1] : (h1Match ? h1Match[1] : null)));
-                  
-                  // Advanced Image Extraction
-                  const ogImageMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):image["']\s+content=["']([^"']+)["']/i);
-                  const relImageMatch = html.match(/<link\s+rel=["'](?:image_src|apple-touch-icon)["']\s+href=["']([^"']+)["']/i);
-                  const thumbnailMatch = html.match(/<meta\s+name=["']thumbnail["']\s+content=["']([^"']+)["']/i);
-                  
-                  let ogImage = ogImageMatch ? ogImageMatch[1] : (relImageMatch ? relImageMatch[1] : (thumbnailMatch ? thumbnailMatch[1] : null));
+                if (ml && ml.status === "success") {
+                  meta.title = (meta.title && meta.title.length > 15) ? meta.title : ml.data.title;
+                  meta.description = meta.description || ml.data.description;
+                  meta.image = meta.image || ml.data.image?.url || ml.data.screenshot?.url;
+                  meta.favicon = meta.favicon || ml.data.logo?.url; // Preserva o local se já existir
+                  meta.source = "microlink";
+                }
+              }
 
-                  // Convert relative image URLs
-                  if (ogImage && !ogImage.startsWith('http')) {
-                    try {
-                      ogImage = new URL(ogImage, target.origin).href;
-                    } catch {
-                      ogImage = null;
-                    }
-                  }
+              // 3. Fallback absoluto para /favicon.ico
+              if (!meta.favicon) {
+                try {
+                  meta.favicon = new URL("/favicon.ico", new URL(targetUrl).origin).href;
+                } catch {}
+              }
 
-                  // Advanced Description Extraction
-                  const ogDescMatch = html.match(/<meta\s+(?:property|name)=["'](?:og|twitter):description["']\s+content=["']([^"']+)["']/i);
-                  const metaDescMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-                  let description = ogDescMatch ? ogDescMatch[1] : (metaDescMatch ? metaDescMatch[1] : null);
+              res.setHeader("Content-Type", "application/json");
+              res.setHeader("Access-Control-Allow-Origin", "*");
+              res.end(JSON.stringify({
+                title: meta.title || new URL(targetUrl).hostname,
+                description: meta.description,
+                image: meta.image,
+                favicon: meta.favicon,
+                source: meta.source
+              }));
 
-                  // Extração de Favicon (Melhorada para buscar originais de alta resolução)
-                  const favRegex = /<link\s+[^>]*rel=["'](?:shortcut\s+)?icon|apple-touch-icon|image_src["'][^>]*href=["']([^"']+)["']/gi;
-                  let favicon = null;
-                  let match;
-                  while ((match = favRegex.exec(html)) !== null) {
-                    favicon = match[1];
-                    // Se acharmos um ícone que parece ser de alta resolução (apple-touch), paramos nele
-                    if (match[0].includes('apple-touch-icon') || match[0].includes('32x32')) break;
-                  }
-
-                  if (favicon && !favicon.startsWith('http')) {
-                    try {
-                      favicon = new URL(favicon, target.origin).href;
-                    } catch {
-                      favicon = null;
-                    }
-                  } else if (!favicon) {
-                    // Fallback para o padrão da raiz se nada for encontrado no HTML
-                    favicon = `${target.origin}/favicon.ico`;
-                  }
-
-                  res.setHeader("Content-Type", "application/json");
-                  res.setHeader("Access-Control-Allow-Origin", "*");
-                  res.statusCode = 200;
-                  res.end(JSON.stringify({ 
-                    title: title ? title.trim().substring(0, 200) : null,
-                    description: description ? description.trim().substring(0, 400) : null,
-                    ogImage: ogImage ? ogImage.trim() : null,
-                    favicon: favicon ? favicon.trim() : null
-                  }));
-                });
-              }).on("error", (err) => {
-                res.statusCode = 502;
-                res.end(JSON.stringify({ error: err.message }));
-              });
-            };
-
-            fetchUrl(rawUrl);
+            } catch (err) {
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ error: err.message, source: "error" }));
+            }
           });
+
 
           // Cache do proxy para evitar bloqueios de taxa (429) e economizar banda no Dev Server
           const ogProxyCache = new Map();
