@@ -1,9 +1,10 @@
-import { Star, ExternalLink, Pencil, Trash2, GripVertical, StickyNote, ShieldAlert, Link as LinkIcon } from "lucide-react";
-import { useState, memo, useMemo } from "react";
+import { Star, ExternalLink, Pencil, Trash2, GripVertical, StickyNote, ShieldAlert, Link as LinkIcon, Loader2 } from "lucide-react";
+import { useState, useEffect, memo, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FaviconWithFallback } from "@/components/FaviconWithFallback";
+// ✅ getDomainColor reutiliza a lógica de cor do FaviconWithFallback, eliminando getAvatarColor duplicada.
+import { FaviconWithFallback, getDomainColor } from "@/components/FaviconWithFallback";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { invalidateThumbnailCache } from "@/hooks/use-metadata";
 import {
@@ -51,19 +52,6 @@ interface LinkCardProps {
   linkStatus?: "unknown" | "checking" | "ok" | "broken" | "error";
 }
 
-// Função helper para gerar uma cor de fallback
-const getAvatarColor = (url: string) => {
-  try {
-    const hostname = new URL(url).hostname;
-    const colors = ['bg-rose-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-indigo-500', 'bg-cyan-500', 'bg-orange-500'];
-    let hash = 0;
-    for (let i = 0; i < hostname.length; i++) hash = hostname.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length];
-  } catch {
-    return 'bg-slate-500';
-  }
-};
-
 export const LinkCard = memo(function LinkCard({
   link,
   categories,
@@ -84,6 +72,11 @@ export const LinkCard = memo(function LinkCard({
 }: LinkCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const dragEnabled = Boolean(onDragStart);
+
+  // ✅ Reseta imageFailed quando ogImage mudar (ex: usuário edita o link e troca a capa)
+  useEffect(() => {
+    setImageFailed(false);
+  }, [link.ogImage]);
 
   // ✅ Memoize category style calculation
   const categoryStyle = useMemo(() => {
@@ -189,7 +182,10 @@ export const LinkCard = memo(function LinkCard({
           />
         </div>
       ) : link.ogImage && imageFailed ? (
-        <div className={`w-full h-24 flex items-center justify-center opacity-80 ${getAvatarColor(link.url)}`}>
+        <div
+          className="w-full h-24 flex items-center justify-center opacity-80"
+          style={{ backgroundColor: getDomainColor(link.url).bg }}
+        >
           <LinkIcon className="h-8 w-8 text-white/50" />
         </div>
       ) : null}
@@ -210,6 +206,9 @@ export const LinkCard = memo(function LinkCard({
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 font-semibold text-foreground hover:text-primary transition-colors truncate"
               >
+                {linkStatus === "checking" && (
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+                )}
                 {linkStatus === "broken" && (
                   <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-destructive">
                     <title>Link quebrado</title>

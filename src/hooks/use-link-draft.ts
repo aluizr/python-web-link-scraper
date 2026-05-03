@@ -14,7 +14,7 @@ export interface LinkDraft {
   selectedChildId?: string;
   tags: string[];
   favicon: string;
-  ogImage?: string;
+  ogImage?: string | null;
 }
 
 const DRAFT_STORAGE_KEY = "link-draft-v2";
