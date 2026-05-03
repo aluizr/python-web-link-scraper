@@ -41,7 +41,7 @@ function getAvatarData(url: string) {
 
 interface FaviconWithFallbackProps {
   url: string;
-  favicon?: string;
+  favicon?: string | null;
   size?: number;
   className?: string;
 }
@@ -90,7 +90,8 @@ export function FaviconWithFallback({
 
       // Nível 0: Original do banco de dados
       if (favicon && typeof favicon === "string" && favicon.length > 5) {
-        seq.push(ensureProxied(favicon));
+        const proxiedFavicon = ensureProxied(favicon);
+        if (proxiedFavicon) seq.push(proxiedFavicon);
       }
 
       // Nível 0.5: Favicon de domínio conhecido (GitHub, Google, Twitter, etc.)
@@ -104,10 +105,13 @@ export function FaviconWithFallback({
       seq.push(
         `https://unavatar.io/${cleanHostname}?fallback=false`,
         `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`,
-        `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`,
-        ensureProxied(`${urlObj.origin}/favicon.ico`),
-        `https://icon.horse/icon/${cleanHostname}`
+        `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`
       );
+      
+      const proxiedOrigin = ensureProxied(`${urlObj.origin}/favicon.ico`);
+      if (proxiedOrigin) seq.push(proxiedOrigin);
+      
+      seq.push(`https://icon.horse/icon/${cleanHostname}`);
 
       return seq;
     } catch {
