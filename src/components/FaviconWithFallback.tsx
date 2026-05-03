@@ -53,9 +53,9 @@ interface FaviconWithFallbackProps {
  *   0. Favicon original do banco de dados (se existir)
  *   1. Favicon conhecido via getKnownFaviconFallback (se existir)
  *   2. unavatar.io (alta fidelidade)
- *   3. Google Favicons HD (sz=64)
- *   4. /favicon.ico nativo do domínio (via proxy)
- *   5. DuckDuckGo Icons
+ *   3. DuckDuckGo Icons (melhor cobertura para domínios .br que o Google)
+ *   4. Google Favicons HD (sz=64)
+ *   5. /favicon.ico nativo do domínio (via proxy)
  *   6. Icon Horse
  *
  * Se todos falharem → avatar colorido com a inicial do domínio.
@@ -99,11 +99,13 @@ export function FaviconWithFallback({
       }
 
       // Níveis seguintes: serviços externos
+      // ✅ DuckDuckGo antes do Google: melhor cobertura para domínios .br/.gov.br
+      // que retornam 404 no gstatic.com, reduzindo erros desnecessários no console.
       seq.push(
         `https://unavatar.io/${cleanHostname}?fallback=false`,
+        `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`,
         `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`,
         ensureProxied(`${urlObj.origin}/favicon.ico`),
-        `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`,
         `https://icon.horse/icon/${cleanHostname}`
       );
 

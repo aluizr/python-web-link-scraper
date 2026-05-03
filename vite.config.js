@@ -134,8 +134,23 @@ export default defineConfig(({ mode }) => ({
                 } catch {}
               }
 
-              res.setHeader("Content-Type", "application/json");
-              res.setHeader("Access-Control-Allow-Origin", "*");
+              // ✅ Intercepta URLs do thum.io antes de enviar ao cliente.
+              // O thum.io bloqueia requisições diretas do browser (hotlink protection),
+              // mas aceita requests server-to-server. Roteamos pelo og-proxy local
+              // para evitar o erro 403 (Forbidden) no console do navegador.
+              const HOTLINK_BLOCKED_DOMAINS = ['thum.io', 'image.thum.io'];
+              const needsProxy = (url) =>
+                url && HOTLINK_BLOCKED_DOMAINS.some((d) => url.includes(d));
+
+              if (needsProxy(meta.image)) {
+                meta.image = `/og-proxy?url=${encodeURIComponent(meta.image)}`;
+              }
+              if (needsProxy(meta.favicon)) {
+                meta.favicon = `/og-proxy?url=${encodeURIComponent(meta.favicon)}`;
+              }
+
+              res.setHeader('Content-Type', 'application/json');
+              res.setHeader('Access-Control-Allow-Origin', '*');
               res.end(JSON.stringify({
                 title: meta.title || new URL(targetUrl).hostname,
                 description: meta.description,

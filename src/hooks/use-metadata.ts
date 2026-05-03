@@ -173,7 +173,14 @@ async function fetchFromUnifiedProxy(url: string): Promise<LinkMetadata | null> 
     return {
       title: cleanMetadataTitle(data.title),
       description: data.description || null,
-      image: data.image ? extractOriginalImageUrl(data.image) : null,
+      // ✅ Não aplica extractOriginalImageUrl aqui:
+      // O vite.config.js já interceptou URLs de domínios bloqueados (ex: thum.io)
+      // e as substituiu por /og-proxy?url=... antes de retornar o JSON.
+      // Chamar extractOriginalImageUrl desfaría esse proxy, devolvendo a URL
+      // bloqueada diretamente ao browser e causando erro 403 no console.
+      image: data.image
+        ? (data.image.startsWith('/og-proxy') ? data.image : extractOriginalImageUrl(data.image))
+        : null,
       favicon: data.favicon || getKnownFaviconFallback(url),
       loading: false,
       error: null,
