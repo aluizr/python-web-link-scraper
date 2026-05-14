@@ -2,10 +2,11 @@
 
 Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
-Versão mais recente: [0.14.5 — 2026-04-28](CHANGELOG.md#0145--2026-04-28)
+Versão mais recente: [0.15.1 — 2026-05-14](CHANGELOG.md#0151--2026-05-14)
 
 | Versão | Data | Link |
 | --- | --- | --- |
+| 0.15.1 | 2026-05-14 | [Ver mudanças](CHANGELOG.md#0151--2026-05-14) |
 | 0.15.0 | 2026-05-01 | [Ver mudanças](CHANGELOG.md#0150--2026-05-01) |
 | 0.14.5 | 2026-04-28 | [Ver mudanças](CHANGELOG.md#0145--2026-04-28) |
 | 0.14.4 | 2026-04-01 | [Ver mudanças](CHANGELOG.md#0144--2026-04-01) |
@@ -14,6 +15,19 @@ Versão mais recente: [0.14.5 — 2026-04-28](CHANGELOG.md#0145--2026-04-28)
 | 0.14.1 | 2026-03-06 | [Ver mudanças](CHANGELOG.md#0141--2026-03-06) |
 | 0.14.0 | 2026-02-22 | [Ver mudanças](CHANGELOG.md#0140--2026-02-22) |
 | 0.13.0 | 2026-02-21 | [Ver mudanças](CHANGELOG.md#0130--2026-02-21) |
+
+---
+
+## [0.15.1] — 2026-05-14
+
+### Segurança — GRANTs Explícitos (Supabase Breaking Change)
+
+`Banco de Dados`
+
+- **Nova migration `20260530_explicit_grants.sql`**: Adiciona `GRANT SELECT, INSERT, UPDATE, DELETE` explícitos nas tabelas `public.links` e `public.categories` para os roles `authenticated` e `service_role`.
+- **Contexto**: O Supabase anunciou que a partir de **30/05/2026** novos projetos não expõem tabelas do schema `public` à Data API (supabase-js / PostgREST) sem GRANT explícito. A partir de **30/10/2026**, isso será aplicado a todos os projetos existentes — incluindo o WebNest.
+- **Sem breaking changes**: As políticas RLS user-scoped existentes (`auth.uid() = user_id`) permanecem intactas. Os GRANTs apenas formalizam o acesso que hoje é concedido implicitamente.
+- **Role `anon` não recebe acesso**: O app exige autenticação obrigatória; usuários não autenticados continuam sem acesso às tabelas.
 
 ---
 
