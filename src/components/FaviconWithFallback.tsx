@@ -100,17 +100,24 @@ export function FaviconWithFallback({
       }
 
       // Níveis seguintes: serviços externos
-      // ✅ DuckDuckGo antes do Google: melhor cobertura para domínios .br/.gov.br
-      // que retornam 404 no gstatic.com, reduzindo erros desnecessários no console.
+      // ✅ unavatar.io: serviço de alta fidelidade, suporta fallback=false para não
+      //    retornar placeholder quando não encontrado (dispara onError corretamente).
+      // ✅ DuckDuckGo via og-proxy: melhor cobertura para domínios .br/.gov.br.
+      //    Roteado pelo proxy local para que o 404 aconteça server-side (silencioso
+      //    no console do browser) — o onError da <img> ainda dispara normalmente.
+      // ✅ Google Favicons: fallback amplamente disponível, CORS permissivo (sem proxy).
+      const duckduckgoProxied = ensureProxied(
+        `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`
+      );
       seq.push(
         `https://unavatar.io/${cleanHostname}?fallback=false`,
-        `https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`,
+        ...(duckduckgoProxied ? [duckduckgoProxied] : [`https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`]),
         `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`
       );
-      
+
       const proxiedOrigin = ensureProxied(`${urlObj.origin}/favicon.ico`);
       if (proxiedOrigin) seq.push(proxiedOrigin);
-      
+
       seq.push(`https://icon.horse/icon/${cleanHostname}`);
 
       return seq;
