@@ -62,7 +62,7 @@ const normalizeUrl = (value: string): string => {
 
 const getStableFaviconFromUrl = (value: string): string => {
   try {
-    const hostname = new URL(normalizeUrl(value)).hostname;
+    const hostname = new URL(normalizeUrl(value)).hostname.replace(/^www\./i, "");
     return hostname ? `https://icon.horse/icon/${hostname}` : "";
   } catch {
     return "";
@@ -150,6 +150,11 @@ export function LinkForm({
       return found?.id ?? "";
     },
     [categoryOptions]
+  );
+
+  const autoFaviconSuggestion = useMemo(() => getStableFaviconFromUrl(url), [url]);
+  const isAutoFavicon = Boolean(
+    favicon && autoFaviconSuggestion && favicon === autoFaviconSuggestion
   );
 
   // ── Inicialização e reset do formulário ──────────────────────────────────
@@ -937,6 +942,11 @@ export function LinkForm({
                     className="flex-1"
                   />
                 </div>
+                {isAutoFavicon && (
+                  <p className={`${TEXT_XS_CLASS} text-muted-foreground`}>
+                    Preenchido automaticamente pelo dominio.
+                  </p>
+                )}
               </div>
             </div>
 

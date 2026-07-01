@@ -52,7 +52,7 @@ function buildLocalFallback(url: string): LinkMetadata {
       title: host,
       description: null,
       image: null,
-      favicon: `https://icon.horse/icon/${parsed.hostname}`,
+      favicon: `https://icon.horse/icon/${host}`,
       loading: false,
       error: null,
       source: "local",
