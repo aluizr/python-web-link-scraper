@@ -156,6 +156,7 @@ export function LinkForm({
   const isAutoFavicon = Boolean(
     favicon && autoFaviconSuggestion && favicon === autoFaviconSuggestion
   );
+  const hasSpecificFavicon = Boolean(favicon && !isAutoFavicon);
 
   // ── Inicialização e reset do formulário ──────────────────────────────────
   useEffect(() => {
@@ -222,8 +223,13 @@ export function LinkForm({
 
     try {
       const hostname = new URL(url).hostname;
-      if (hostname && (!editingLink || !favicon)) {
-        setFavicon("");
+      if (hostname) {
+        const suggestedFavicon = getStableFaviconFromUrl(url);
+        if (!editingLink) {
+          setFavicon(suggestedFavicon);
+        } else if (!favicon) {
+          setFavicon(suggestedFavicon);
+        }
       }
     } catch {
       // URL inválida, ignora
@@ -258,7 +264,14 @@ export function LinkForm({
           setOgImage((prev) => (prev ? prev : result.image));
         }
         if (result.favicon) {
-          setFavicon((prev) => (prev ? prev : result.favicon || ""));
+          setFavicon((prev) => {
+            const suggested = getStableFaviconFromUrl(url);
+            // Substitui fallback automático pelo favicon real quando disponível.
+            if (!prev || prev === suggested) {
+              return result.favicon || "";
+            }
+            return prev;
+          });
         } else {
           setFavicon((prev) => (prev ? prev : getStableFaviconFromUrl(url)));
         }
@@ -943,9 +956,17 @@ export function LinkForm({
                   />
                 </div>
                 {isAutoFavicon && (
-                  <p className={`${TEXT_XS_CLASS} text-muted-foreground`}>
-                    Preenchido automaticamente pelo dominio.
-                  </p>
+                  <Badge variant="secondary" className="h-5 px-2 text-[10px] uppercase tracking-wide">
+                    Fallback
+                  </Badge>
+                )}
+                {hasSpecificFavicon && (
+                  <Badge
+                    variant="outline"
+                    className="h-5 border-emerald-500/50 px-2 text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300"
+                  >
+                    Detectado/Manual
+                  </Badge>
                 )}
               </div>
             </div>
