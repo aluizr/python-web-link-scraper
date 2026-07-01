@@ -60,6 +60,15 @@ const normalizeUrl = (value: string): string => {
   return `https://${trimmed}`;
 };
 
+const getStableFaviconFromUrl = (value: string): string => {
+  try {
+    const hostname = new URL(normalizeUrl(value)).hostname;
+    return hostname ? `https://icon.horse/icon/${hostname}` : "";
+  } catch {
+    return "";
+  }
+};
+
 export function LinkForm({
   open,
   onOpenChange,
@@ -152,7 +161,7 @@ export function LinkForm({
       setSelectedCategoryId(resolveSelection(editingLink.category));
       setTags(editingLink.tags);
       setNotes(editingLink.notes || "");
-      setFavicon(editingLink.favicon);
+      setFavicon(editingLink.favicon || getStableFaviconFromUrl(editingLink.url));
       setOgImage(editingLink.ogImage || "");
       setStatus(editingLink.status || "backlog");
       setPriority(editingLink.priority || "medium");
@@ -245,6 +254,8 @@ export function LinkForm({
         }
         if (result.favicon) {
           setFavicon((prev) => (prev ? prev : result.favicon || ""));
+        } else {
+          setFavicon((prev) => (prev ? prev : getStableFaviconFromUrl(url)));
         }
       });
     }, 700);
@@ -338,7 +349,7 @@ export function LinkForm({
     };
 
     const finalImage = cleanProxyUrl(ogImage || fetchedImage);
-    const finalFavicon = cleanProxyUrl(favicon || fetchedFavicon);
+    const finalFavicon = cleanProxyUrl(favicon || fetchedFavicon) || getStableFaviconFromUrl(finalUrl);
 
     await onSubmit({
       url: finalUrl,

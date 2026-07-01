@@ -52,22 +52,23 @@ export function FaviconWithFallback({
   // O useMemo evita recriação a cada render e garante consistência
   // entre faviconUrl e o limite usado em handleNextLevel.
   const sequence = useMemo(() => {
+    const seq: string[] = [];
+
+    // Nível 0: Original do banco de dados
+    if (
+      favicon &&
+      typeof favicon === "string" &&
+      favicon.length > 5 &&
+      !shouldSkipStoredFavicon(favicon)
+    ) {
+      const proxiedFavicon = ensureProxied(favicon);
+      if (proxiedFavicon) seq.push(proxiedFavicon);
+    }
+
     try {
       const urlObj = new URL(url);
       const cleanHostname = urlObj.hostname.replace(/^www\./, "");
       const known = getKnownFaviconFallback(url);
-      const seq: string[] = [];
-
-      // Nível 0: Original do banco de dados
-      if (
-        favicon &&
-        typeof favicon === "string" &&
-        favicon.length > 5 &&
-        !shouldSkipStoredFavicon(favicon)
-      ) {
-        const proxiedFavicon = ensureProxied(favicon);
-        if (proxiedFavicon) seq.push(proxiedFavicon);
-      }
 
       // Nível 0.5: Favicon de domínio conhecido (GitHub, Google, Twitter, etc.)
       if (known) {
@@ -93,11 +94,11 @@ export function FaviconWithFallback({
       if (proxiedOrigin) seq.push(proxiedOrigin);
 
       seq.push(`https://icon.horse/icon/${cleanHostname}`);
-
-      return Array.from(new Set(seq.filter(Boolean)));
     } catch {
-      return [];
+      // Sem URL válida: mantém apenas favicon explícito (se houver).
     }
+
+    return Array.from(new Set(seq.filter(Boolean)));
   }, [url, favicon]);
 
   // Reseta os estados quando a URL ou favicon mudam
