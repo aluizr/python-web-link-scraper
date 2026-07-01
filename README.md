@@ -6,19 +6,17 @@ Organize seus links favoritos com estilo e segurança.
 
 | Versão | Data | Link |
 | --- | --- | --- |
-| 0.14.4 | 2026-04-01 | [Ver changelog](CHANGELOG.md#0144--2026-04-01) |
-| 0.14.3 | 2026-03-31 | [Ver changelog](CHANGELOG.md#0143--2026-03-31) |
-| 0.14.2 | 2026-03-11 | [Ver changelog](CHANGELOG.md#0142--2026-03-11) |
+| 0.15.1 | 2026-05-14 | [Ver changelog](CHANGELOG.md#0151--2026-05-14) |
+| 0.15.0 | 2026-05-01 | [Ver changelog](CHANGELOG.md#0150--2026-05-01) |
+| 0.14.5 | 2026-04-28 | [Ver changelog](CHANGELOG.md#0145--2026-04-28) |
 
-## What's new — 0.14.4 (2026-04-01)
+## What's new — 0.15.1 (2026-05-14)
 
-Detalhes completos da release: [CHANGELOG 0.14.4](CHANGELOG.md#0144--2026-04-01)
+Detalhes completos da release: [CHANGELOG 0.15.1](CHANGELOG.md#0151--2026-05-14)
 
-- **Correções Globais na Importação de Metadados** para preservar a imagem original (og:image) durante extração de arquivos CSV, HTML e JSON.
-- **Fetch Automático em Lote (Background)** nativo para buscar thumbnails pendentes ao finalizar fluxos de importações em massa, operando de forma invisível via rate-limits.
-- **Prevenção Anti-Link Rot** incorporando invalidação proativa de cache (`invalidateThumbnailCache()`) no client perante quebras da imagem na CDN de terceiros (404/403).
-- **Aprimoramento do Fallback Dicionário Local**. Fallbacks dinâmicos usando `localStorage` com suporte avançado a blindagem contra hotlinkings e proxies em domínios estritos (Ex: ferramentas como Salesforce, Greenhouse e Claude).
-- **Validação de Screenshot e Expansão Resiliente** contornando páginas bloqueadas por bot para extrair resoluções canônicas de serviços de imagem (Imgix e Unsplash).
+- **Hardening de Segurança (Supabase Data API):** nova migration com GRANTs explícitos para `authenticated` e `service_role` em `public.links` e `public.categories`, compatível com a mudança de política do Supabase.
+- **RLS preservado:** as políticas user-scoped existentes seguem ativas; o ajuste formaliza permissões sem ampliar acesso indevido.
+- **Sem acesso para `anon`:** o comportamento de autenticação obrigatória permanece inalterado.
 
 ## Funcionalidades
 

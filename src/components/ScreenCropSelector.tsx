@@ -5,6 +5,14 @@ import { ensureProxied } from "@/lib/image-utils";
 
 
 interface Rect { x: number; y: number; w: number; h: number; }
+interface Annotation {
+  type: "arrow" | "rect" | "blur" | "text";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  isDrawing: boolean;
+}
 
 type HandleId = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -60,7 +68,7 @@ export function ScreenCropSelector({ imageSrc, onConfirm, onCancel }: ScreenCrop
   const [rect, setRect]               = useState<Rect | null>(null);
   const [activeHandle, setActiveHandle] = useState<HandleId | null>(null);
   const [tool, setTool] = useState<"crop" | "arrow" | "rect" | "blur" | "text">("crop");
-  const [annotations, setAnnotations] = useState<any[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [imageFilter, setImageFilter] = useState<string>("none");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);

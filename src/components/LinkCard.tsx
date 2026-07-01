@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 // ✅ getDomainColor reutiliza a lógica de cor do FaviconWithFallback, eliminando getAvatarColor duplicada.
-import { FaviconWithFallback, getDomainColor } from "@/components/FaviconWithFallback";
+import { FaviconWithFallback } from "@/components/FaviconWithFallback";
+import { getDomainColor } from "@/lib/domain-avatar";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { invalidateThumbnailCache } from "@/hooks/use-metadata";
 import {
