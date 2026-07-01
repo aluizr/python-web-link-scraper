@@ -80,8 +80,29 @@ const CORP_BLOCKED_DOMAINS = new Set([
   'claude.ai',
   'anthropic.com',
   'wikimedia.org',
-  'upload.wikimedia.org'
+  'upload.wikimedia.org',
+  'readthedocs.io'
 ]);
+
+function getHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+export function isCorpBlockedUrl(imageUrl: string | null | undefined): boolean {
+  if (!imageUrl) return false;
+  if (!(imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) return false;
+
+  const hostname = getHostname(imageUrl);
+  if (!hostname) return false;
+
+  return [...CORP_BLOCKED_DOMAINS].some(
+    (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+  );
+}
 
 /**
  * Like ensureProxied(), but ONLY proxies images from known CORP-restricted domains.
@@ -95,18 +116,8 @@ export function ensureProxiedIfCorp(imageUrl: string | null | undefined): string
   // Already proxied — nothing to do
   if (imageUrl.startsWith('/og-proxy')) return imageUrl;
 
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    try {
-      const hostname = new URL(imageUrl).hostname.replace(/^www\./, '');
-      const isCorp = [...CORP_BLOCKED_DOMAINS].some(
-        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-      );
-      if (isCorp) {
-        return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
-      }
-    } catch {
-      // Malformed URL — return as-is
-    }
+  if (isCorpBlockedUrl(imageUrl)) {
+    return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
   }
 
   return imageUrl;

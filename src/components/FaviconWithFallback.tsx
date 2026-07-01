@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ensureProxied } from "@/lib/image-utils";
+import { ensureProxied, ensureProxiedIfCorp } from "@/lib/image-utils";
 import { getKnownFaviconFallback } from "@/lib/metadata-utils";
 import { getAvatarData } from "@/lib/domain-avatar";
 
@@ -8,6 +8,12 @@ interface FaviconWithFallbackProps {
   favicon?: string | null;
   size?: number;
   className?: string;
+}
+
+function shouldSkipStoredFavicon(candidate: string): boolean {
+  const value = candidate.toLowerCase();
+  // Favicons antigos do Google/gstatic costumam ficar obsoletos e gerar 404.
+  return value.includes("google.com/s2/favicons") || value.includes("gstatic.com/favicon");
 }
 
 /**
@@ -53,14 +59,19 @@ export function FaviconWithFallback({
       const seq: string[] = [];
 
       // Nível 0: Original do banco de dados
-      if (favicon && typeof favicon === "string" && favicon.length > 5) {
+      if (
+        favicon &&
+        typeof favicon === "string" &&
+        favicon.length > 5 &&
+        !shouldSkipStoredFavicon(favicon)
+      ) {
         const proxiedFavicon = ensureProxied(favicon);
         if (proxiedFavicon) seq.push(proxiedFavicon);
       }
 
       // Nível 0.5: Favicon de domínio conhecido (GitHub, Google, Twitter, etc.)
       if (known) {
-        seq.push(known);
+        seq.push(ensureProxiedIfCorp(known) ?? known);
       }
 
       // Níveis seguintes: serviços externos
@@ -75,8 +86,7 @@ export function FaviconWithFallback({
       );
       seq.push(
         `https://unavatar.io/${cleanHostname}?fallback=false`,
-        ...(duckduckgoProxied ? [duckduckgoProxied] : [`https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`]),
-        `https://www.google.com/s2/favicons?domain=${cleanHostname}&sz=64`
+        ...(duckduckgoProxied ? [duckduckgoProxied] : [`https://icons.duckduckgo.com/ip3/${cleanHostname}.ico`])
       );
 
       const proxiedOrigin = ensureProxied(`${urlObj.origin}/favicon.ico`);
@@ -84,7 +94,7 @@ export function FaviconWithFallback({
 
       seq.push(`https://icon.horse/icon/${cleanHostname}`);
 
-      return seq;
+      return Array.from(new Set(seq.filter(Boolean)));
     } catch {
       return [];
     }

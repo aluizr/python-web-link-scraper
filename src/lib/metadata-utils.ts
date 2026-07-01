@@ -120,7 +120,7 @@ export function extractOriginalImageUrl(imageUrl: string): string {
  */
 const DEFAULT_KNOWN_FALLBACKS: Record<string, string> = {
   'kaggle.com': 'https://www.kaggle.com/static/images/site-logo.svg',
-  'joblib.readthedocs.io': 'https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg',
+  'joblib.readthedocs.io': 'https://icon.horse/icon/joblib.readthedocs.io',
   'nanobananaimg.com': 'https://nanobananaimg.com/favicon.ico',
   'salesforce.com': 'https://www.salesforce.com/content/dam/sfdc-docs/www/logos/logo-salesforce.svg',
   'github.com': 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import { TEXT_XS_CLASS } from "@/lib/utils";
-import { ensureProxied } from "@/lib/image-utils";
+import { ensureProxiedIfCorp } from "@/lib/image-utils";
 
 interface DragDropOverlayProps {
   canUndo: boolean;
@@ -64,7 +64,7 @@ export function DragDropOverlay({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {draggedLink.ogImage ? (
-              <img src={draggedLink.ogImage} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", background: "#f3f4f6" }} />
+                <img src={ensureProxiedIfCorp(draggedLink.ogImage) || draggedLink.ogImage} alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: "cover", background: "#f3f4f6" }} />
             ) : (
               <span style={{ fontSize: 22, marginRight: 2 }}>🔗</span>
             )}

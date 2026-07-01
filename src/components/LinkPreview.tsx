@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import type { LinkMetadata } from "@/hooks/use-metadata";
 import { COMPACT_BADGE_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
+import { ensureProxiedIfCorp, isCorpBlockedUrl } from "@/lib/image-utils";
 
 interface LinkPreviewProps {
   metadata: LinkMetadata;
@@ -65,16 +66,27 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
     return null;
   }
 
+  const imageSrc = debouncedImage
+    ? (
+      debouncedImage.startsWith("data:") ||
+      debouncedImage.includes("supabase.co/storage") ||
+      debouncedImage.startsWith("/og-proxy?") ||
+      proxyFailed
+        ? debouncedImage
+        : (ensureProxiedIfCorp(debouncedImage) || `/og-proxy?url=${encodeURIComponent(debouncedImage)}`)
+    )
+    : null;
+
   return (
     <div className="mt-4 p-4 border rounded-lg bg-muted/50 space-y-3">
       <div className="flex items-start gap-3">
         {debouncedImage && !imageFailed ? (
           <img
-            src={debouncedImage.startsWith('data:') || debouncedImage.includes('supabase.co/storage') || proxyFailed ? debouncedImage : `/og-proxy?url=${encodeURIComponent(debouncedImage)}`}
+            src={imageSrc || ""}
             alt="Preview"
             className="h-20 w-20 object-cover rounded border flex-shrink-0"
             onError={() => {
-              if (!proxyFailed && debouncedImage && !debouncedImage.startsWith('data:')) {
+              if (!proxyFailed && debouncedImage && !debouncedImage.startsWith('data:') && !isCorpBlockedUrl(debouncedImage)) {
                 setProxyFailed(true);
               } else {
                 setImageFailed(true);

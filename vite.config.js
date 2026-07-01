@@ -320,7 +320,7 @@ export default defineConfig(({ mode }) => ({
                         }
                         if (hostname.includes('joblib.readthedocs.io')) {
                           upstream.resume();
-                          return fetchUrl("https://joblib.readthedocs.io/en/stable/_static/joblib_logo.svg", redirectCount);
+                          return fetchUrl("https://icon.horse/icon/joblib.readthedocs.io", redirectCount);
                         }
                         if (hostname.includes('nanobananaimg.com')) {
                           upstream.resume();

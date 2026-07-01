@@ -8,6 +8,7 @@ import { FaviconWithFallback } from "@/components/FaviconWithFallback";
 import { getDomainColor } from "@/lib/domain-avatar";
 import { RichTextDisplay } from "@/components/RichTextEditor";
 import { invalidateThumbnailCache } from "@/hooks/use-metadata";
+import { ensureProxiedIfCorp } from "@/lib/image-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -172,7 +173,7 @@ export const LinkCard = memo(function LinkCard({
       {link.ogImage && !imageFailed ? (
         <div className="w-full h-24 overflow-hidden bg-muted relative">
           <img
-            src={link.ogImage}
+            src={ensureProxiedIfCorp(link.ogImage) || link.ogImage}
             alt=""
             loading="lazy"
             className="w-full h-full object-cover"

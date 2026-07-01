@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FaviconWithFallback } from "@/components/FaviconWithFallback";
-import { ensureProxied } from "@/lib/image-utils";
+import { ensureProxiedIfCorp } from "@/lib/image-utils";
 import {
   Select,
   SelectContent,
@@ -1110,7 +1110,7 @@ export function LinkBoardView({ links, onToggleFavorite, onUpdateLink, onEdit, o
                 {link.ogImage && (
                   <div className="w-full h-24 overflow-hidden bg-muted">
                     <img
-                      src={link.ogImage}
+                      src={ensureProxiedIfCorp(link.ogImage) || link.ogImage}
                       alt=""
                       loading="lazy"
                       className="w-full h-full object-cover"
