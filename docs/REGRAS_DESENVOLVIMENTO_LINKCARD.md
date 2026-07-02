@@ -17,7 +17,7 @@ Mantenha a consistência visual usando os utilitários definidos em `@/lib/utils
 - **Botões de Ação:** Use `${ICON_BTN_MD_CLASS}` para botões de edição, favorito e lixeira.
 - **Cores Dinâmicas:** Ao lidar com cores de categorias, sempre use o sistema de fallback:
   ```tsx
-  style={{ backgroundColor: `${color}20`, color: color, borderColor: `${color}40` }}
+  {% raw %}style={{ backgroundColor: `${color}20`, color: color, borderColor: `${color}40` }}{% endraw %}
   ```
 
 ## 🖼️ 3. Gestão de Imagens (Capa e Favicon)
