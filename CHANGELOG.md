@@ -4,6 +4,18 @@ Todas as mudanças relevantes deste projeto estão documentadas neste arquivo.
 
 Versão mais recente: [0.15.1 — 2026-05-14](CHANGELOG.md#0151--2026-05-14)
 
+## [Unreleased]
+
+### Refatoração da página principal
+
+- Quebra da página `Index` em controller, view, header, dialogs, content e renderer por modo para reduzir acoplamento.
+- Separação explícita das renderizações de Grid, Lista, Cartões, Tabela, Board e Galeria em componentes menores.
+
+### Imagens e favicons
+
+- Ajuste do fluxo de fallback para evitar proxy desnecessário em favicon e preview de imagem.
+- Uso de `og-proxy` restrito a domínios conhecidos com bloqueio CORS/CORP.
+
 | Versão | Data | Link |
 | --- | --- | --- |
 | 0.15.1 | 2026-05-14 | [Ver mudanças](CHANGELOG.md#0151--2026-05-14) |

@@ -47,8 +47,9 @@ O componente resolve o problema clássico de desvio de pixels em telas de alta d
 3.  **Clamping**: Garante que o recorte nunca tente acessar pixels fora dos limites da imagem, evitando erros de execução.
 
 ### Segurança e CORS (Proxy)
-Para permitir que imagens de sites externos (como GitHub, Google, LinkedIn) sejam manipuladas em um Canvas (que é uma operação sensível), utilizamos:
-*   **`ensureProxied`**: Todas as imagens externas são roteadas via `/og-proxy`.
+Para permitir que imagens de sites externos (como GitHub, Google, LinkedIn) sejam manipuladas em um Canvas (que é uma operação sensível), utilizamos uma estratégia seletiva:
+*   **`ensureProxiedIfCorp`**: Apenas URLs com bloqueio conhecido de CORS/CORP são roteadas via `/og-proxy`.
+*   **Carregamento direto por padrão**: URLs públicas sem bloqueio conhecido tentam renderização direta para evitar 404/429 desnecessários.
 *   **`Access-Control-Allow-Origin: *`**: O proxy limpa os headers restritivos, permitindo que o navegador exporte o Blob final sem "sujar" o canvas.
 
 ## 🔧 Manutenção e Logs

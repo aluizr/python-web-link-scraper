@@ -1,12 +1,12 @@
 # Análise Geral do Projeto — WebNest
 
-**Data:** 28 de Abril, 2026  
-**Versão:** 0.14.5  
+**Data:** 1 de Julho, 2026  
+**Versão:** 0.15.1  
 **Framework:** React 18.3 + Vite 7.3 + TypeScript 5.8  
 **Banco de Dados:** Supabase (PostgreSQL)  
 **Componentes UI:** Shadcn/UI + Radix UI  
 **Rich Text:** Tiptap (ProseMirror)  
-**Status Geral:** 🟢 **BOM** (bem estruturado, pronto para produção com otimizações)
+**Status Geral:** 🟢 **BOM** (bem estruturado, com a página principal já fatiada em controller/view/components menores)
 
 ---
 
@@ -78,7 +78,12 @@ webnest/
 │   │   └── validation.ts            # Schemas Zod
 │   ├── pages/
 │   │   ├── Auth.tsx                 # Página de login/signup
-│   │   ├── Index.tsx                # Página principal (~690 linhas)
+│   │   ├── Index.tsx                # Wrapper fino da página principal
+│   │   ├── useIndexPageController.ts# Controller da página Index
+│   │   ├── IndexView.tsx           # Composição da página principal
+│   │   ├── IndexHeader.tsx         # Barra superior da página Index
+│   │   ├── IndexContent.tsx        # Área principal (busca + renderer)
+│   │   ├── IndexModeRenderer.tsx   # Renderização por modo (grid/list/cards/table/board/gallery)
 │   │   └── NotFound.tsx             # 404
 │   ├── types/
 │   │   ├── link.ts                  # LinkItem, Category, ViewMode, etc.
@@ -118,6 +123,7 @@ webnest/
 - 10 arquivos de teste com 91+ testes unitários
 - Editor Rich Text (Tiptap) isolado em componente reutilizável
 - 6 visualizações com seleção em lote consistente
+- Página principal agora separada por responsabilidade, reduzindo o acoplamento do fluxo de renderização
 
 ⚠️ **Pontos de Melhoria:**
 
@@ -258,7 +264,7 @@ export const ICONS = {
 // src/components/LinkFormModal.tsx
 export const LinkFormModal = lazy(() => import('./LinkForm'));
 
-// Usar em Index.tsx:
+// Usar em IndexView.tsx ou IndexModeRenderer.tsx:
 <Suspense fallback={null}>
   <LinkFormModal />
 </Suspense>

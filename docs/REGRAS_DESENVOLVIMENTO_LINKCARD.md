@@ -25,14 +25,15 @@ Mantenha a consistência visual usando os utilitários definidos em `@/lib/utils
 - **Favicons:** Use SEMPRE o componente `<FaviconWithFallback />`. Ele centraliza a lógica de fallback e detecção de erros.
 - **Capas (ogImage):** 
   - Imagens do **Supabase Storage** (contendo `supabase.co/storage`) devem ser carregadas diretamente.
-  - Imagens externas devem passar pelo proxy `/og-proxy?url=...` se houver problemas de CORS.
+  - Imagens externas devem ser carregadas diretamente por padrão e só devem usar `/og-proxy?url=...` quando houver bloqueio conhecido de CORS/CORP.
   - SEMPRE implemente o `onError` para disparar `invalidateThumbnailCache(link.url)`.
 
 ## 🖱️ 4. Drag & Drop (Altamente Sensível)
 
-O `LinkCard` é uma "peça" fundamental do sistema de reordenação. Não altere as props de drag sem testar o `Index.tsx`:
+O `LinkCard` é uma "peça" fundamental do sistema de reordenação. Não altere as props de drag sem testar a página principal (`IndexView.tsx` e `IndexModeRenderer.tsx`):
 - **Atributos:** Mantenha `draggable={dragEnabled}` e `data-card-id={link.id}`.
 - **Eventos:** Não remova ou altere o comportamento de `onDragStart`, `onDragOver` e `onDrop`. Eles são essenciais para a reordenação manual.
+- **Página principal atual:** valide o fluxo com `IndexView` e `IndexModeRenderer` quando alterar o contrato de drag do card.
 - **Feedback Visual:** Mantenha as classes condicionais para `${isDragging}` e `${isDropZone}`.
 
 ## ♿ 5. Acessibilidade & UX

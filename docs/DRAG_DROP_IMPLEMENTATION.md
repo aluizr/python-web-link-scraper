@@ -41,7 +41,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 
 **Arquivo:** `src/components/LinkCard.tsx`
 
-### **5. Página `Index.tsx`**
+### **5. Página principal (`Index.tsx` + `IndexView.tsx`)**
 
 - ✅ Estado `draggedLink` para controlar drag
 - ✅ Handlers implementados:
@@ -51,7 +51,7 @@ Implementei **drag & drop nativo** (sem bibliotecas extras) para reordenar links
 - ✅ Atualiza ordem no banco via `reorderLinks()`
 - ✅ Toast de confirmação ao reordenar
 
-**Arquivo:** `src/pages/Index.tsx`
+**Arquivos:** `src/pages/Index.tsx`, `src/pages/IndexView.tsx`, `src/pages/useIndexPageController.ts`
 
 ---
 

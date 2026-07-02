@@ -18,6 +18,13 @@ Detalhes completos da release: [CHANGELOG 0.15.1](CHANGELOG.md#0151--2026-05-14)
 - **RLS preservado:** as políticas user-scoped existentes seguem ativas; o ajuste formaliza permissões sem ampliar acesso indevido.
 - **Sem acesso para `anon`:** o comportamento de autenticação obrigatória permanece inalterado.
 
+## Atualizações internas recentes
+
+- **Index page refatorada** em camadas menores: controller, view principal, header, dialogs, content e renderer por modo.
+- **Renderização por modo separada** para Grid, Lista, Cartões, Tabela, Board e Galeria, reduzindo a complexidade do fluxo principal.
+- **Fallback de favicon e preview simplificado**: imagens passam direto pelo browser por padrão; proxy é usado apenas quando necessário para domínios com restrição CORS/CORP.
+- **Validação recente mantida**: as últimas alterações foram verificadas com `npm run lint` e `npm run build`.
+
 ## Funcionalidades
 
 ### Core
