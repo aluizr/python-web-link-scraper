@@ -1,0 +1,11 @@
+function D(r){const t=new DOMParser().parseFromString(r,"text/html");if(t.getElementsByTagName("parsererror").length>0)throw new Error("Arquivo HTML inválido");const e=t.querySelectorAll("dl");if(e.length===0)throw new Error("Formato de bookmarks não reconhecido. Certifique-se de que exportou os bookmarks do seu navegador.");const s=[];if(e.length>0){const o=e[0];f(o,s)}return s}function f(r,a){let t=null;for(const e of r.children)if(e.tagName==="DT"){const s=e.querySelector("h3");if(s)t={name:s.textContent?.trim()||"Sem nome",children:[]},a.push(t);else{const o=e.querySelector("a");if(o){const n=o.getAttribute("href")||"",i=o.textContent?.trim()||n,d=o.getAttribute("add_date"),c=d?parseInt(d,10):void 0,l={url:n,title:i,addDate:c};t?t.children.push(l):a.push(l)}}}else e.tagName==="DL"&&t&&f(e,t.children)}function k(r){const a=[];let t=0;function e(s,o=""){for(const n of s)if("url"in n){const i={id:p(),url:n.url,title:n.title||n.url,description:"",category:o,tags:[],isFavorite:!1,favicon:g(n.url),createdAt:n.addDate?new Date(n.addDate*1e3).toISOString():new Date().toISOString(),position:t++,ogImage:"",notes:""};a.push(i)}else{const i=o?`${o} / ${n.name}`:n.name;e(n.children,i)}}return e(r),a}function T(r,a){const t=new Map;for(const s of r){const o=s.category||"Sem categoria";t.has(o)||t.set(o,[]),t.get(o).push(s.id)}let e=`<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- Exportado de WebNest em ${new Date().toLocaleString()} -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+`;for(const[s,o]of t){const n=m(s),i=Math.floor(Date.now()/1e3);e+=`  <DT><H3 ADD_DATE="${i}">${n}</H3></DT>
+`,e+=`  <DL><p>
+`;for(const d of o){const c=r.find(l=>l.id===d);if(c){const l=m(c.title),u=m(c.url),h=Math.floor(new Date(c.createdAt).getTime()/1e3);e+=`    <DT><A HREF="${u}" ADD_DATE="${h}" ICON="${c.favicon}">${l}</A></DT>
+`}}e+=`  </DL><p>
+`}return e+="</DL><p>",e}function p(){return Math.random().toString(36).substring(2,9)}function g(r){try{return`https://icon.horse/icon/${new URL(r).hostname}?size=32`}catch{return""}}function m(r){const a={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"};return r.replace(/[&<>"']/g,t=>a[t])}export{k as b,T as l,D as p};
