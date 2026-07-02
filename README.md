@@ -117,15 +117,14 @@ O repositório já possui workflow para deploy automático em GitHub Pages:
 
 - Workflow: `.github/workflows/deploy-pages.yml`
 - Gatilho: `push` na `main`/`master` ou execução manual (`workflow_dispatch`)
-- Etapas: `lint` + `test` + `build` + publicação do `dist/` na branch `gh-pages`
+- Etapas: `lint` + `test` + `build` + `upload-pages-artifact` + `deploy-pages`
 
 ### Ativação no GitHub
 
 1. Abra o repositório no GitHub.
 2. Vá em `Settings > Pages`.
-3. Em **Source**, selecione **Deploy from a branch**.
-4. Selecione a branch `gh-pages` e pasta `/ (root)`.
-5. Faça merge das mudanças na branch principal.
+3. Em **Source**, selecione **GitHub Actions**.
+4. Faça merge das mudanças na branch principal.
 
 ### Secrets obrigatórios para build de produção
 
