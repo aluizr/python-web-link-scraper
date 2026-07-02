@@ -17,6 +17,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: github-pages
 
     steps:
       - name: Checkout
@@ -42,7 +43,21 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "Missing required GitHub secrets: VITE_SUPABASE_URL and/or VITE_SUPABASE_PUBLISHABLE_KEY"
+            echo "Missing required GitHub secrets for build."
+            echo "Expected (Repository or Environment github-pages): VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY"
+            echo "Go to: Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - name: Secrets sanity check (masked)
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          echo "VITE_SUPABASE_URL set: yes"
+          echo "VITE_SUPABASE_PUBLISHABLE_KEY set: yes"
+          if ! echo "$VITE_SUPABASE_URL" | grep -Eq '^https://.+\.supabase\.co$'; then
+            echo "VITE_SUPABASE_URL format seems invalid (expected https://<project>.supabase.co)"
             exit 1
           fi
 
