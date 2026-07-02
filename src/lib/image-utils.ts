@@ -23,9 +23,15 @@ const CORP_BLOCKED_DOMAINS = new Set([
   'readthedocs.io'
 ]);
 
-const PLACEHOLDER_IMAGE = '/placeholder.svg';
 const IMAGE_PROXY_ENABLED =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_IMAGE_PROXY === 'true';
+
+function getPlaceholderImage(): string {
+  const basePath = import.meta.env.BASE_URL || '/';
+  return basePath.endsWith('/') 
+    ? `${basePath}placeholder.svg` 
+    : `${basePath}/placeholder.svg`;
+}
 
 function getHostname(url: string): string | null {
   try {
@@ -57,7 +63,7 @@ export function resolveImageSource(imageUrl: string | null | undefined): string 
 
   // Already proxied path: keep it only in dev, otherwise fall back to a safe local placeholder.
   if (imageUrl.startsWith('/og-proxy')) {
-    return IMAGE_PROXY_ENABLED ? imageUrl : PLACEHOLDER_IMAGE;
+    return IMAGE_PROXY_ENABLED ? imageUrl : getPlaceholderImage();
   }
 
   if (imageUrl.startsWith('/') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
@@ -82,7 +88,7 @@ export function resolveImageSource(imageUrl: string | null | undefined): string 
   }
 
   if (isCorpBlockedUrl(imageUrl) || imageUrl.startsWith('/og-proxy')) {
-    return PLACEHOLDER_IMAGE;
+    return getPlaceholderImage();
   }
 
   return imageUrl;
