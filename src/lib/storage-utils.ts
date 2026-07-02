@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "./logger";
+import { buildProxyUrl } from "./image-utils";
 
 const BUCKET_NAME = "link-thumbnails";
 
@@ -97,7 +98,7 @@ export async function getLocalBlobUrl(url: string): Promise<string> {
 
   // URL externa — busca via /og-proxy (que já está no connect-src da CSP)
   // Fetch direto para CDNs externas seria bloqueado pela CSP
-  const proxied = `/og-proxy?url=${encodeURIComponent(url)}`;
+  const proxied = buildProxyUrl(url);
   const res = await fetch(proxied);
   if (!res.ok) throw new Error(`Proxy retornou HTTP ${res.status}`);
   const blob = await res.blob();
