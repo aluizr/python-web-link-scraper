@@ -123,9 +123,8 @@ O repositório já possui workflow para deploy automático em GitHub Pages:
 
 1. Abra o repositório no GitHub.
 2. Vá em `Settings > Pages`.
-3. Em **Source**, selecione **Deploy from a branch**.
-4. Selecione a branch `gh-pages` e pasta `/ (root)`.
-5. Faça merge das mudanças na branch principal.
+3. Em **Source**, selecione **GitHub Actions**.
+4. Faça merge das mudanças na branch principal para disparar o workflow de deploy.
 
 ### Secrets obrigatórios para build de produção
 
