@@ -117,7 +117,7 @@ O repositório já possui workflow para deploy automático em GitHub Pages:
 
 - Workflow: `.github/workflows/deploy-pages.yml`
 - Gatilho: `push` na `main`/`master` ou execução manual (`workflow_dispatch`)
-- Etapas: `lint` + `test` + `build` + publicação do `dist/` na branch `gh-pages`
+- Etapas: `lint` + `test` + `build` + `upload-pages-artifact` + `deploy-pages`
 
 ### Ativação no GitHub
 
@@ -144,3 +144,4 @@ Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [
 ## Domínio customizado
 
 Configure o domínio no seu provedor de hospedagem apontando para o build estático gerado em `dist/`.
+
