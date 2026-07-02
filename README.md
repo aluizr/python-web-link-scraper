@@ -139,9 +139,22 @@ Opcional (rotação de chave):
 
 O workflow ajusta automaticamente o `base path` do Vite para `/${repo-name}/` durante o build e publica fallback `404.html` para SPA.
 
+### Troubleshooting (regressão de assets e proxy)
+
+Se aparecer novamente `404` para `logo.png` ou `og-proxy?url=...` em produção:
+
+1. Confirme em `Settings > Pages` que o site está em **GitHub Actions** (não "Deploy from a branch").
+2. Rode um deploy manual em `Actions > Deploy to GitHub Pages > Run workflow` (branch `main`).
+3. Faça hard refresh no navegador (`Ctrl+F5`) ou teste em aba anônima.
+
+Checklist rápido de prevenção:
+
+- Manter `.github/workflows/deploy-pages.yml` usando `actions/upload-pages-artifact` + `actions/deploy-pages`.
+- Garantir `VITE_BASE_PATH=/${repo-name}/` no passo de build.
+- Evitar paths absolutos sem base (`/logo.png`, `/og-proxy?...`) em código de produção.
+
 Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [ROADMAP_BACKEND_PYTHON.md](docs/ROADMAP_BACKEND_PYTHON.md).
 
 ## Domínio customizado
 
 Configure o domínio no seu provedor de hospedagem apontando para o build estático gerado em `dist/`.
-
