@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BreadcrumbNav } from "@/components/BreadcrumbNav";
 import { LinkCard } from "@/components/LinkCard";
 import { LinkNotionView } from "@/components/LinkNotionView";
 import { useIndexPageController } from "./useIndexPageController";

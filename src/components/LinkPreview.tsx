@@ -26,7 +26,6 @@ function getHostname(rawUrl: string): string {
 
 export function LinkPreview({ metadata, url }: LinkPreviewProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const [proxyFailed, setProxyFailed] = useState(false);
   const [debouncedImage, setDebouncedImage] = useState(metadata?.image);
 
   // Debounce para evitar spam de proxy a cada letra digitada no input
@@ -34,7 +33,6 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
     const timer = setTimeout(() => {
       setDebouncedImage(metadata?.image);
       setImageFailed(false);
-      setProxyFailed(false);
     }, 800);
     return () => clearTimeout(timer);
   }, [metadata?.image]);
@@ -71,9 +69,9 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
       debouncedImage.startsWith("data:") ||
       debouncedImage.includes("supabase.co/storage") ||
       debouncedImage.startsWith("/og-proxy?") ||
-      proxyFailed
-        ? debouncedImage
-        : (ensureProxiedIfCorp(debouncedImage) || `/og-proxy?url=${encodeURIComponent(debouncedImage)}`)
+      isCorpBlockedUrl(debouncedImage)
+        ? ensureProxiedIfCorp(debouncedImage) ?? debouncedImage
+        : debouncedImage
     )
     : null;
 
@@ -86,11 +84,7 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
             alt="Preview"
             className="h-20 w-20 object-cover rounded border flex-shrink-0"
             onError={() => {
-              if (!proxyFailed && debouncedImage && !debouncedImage.startsWith('data:') && !isCorpBlockedUrl(debouncedImage)) {
-                setProxyFailed(true);
-              } else {
-                setImageFailed(true);
-              }
+              setImageFailed(true);
             }}
           />
         ) : (
