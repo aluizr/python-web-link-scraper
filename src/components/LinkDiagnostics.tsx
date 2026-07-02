@@ -6,6 +6,7 @@ import { ExternalLink, Image, AlertCircle, CheckCircle, XCircle, RefreshCw, Wand
 import { useMetadata } from "@/hooks/use-metadata";
 import { toast } from "sonner";
 import type { LinkItem } from "@/types/link";
+import { buildProxyUrl, isProxied } from "@/lib/image-utils";
 
 interface LinkDiagnosticsProps {
   links: LinkItem[];
@@ -140,9 +141,9 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     if (!imageUrl) return imageUrl;
     
     // Remove /og-proxy wrapper if present
-    if (imageUrl.startsWith('/og-proxy?url=')) {
+    if (isProxied(imageUrl)) {
       try {
-        const url = new URL(imageUrl, 'http://localhost');
+        const url = new URL(imageUrl, "http://localhost");
         const originalUrl = url.searchParams.get('url');
         if (originalUrl) {
           return decodeURIComponent(originalUrl);
@@ -180,7 +181,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
   const fixProxyUrls = async () => {
     const proxyLinks = results.filter(
       (r) => r.hasOgImage && 
-             (r.link.ogImage.startsWith('/og-proxy') ||
+             (isProxied(r.link.ogImage) ||
               r.link.ogImage.includes('/_next/image') || 
               r.link.ogImage.includes('/_vercel/image') ||
               r.link.ogImage.includes('/cdn-cgi/image'))
@@ -215,7 +216,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     
     try {
       // Route through proxy
-      const proxiedUrl = `/og-proxy?url=${encodeURIComponent(ogImageUrl)}`;
+      const proxiedUrl = buildProxyUrl(ogImageUrl);
       
       // Test if proxy works
       const result = await checkImage(proxiedUrl);
@@ -243,7 +244,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     const corsLinks = results.filter(
       (r) => r.hasOgImage && 
              r.ogImageStatus === "error" && 
-             !r.link.ogImage.startsWith("/og-proxy")
+             !isProxied(r.link.ogImage)
     );
     
     if (corsLinks.length === 0) {
@@ -448,8 +449,8 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
     total: results.length,
     missingThumb: results.filter((r) => !r.hasOgImage || r.ogImageStatus === "error").length,
     missingFavicon: results.filter((r) => !r.hasFavicon || r.faviconStatus === "error").length,
-    corsErrors: results.filter((r) => r.hasOgImage && r.ogImageStatus === "error" && !r.link.ogImage.startsWith("/og-proxy")).length,
-    proxyUrls: results.filter((r) => r.hasOgImage && (r.link.ogImage.startsWith('/og-proxy') || r.link.ogImage.includes('/_next/image') || r.link.ogImage.includes('/_vercel/image') || r.link.ogImage.includes('/cdn-cgi/image'))).length,
+    corsErrors: results.filter((r) => r.hasOgImage && r.ogImageStatus === "error" && !isProxied(r.link.ogImage)).length,
+    proxyUrls: results.filter((r) => r.hasOgImage && (isProxied(r.link.ogImage) || r.link.ogImage.includes('/_next/image') || r.link.ogImage.includes('/_vercel/image') || r.link.ogImage.includes('/cdn-cgi/image'))).length,
     allGood: results.filter((r) => r.hasOgImage && r.ogImageStatus === "success" && r.hasFavicon && r.faviconStatus === "success").length,
   };
 
@@ -612,7 +613,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                 {filteredResults.map((result) => {
                   const isFixing = fixing.has(result.link.id);
                   const canFix = !result.hasOgImage || result.ogImageStatus === "error";
-                  const canProxy = result.hasOgImage && result.ogImageStatus === "error" && !result.link.ogImage.startsWith("/og-proxy");
+                  const canProxy = result.hasOgImage && result.ogImageStatus === "error" && !isProxied(result.link.ogImage);
                   
                   return (
                     <Card key={result.link.id}>
@@ -680,7 +681,7 @@ export function LinkDiagnostics({ links, onUpdateLink }: LinkDiagnosticsProps) {
                           </div>
                           {result.hasOgImage && result.ogImageStatus === "success" && (
                             <img
-                              src={result.link.ogImage.startsWith("/og-proxy") ? result.link.ogImage : `/og-proxy?url=${encodeURIComponent(result.link.ogImage)}`}
+                              src={isProxied(result.link.ogImage) ? result.link.ogImage : buildProxyUrl(result.link.ogImage)}
                               alt=""
                               className="w-20 h-20 object-cover rounded flex-shrink-0"
                             />

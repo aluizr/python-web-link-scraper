@@ -11,6 +11,7 @@ import {
   KNOWN_FALLBACKS,
   KNOWN_FAVICON_FALLBACKS
 } from "@/lib/metadata-utils";
+import { isProxied } from "@/lib/image-utils";
 
 export interface LinkMetadata {
   title: string | null;
@@ -179,7 +180,7 @@ async function fetchFromUnifiedProxy(url: string): Promise<LinkMetadata | null> 
       // Chamar extractOriginalImageUrl desfaría esse proxy, devolvendo a URL
       // bloqueada diretamente ao browser e causando erro 403 no console.
       image: data.image
-        ? (data.image.startsWith('/og-proxy') ? data.image : extractOriginalImageUrl(data.image))
+        ? (isProxied(data.image) ? data.image : extractOriginalImageUrl(data.image))
         : null,
       favicon: data.favicon || getKnownFaviconFallback(url),
       loading: false,

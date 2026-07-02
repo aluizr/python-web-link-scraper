@@ -540,7 +540,7 @@ export function AppSidebar({
       <div className="p-6 pb-2 flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden ring-1 ring-primary/20 shadow-sm">
           <img 
-            src="/logo.png" 
+            src={`${import.meta.env.BASE_URL}logo.png`} 
             alt="WebNest Logo" 
             className="h-7 w-7 object-contain" 
           />

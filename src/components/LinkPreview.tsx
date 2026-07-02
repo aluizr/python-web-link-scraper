@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import type { LinkMetadata } from "@/hooks/use-metadata";
 import { COMPACT_BADGE_CLASS, TEXT_XS_CLASS } from "@/lib/utils";
-import { ensureProxiedIfCorp, isCorpBlockedUrl } from "@/lib/image-utils";
+import { ensureProxiedIfCorp, isCorpBlockedUrl, isProxied } from "@/lib/image-utils";
 
 interface LinkPreviewProps {
   metadata: LinkMetadata;
@@ -68,7 +68,7 @@ export function LinkPreview({ metadata, url }: LinkPreviewProps) {
     ? (
       debouncedImage.startsWith("data:") ||
       debouncedImage.includes("supabase.co/storage") ||
-      debouncedImage.startsWith("/og-proxy?") ||
+      isProxied(debouncedImage) ||
       isCorpBlockedUrl(debouncedImage)
         ? ensureProxiedIfCorp(debouncedImage) ?? debouncedImage
         : debouncedImage

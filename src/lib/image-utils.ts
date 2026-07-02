@@ -23,9 +23,21 @@ const CORP_BLOCKED_DOMAINS = new Set([
   'readthedocs.io'
 ]);
 
-const PLACEHOLDER_IMAGE = '/placeholder.svg';
+const BASE_PATH = (() => {
+  const raw = import.meta.env.BASE_URL || '/';
+  return raw.endsWith('/') ? raw : `${raw}/`;
+})();
+
 const IMAGE_PROXY_ENABLED =
   import.meta.env.DEV || import.meta.env.VITE_ENABLE_IMAGE_PROXY === 'true';
+
+function getPlaceholderImage(): string {
+  return `${BASE_PATH}placeholder.svg`;
+}
+
+export function buildProxyUrl(imageUrl: string): string {
+  return `${BASE_PATH}og-proxy?url=${encodeURIComponent(imageUrl)}`;
+}
 
 function getHostname(url: string): string | null {
   try {
@@ -55,9 +67,11 @@ export function isCorpBlockedUrl(imageUrl: string | null | undefined): boolean {
 export function resolveImageSource(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) return null;
 
-  // Already proxied path: keep it only in dev, otherwise fall back to a safe local placeholder.
-  if (imageUrl.startsWith('/og-proxy')) {
-    return IMAGE_PROXY_ENABLED ? imageUrl : PLACEHOLDER_IMAGE;
+  // Already proxied path: keep proxy only in dev, otherwise fall back to a safe local placeholder.
+  if (isProxied(imageUrl)) {
+    if (!IMAGE_PROXY_ENABLED) return getPlaceholderImage();
+    const originalUrl = extractFromProxy(imageUrl);
+    return originalUrl ? buildProxyUrl(originalUrl) : imageUrl;
   }
 
   if (imageUrl.startsWith('/') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
@@ -78,11 +92,11 @@ export function resolveImageSource(imageUrl: string | null | undefined): string 
       return imageUrl;
     }
 
-    return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
+    return buildProxyUrl(imageUrl);
   }
 
-  if (isCorpBlockedUrl(imageUrl) || imageUrl.startsWith('/og-proxy')) {
-    return PLACEHOLDER_IMAGE;
+  if (isCorpBlockedUrl(imageUrl) || isProxied(imageUrl)) {
+    return getPlaceholderImage();
   }
 
   return imageUrl;
@@ -104,7 +118,7 @@ export function ensureProxied(imageUrl: string | null | undefined): string | nul
 export function extractFromProxy(proxiedUrl: string | null | undefined): string | null {
   if (!proxiedUrl) return null;
 
-  if (proxiedUrl.startsWith('/og-proxy?url=')) {
+  if (isProxied(proxiedUrl)) {
     try {
       const url = new URL(proxiedUrl, 'http://localhost');
       const originalUrl = url.searchParams.get('url');
@@ -121,7 +135,13 @@ export function extractFromProxy(proxiedUrl: string | null | undefined): string 
  * Checks if a URL is already proxied
  */
 export function isProxied(url: string | null | undefined): boolean {
-  return !!url && url.startsWith('/og-proxy');
+  if (!url) return false;
+  try {
+    const parsed = new URL(url, 'http://localhost');
+    return parsed.pathname.endsWith('/og-proxy');
+  } catch {
+    return url.includes('/og-proxy');
+  }
 }
 
 /**
@@ -133,4 +153,3 @@ export function isProxied(url: string | null | undefined): boolean {
 export function ensureProxiedIfCorp(imageUrl: string | null | undefined): string | null {
   return resolveImageSource(imageUrl);
 }
-
