@@ -124,7 +124,7 @@ O repositório já possui workflow para deploy automático em GitHub Pages:
 1. Abra o repositório no GitHub.
 2. Vá em `Settings > Pages`.
 3. Em **Source**, selecione **GitHub Actions**.
-4. Faça merge das mudanças na branch principal.
+4. Faça merge das mudanças na branch principal para disparar o workflow de deploy.
 
 ### Secrets obrigatórios para build de produção
 
@@ -144,3 +144,4 @@ Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [
 ## Domínio customizado
 
 Configure o domínio no seu provedor de hospedagem apontando para o build estático gerado em `dist/`.
+
