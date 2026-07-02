@@ -127,6 +127,17 @@ O repositório já possui workflow para deploy automático em GitHub Pages:
 4. Selecione a branch `gh-pages` e pasta `/ (root)`.
 5. Faça merge das mudanças na branch principal.
 
+### Secrets obrigatórios para build de produção
+
+Em `Settings > Secrets and variables > Actions`, configure:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+Opcional (rotação de chave):
+
+- `VITE_SUPABASE_FALLBACK_KEY`
+
 O workflow ajusta automaticamente o `base path` do Vite para `/${repo-name}/` durante o build e publica fallback `404.html` para SPA.
 
 Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [ROADMAP_BACKEND_PYTHON.md](docs/ROADMAP_BACKEND_PYTHON.md).

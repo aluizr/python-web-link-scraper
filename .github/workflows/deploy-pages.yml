@@ -36,9 +36,22 @@ jobs:
           npm run lint
           npm run test
 
+      - name: Validate required build secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Missing required GitHub secrets: VITE_SUPABASE_URL and/or VITE_SUPABASE_PUBLISHABLE_KEY"
+            exit 1
+          fi
+
       - name: Build for GitHub Pages
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_FALLBACK_KEY: ${{ secrets.VITE_SUPABASE_FALLBACK_KEY }}
         run: npm run build
 
       - name: Add SPA fallback page
