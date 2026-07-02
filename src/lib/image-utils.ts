@@ -10,67 +10,6 @@ const SKIP_PROXY_DOMAINS = new Set<string>([
 ]);
 
 /**
- * Ensures an image URL goes through the /og-proxy to bypass CORS restrictions
- * If the URL is already proxied, returns it as-is
- * If the URL is null/undefined, returns null
- */
-export function ensureProxied(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-  
-  // Already proxied
-  if (imageUrl.startsWith('/og-proxy')) {
-    return imageUrl;
-  }
-  
-  // External URL - needs proxy
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    try {
-      const hostname = new URL(imageUrl).hostname.replace(/^www\./, '');
-      const shouldSkip = [...SKIP_PROXY_DOMAINS].some(
-        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
-      );
-      if (shouldSkip) {
-        return imageUrl;
-      }
-    } catch {
-      // Ignorar URL mal formatada
-    }
-    
-    return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
-  }
-  
-  // Relative URL or data URL - no proxy needed
-  return imageUrl;
-}
-
-/**
- * Extracts the original URL from a proxied URL
- * If not proxied, returns the URL as-is
- */
-export function extractFromProxy(proxiedUrl: string | null | undefined): string | null {
-  if (!proxiedUrl) return null;
-  
-  if (proxiedUrl.startsWith('/og-proxy?url=')) {
-    try {
-      const url = new URL(proxiedUrl, 'http://localhost');
-      const originalUrl = url.searchParams.get('url');
-      return originalUrl || proxiedUrl;
-    } catch {
-      return proxiedUrl;
-    }
-  }
-  
-  return proxiedUrl;
-}
-
-/**
- * Checks if a URL is already proxied
- */
-export function isProxied(url: string | null | undefined): boolean {
-  return !!url && url.startsWith('/og-proxy');
-}
-
-/**
  * Domains known to send `Cross-Origin-Resource-Policy: same-origin`,
  * which blocks browsers from loading their images cross-origin.
  * Also includes domains that block hotlinking (like wikimedia)
@@ -83,6 +22,10 @@ const CORP_BLOCKED_DOMAINS = new Set([
   'upload.wikimedia.org',
   'readthedocs.io'
 ]);
+
+const PLACEHOLDER_IMAGE = '/placeholder.svg';
+const IMAGE_PROXY_ENABLED =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_IMAGE_PROXY === 'true';
 
 function getHostname(url: string): string | null {
   try {
@@ -105,20 +48,89 @@ export function isCorpBlockedUrl(imageUrl: string | null | undefined): boolean {
 }
 
 /**
+ * Resolves an image URL for rendering.
+ * In development we keep the proxy available; in production we avoid /og-proxy
+ * because GitHub Pages is static and cannot serve it.
+ */
+export function resolveImageSource(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+
+  // Already proxied path: keep it only in dev, otherwise fall back to a safe local placeholder.
+  if (imageUrl.startsWith('/og-proxy')) {
+    return IMAGE_PROXY_ENABLED ? imageUrl : PLACEHOLDER_IMAGE;
+  }
+
+  if (imageUrl.startsWith('/') || imageUrl.startsWith('data:') || imageUrl.startsWith('blob:')) {
+    return imageUrl;
+  }
+
+  if (IMAGE_PROXY_ENABLED && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+    try {
+      const hostname = new URL(imageUrl).hostname.replace(/^www\./, '');
+      const shouldSkip = [...SKIP_PROXY_DOMAINS].some(
+        (domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+      );
+      if (shouldSkip) {
+        return imageUrl;
+      }
+    } catch {
+      // Invalid URL: fall back to the original value.
+      return imageUrl;
+    }
+
+    return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
+  if (isCorpBlockedUrl(imageUrl) || imageUrl.startsWith('/og-proxy')) {
+    return PLACEHOLDER_IMAGE;
+  }
+
+  return imageUrl;
+}
+
+/**
+ * Ensures an image URL goes through the /og-proxy to bypass CORS restrictions
+ * If the URL is already proxied, returns it as-is
+ * If the URL is null/undefined, returns null
+ */
+export function ensureProxied(imageUrl: string | null | undefined): string | null {
+  return resolveImageSource(imageUrl);
+}
+
+/**
+ * Extracts the original URL from a proxied URL
+ * If not proxied, returns the URL as-is
+ */
+export function extractFromProxy(proxiedUrl: string | null | undefined): string | null {
+  if (!proxiedUrl) return null;
+
+  if (proxiedUrl.startsWith('/og-proxy?url=')) {
+    try {
+      const url = new URL(proxiedUrl, 'http://localhost');
+      const originalUrl = url.searchParams.get('url');
+      return originalUrl || proxiedUrl;
+    } catch {
+      return proxiedUrl;
+    }
+  }
+
+  return proxiedUrl;
+}
+
+/**
+ * Checks if a URL is already proxied
+ */
+export function isProxied(url: string | null | undefined): boolean {
+  return !!url && url.startsWith('/og-proxy');
+}
+
+/**
  * Like ensureProxied(), but ONLY proxies images from known CORP-restricted domains.
  * For all other URLs the original value is returned unchanged.
  *
  * Use this at render time (img src) — never store the proxied path in the database.
  */
 export function ensureProxiedIfCorp(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-
-  // Already proxied — nothing to do
-  if (imageUrl.startsWith('/og-proxy')) return imageUrl;
-
-  if (isCorpBlockedUrl(imageUrl)) {
-    return `/og-proxy?url=${encodeURIComponent(imageUrl)}`;
-  }
-
-  return imageUrl;
+  return resolveImageSource(imageUrl);
 }
+
