@@ -4,7 +4,14 @@ import path from "path";
 import https from "https";
 import http from "http";
 
+function normalizeBasePath(rawBase) {
+  if (!rawBase || rawBase === "/") return "/";
+  const withLeadingSlash = rawBase.startsWith("/") ? rawBase : `/${rawBase}`;
+  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
 export default defineConfig(({ mode }) => ({
+  base: normalizeBasePath(process.env.VITE_BASE_PATH),
   server: {
     host: "::",
     port: 8080,

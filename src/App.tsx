@@ -100,7 +100,10 @@ function AppRoutes() {
             errorElement: <RouteErrorFallback />
           },
         ],
-        { future: { v7_startTransition: true } }
+        {
+          basename: import.meta.env.BASE_URL,
+          future: { v7_startTransition: true },
+        }
       ),
     [user, signOut]
   );

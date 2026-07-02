@@ -1,5 +1,8 @@
 # WebNest — Gerenciador de Links
 
+[![CI/CD](https://github.com/aluizr/python-web-link-scraper/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aluizr/python-web-link-scraper/actions/workflows/ci.yml)
+[![Deploy to GitHub Pages](https://github.com/aluizr/python-web-link-scraper/actions/workflows/deploy-pages.yml/badge.svg?branch=main)](https://github.com/aluizr/python-web-link-scraper/actions/workflows/deploy-pages.yml)
+
 Organize seus links favoritos com estilo e segurança.
 
 ## Últimas versões
@@ -107,6 +110,23 @@ npm run dev
 | `npm test` | Testes com Vitest |
 
 O projeto é hospedado como uma Single Page Application (SPA) estática. Pode ser implantado facilmente em Vercel, Netlify, Cloudflare Pages ou GitHub Pages.
+
+## Deploy no GitHub Pages
+
+O repositório já possui workflow para deploy automático em GitHub Pages:
+
+- Workflow: `.github/workflows/deploy-pages.yml`
+- Gatilho: `push` na `main`/`master` ou execução manual (`workflow_dispatch`)
+- Etapas: `lint` + `test` + `build` + publicação do `dist/`
+
+### Ativação no GitHub
+
+1. Abra o repositório no GitHub.
+2. Vá em `Settings > Pages`.
+3. Em **Source**, selecione **GitHub Actions**.
+4. Faça merge das mudanças na branch principal.
+
+O workflow ajusta automaticamente o `base path` do Vite para `/${repo-name}/` durante o build e publica fallback `404.html` para SPA.
 
 Para uma visão de futuro envolvendo um backend dedicado em Python, consulte o [ROADMAP_BACKEND_PYTHON.md](docs/ROADMAP_BACKEND_PYTHON.md).
 
